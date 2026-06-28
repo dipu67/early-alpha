@@ -1,0 +1,41 @@
+{
+  "name": "early-alpha",
+  "version": "1.0.0",
+  "description": "Twitter following tracker for crypto influencers and early project hunters",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx index.ts",
+    "bot": "tsx tg/bots.ts",
+    "worker": "tsx services/worker.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "track:init-db": "tsx Tools/following_Track/track.ts init-db",
+    "track:import-seeds": "tsx Tools/following_Track/track.ts import-seeds",
+    "track:run": "tsx Tools/following_Track/track.ts track",
+    "track:run-full": "tsx Tools/following_Track/track.ts track-full",
+    "track:digest": "tsx Tools/following_Track/track.ts digest",
+    "track:health": "tsx Tools/following_Track/track.ts health",
+    "seed-worker": "tsx services/seedWorker.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@steipete/bird": "^0.8.0",
+    "bullmq": "^5.79.1",
+    "dotenv": "^17.4.2",
+    "grammy": "^1.44.0",
+    "pg": "^8.22.0",
+    "prisma": "^7.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "@types/pg": "^8.20.0",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

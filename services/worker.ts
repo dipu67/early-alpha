@@ -1,0 +1,68 @@
+import "dotenv/config";
+import { Worker } from "bullmq";
+import { connection } from "./queue.js";
+import { checkFollowingDiff } from "./followDiff.js";
+import { prisma } from "../db/prisma.js";
+import { formatNewFollowAlert } from "./formatAlert.js";
+import { sendTelegramAlert } from "../tg/sendAlert.js";
+
+async function sendAlert(
+  influencerUsername: string,
+  user: import("../TwitterClient/TwitterClient.js").UserData,
+): Promise<void> {
+  try {
+    const alertMessage = formatNewFollowAlert(influencerUsername, user);
+    await sendTelegramAlert(alertMessage);
+  } catch (error) {
+    console.error(`Failed to send alert for @${user.username}:`, error);
+  }
+}
+
+const worker = new Worker(
+  "follow-tracker",
+  async (job) => {
+    const { watchListId, username } = job.data as {
+      watchListId: string;
+      username: string;
+    };
+    const id = BigInt(watchListId);
+
+    console.log(`[worker] Checking following for @${username}`);
+
+    const { newFollows } = await checkFollowingDiff(id);
+
+    if (newFollows.length === 0) {
+      console.log(`[worker] No new follows for @${username}`);
+      return;
+    }
+
+    console.log(
+      `[worker] Found ${newFollows.length} new follows for @${username}`,
+    );
+
+    for (const user of newFollows) {
+      await sendAlert(username, user);
+
+      await prisma.alertLog.create({
+        data: {
+          watchListId: id,
+          newFollowId: user.id,
+          newFollowUsername: user.username,
+        },
+      });
+    }
+  },
+  { connection },
+);
+
+worker.on("failed", (job, err) => {
+  console.error(`[worker] Job ${job?.id} failed:`, err.message);
+});
+
+worker.on("completed", (job) => {
+  console.log(`[worker] Job ${job.id} completed`);
+});
+
+console.log("[worker] Follow tracker worker started");
+
+export { worker };

@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model TwitterAccount {
+  id              String    @id
+  username        String    @unique
+  name            String    @default("")
+  description     String?
+  followersCount  Int?      @map("followers_count")
+  followingCount  Int?      @map("following_count")
+  isBlueVerified  Boolean?  @map("is_blue_verified")
+  profileImageUrl String?   @map("profile_image_url")
+  createdAt       DateTime? @map("created_at") @db.Timestamptz
+  firstSeenAt     DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  followEdgesAsFollowing FollowEdge[] @relation("following")
+  alerts                 Alert[]
+
+  @@map("twitter_accounts")
+}
+
+model SeedAccount {
+  id        BigInt   @id @default(autoincrement())
+  twitterId String?  @unique @map("twitter_id")
+  username  String   @unique
+  category  String
+  label     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  followEdges FollowEdge[]
+
+  @@map("seed_accounts")
+}
+
+model TrackingRun {
+  id              BigInt    @id @default(autoincrement())
+  startedAt       DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  finishedAt      DateTime? @map("finished_at") @db.Timestamptz
+  status          String    @default("running")
+  error           String?
+  seedsProcessed  Int       @default(0) @map("seeds_processed")
+  accountsSeen    Int       @default(0) @map("accounts_seen")
+  newFollowEdges  Int       @default(0) @map("new_follow_edges")
+
+  firstSeenEdges FollowEdge[] @relation("firstSeenRun")
+  lastSeenEdges  FollowEdge[] @relation("lastSeenRun")
+  alerts         Alert[]
+
+  @@map("tracking_runs")
+}
+
+model FollowEdge {
+  seedId        BigInt   @map("seed_id")
+  followingId   String   @map("following_id")
+  firstSeenRunId BigInt? @map("first_seen_run_id")
+  lastSeenRunId  BigInt? @map("last_seen_run_id")
+  firstSeenAt   DateTime @default(now()) @map("first_seen_at") @db.Timestamptz
+  lastSeenAt    DateTime @default(now()) @map("last_seen_at") @db.Timestamptz
+  active        Boolean  @default(true)
+
+  seed         SeedAccount    @relation(fields: [seedId], references: [id], onDelete: Cascade)
+  following    TwitterAccount @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  firstSeenRun TrackingRun?   @relation("firstSeenRun", fields: [firstSeenRunId], references: [id])
+  lastSeenRun  TrackingRun?   @relation("lastSeenRun", fields: [lastSeenRunId], references: [id])
+
+  @@id([seedId, followingId])
+  @@index([followingId, firstSeenAt(sort: Desc)])
+  @@index([followingId])
+  @@index([active])
+  @@map("follow_edges")
+}
+
+model Alert {
+  id            BigInt   @id @default(autoincrement())
+  followingId   String   @map("following_id")
+  runId         BigInt?  @map("run_id")
+  alertType     String   @map("alert_type")
+  score         Int
+  seedCount     Int      @map("seed_count")
+  categories    String[] @default([])
+  seedUsernames String[] @default([]) @map("seed_usernames")
+  reason        String
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  following TwitterAccount @relation(fields: [followingId], references: [id], onDelete: Cascade)
+  run       TrackingRun?   @relation(fields: [runId], references: [id])
+
+  @@index([followingId, alertType, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([score(sort: Desc)])
+  @@map("alerts")
+}
+
+model TwitterAuthAccount {
+  id              BigInt    @id @default(autoincrement())
+  label           String?
+  authToken       String    @unique @map("auth_token")
+  ct0             String
+  isActive        Boolean   @default(true) @map("is_active")
+  rateLimitedUntil DateTime? @map("rate_limited_until") @db.Timestamptz
+  lastUsedAt      DateTime? @map("last_used_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([isActive, rateLimitedUntil])
+  @@map("twitter_auth_accounts")
+}
+
+model WatchList {
+  id             BigInt   @id @default(autoincrement())
+  twitterUserId  String   @map("twitter_user_id")
+  username       String   @unique
+  isActive       Boolean  @default(true) @map("is_active")
+  addedBy        String?  @map("added_by")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  snapshots FollowSnapshot[]
+  alertLogs AlertLog[]
+
+  @@map("watch_list")
+}
+
+model FollowSnapshot {
+  id          BigInt   @id @default(autoincrement())
+  watchListId BigInt   @map("watch_list_id")
+  userIds     String[] @map("user_ids")
+  takenAt     DateTime @default(now()) @map("taken_at") @db.Timestamptz
+
+  watchList WatchList @relation(fields: [watchListId], references: [id], onDelete: Cascade)
+
+  @@index([watchListId, takenAt(sort: Desc)])
+  @@map("follow_snapshots")
+}
+
+model AlertLog {
+  id               BigInt   @id @default(autoincrement())
+  watchListId      BigInt   @map("watch_list_id")
+  newFollowId      String   @map("new_follow_id")
+  newFollowUsername String?  @map("new_follow_username")
+  analysis         String?
+  sentAt           DateTime @default(now()) @map("sent_at") @db.Timestamptz
+
+  watchList WatchList @relation(fields: [watchListId], references: [id], onDelete: Cascade)
+
+  @@index([watchListId, sentAt(sort: Desc)])
+  @@map("alert_logs")
+}
