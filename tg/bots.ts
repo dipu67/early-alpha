@@ -4,6 +4,7 @@ import { prisma } from "../db/prisma.js";
 import { getTwitterClient, markRateLimited } from "../twitter/getClient.js";
 import { addWatchJob, removeWatchJob } from "../services/queue.js";
 import type { UserData } from "../TwitterClient/TwitterClient.js";
+import {TwitterClient} from "../TwitterClient/TwitterClient.js";
 
 const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN as string);
 
@@ -112,7 +113,6 @@ bot.command("watch", async (ctx) => {
       },
     });
 
-    console.log("watchEntry", watchEntry.id)
 
     await addWatchJob(watchEntry.id, user.username);
 
@@ -207,21 +207,27 @@ bot.command("addauth", async (ctx) => {
   const parts = text.split(/\s+/);
   const authToken = parts[1];
   const ct0 = parts[2];
-  const label = parts[3] ?? null;
 
   if (!authToken || !ct0) {
     return ctx.reply("Usage: /addauth <auth_token> <ct0> [label]");
   }
 
   try {
+    const client = new TwitterClient({ cookies: { authToken, ct0 } });
+    const currentUserResult = await client.getCurrentUser();
+
+    if (!currentUserResult.success || !currentUserResult.user) {
+      return ctx.reply("Failed to validate the provided auth token and ct0.");
+    }
+
     const account = await prisma.twitterAuthAccount.upsert({
       where: { authToken },
-      create: { authToken, ct0, label },
-      update: { ct0, label, isActive: true, rateLimitedUntil: null },
+      create: { authToken, ct0, username: currentUserResult.user.username, id : BigInt(currentUserResult.user?.id), isActive: true },
+      update: { ct0, username: currentUserResult.user.username, isActive: true, rateLimitedUntil: null },
     });
 
     return ctx.reply(
-      `✅ Auth account added (id: ${account.id}, label: ${account.label ?? "none"})`,
+      `✅ Auth account added  \nusername: ${account.username ?? "none"} \nid: ${account.id}`,
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

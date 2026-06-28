@@ -13,7 +13,7 @@ export async function addWatchJob(watchListId: bigint, username: string): Promis
 
   await followTrackerQueue.upsertJobScheduler(
     jobId,
-    { every:  60 * 1000 },
+    { every: 15 *  60 * 1000 },
     {
       name: "check-following",
       data: { watchListId: watchListId.toString(), username },

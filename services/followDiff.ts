@@ -35,14 +35,20 @@ export async function checkFollowingDiff(
     orderBy: { takenAt: "desc" },
   });
 
-  const previousIds = new Set(latestSnapshot?.userIds ?? []);
-  const newFollows = result.users.filter((u) => !previousIds.has(u.id));
+
   await prisma.followSnapshot.create({
     data: {
       watchListId,
       userIds: currentIds,
     },
   });
+
+  if (!latestSnapshot) {
+    return { newFollows: [], watchListId, username: entry.username };
+  }
+
+  const previousIds = new Set(latestSnapshot.userIds);
+  const newFollows = result.users.filter((u) => !previousIds.has(u.id));
 
   return { newFollows, watchListId, username: entry.username };
 }

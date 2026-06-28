@@ -27,18 +27,14 @@ const worker = new Worker(
     };
     const id = BigInt(watchListId);
 
-    console.log(`[worker] Checking following for @${username}`);
 
     const { newFollows } = await checkFollowingDiff(id);
 
     if (newFollows.length === 0) {
-      console.log(`[worker] No new follows for @${username}`);
+      // console.log(`[worker] No new follows for @${username}`);
       return;
     }
 
-    console.log(
-      `[worker] Found ${newFollows.length} new follows for @${username}`,
-    );
 
     for (const user of newFollows) {
       await sendAlert(username, user);

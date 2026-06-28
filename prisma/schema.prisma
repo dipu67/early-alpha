@@ -101,8 +101,8 @@ model Alert {
 }
 
 model TwitterAuthAccount {
-  id              BigInt    @id @default(autoincrement())
-  label           String?
+  id              BigInt    @id 
+  username        String    @unique
   authToken       String    @unique @map("auth_token")
   ct0             String
   isActive        Boolean   @default(true) @map("is_active")
