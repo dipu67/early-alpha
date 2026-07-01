@@ -155,8 +155,6 @@ grokBot.on("message", async (ctx) => {
   );
 
   if (!mentioned) return;
-  if (isAdmin) return;
-  console.log(`Received message from ${ctx.from?.username}: ${messageText}`);
 
   const prompt = messageText
     .replace(new RegExp(`@${botUsername}`, "gi"), "")
