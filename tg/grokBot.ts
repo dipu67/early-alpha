@@ -12,9 +12,15 @@ const conversationIdFilePath = new URL(
   "./conversationId.json",
   import.meta.url,
 );
-let conversationIdData: { private: string[]; group: string[] } = JSON.parse(
-  await readFile(conversationIdFilePath, "utf-8"),
-);
+let conversationIdData: { private: string[]; group: string[] };
+try {
+  conversationIdData = JSON.parse(
+    await readFile(conversationIdFilePath, "utf-8"),
+  );
+} catch {
+  conversationIdData = { private: [], group: [] };
+  await writeFile(conversationIdFilePath, JSON.stringify(conversationIdData), "utf-8");
+}
 let botUsername: string | undefined;
 
 // bot.api.setMyCommands([
