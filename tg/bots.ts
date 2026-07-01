@@ -27,10 +27,41 @@ bot.api.setMyCommands([
   { command: "unwatch", description: "Remove from watch list" },
   { command: "list", description: "Show all watched accounts" },
   { command: "addauth", description: "Add a Twitter auth account" },
+  { command: "group_info", description: "Get group chat ID and title" },
+  { command: "help", description: "Show help message" },
 ]);
 
 bot.command("start", (ctx) => ctx.reply("Hello! I'm your follow tracker bot."));
 bot.command("chat_id", (ctx) => ctx.reply(`Your ID is: ${ctx.from?.id}`));
+
+bot.command("group_info", (ctx) => {
+  
+
+  const chatId = ctx.chat.id;
+  const chatTitle = ctx.chat.title ?? "Unknown";
+  if (ctx.chat.type !== "group" && ctx.chat.type !== "supergroup") {
+    return ctx.reply("This command can only be used in a group chat.");
+  }
+  if (ctx.message?.is_topic_message) {
+   const topicId = ctx.message.message_thread_id;
+   return ctx.reply(`Group Name: ${chatTitle}\nGroup ID: ${chatId}\nTopic ID: ${topicId}`); 
+  }
+  
+  return ctx.reply(`Group Name: ${chatTitle}\nGroup ID: ${chatId}`);
+});
+bot.command("help", (ctx) => {
+  const helpMessage = `
+Available commands:
+/start - Start the bot
+/chat_id - Get your chat ID
+/watch @username - Add a Twitter account to watch list
+/unwatch @username - Remove from watch list
+/list - Show all watched accounts
+/addauth <auth_token> <ct0> [label] - Add a Twitter auth account
+/help - Show this help message
+  `;
+  ctx.reply(helpMessage);
+});
 
 bot.command("watch", async (ctx) => {
   if (!isAdmin(ctx.from?.id)) {
