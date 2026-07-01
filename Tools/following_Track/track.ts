@@ -428,7 +428,7 @@ async function checkAndAlertConvergence(
   };
 
   try {
-    await sendTelegramAlert(formatConvergenceAlert(alertData));
+    await sendTelegramAlert({ text: formatConvergenceAlert(alertData), user: target });
   } catch (error) {
     console.error(`[track] Failed to send convergence alert for @${target.username}:`, error);
   }
@@ -497,7 +497,7 @@ export async function sendDailyDigestMessage(): Promise<void> {
 
   if (message) {
     try {
-      await sendTelegramAlert(message);
+      await sendTelegramPlaintext(message);
       console.log(`[digest] Sent daily digest with ${digestEntries.length} entries`);
     } catch (error) {
       console.error("[digest] Failed to send daily digest:", error);
