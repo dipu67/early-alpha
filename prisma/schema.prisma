@@ -14,9 +14,14 @@ model TwitterAccount {
   description     String?
   followersCount  Int?      @map("followers_count")
   followingCount  Int?      @map("following_count")
+  tweetCount      Int?      @map("tweet_count")
+  likeCount       Int?      @map("like_count")
   isBlueVerified  Boolean?  @map("is_blue_verified")
   profileImageUrl String?   @map("profile_image_url")
+  profileBannerUrl String?  @map("profile_banner_url")
+  location        String?
   createdAt       DateTime? @map("created_at") @db.Timestamptz
+  detectedAt      DateTime  @default(now()) @map("detected_at") @db.Timestamptz
   firstSeenAt     DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 

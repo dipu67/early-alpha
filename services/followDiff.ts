@@ -23,7 +23,7 @@ export async function checkFollowingDiff(
   }
 
   if (!result.success || !result.users) {
-    throw new Error(
+    throw new Error(  
       `Failed to fetch following for @${entry.username}: ${result.error ?? "Unknown error"}`,
     );
   }
@@ -34,7 +34,6 @@ export async function checkFollowingDiff(
     where: { watchListId },
     orderBy: { takenAt: "desc" },
   });
-
 
   await prisma.followSnapshot.create({
     data: {
@@ -49,6 +48,45 @@ export async function checkFollowingDiff(
 
   const previousIds = new Set(latestSnapshot.userIds);
   const newFollows = result.users.filter((u) => !previousIds.has(u.id));
+
+  if (newFollows.length === 0) {
+    return { newFollows: [], watchListId, username: entry.username };
+  }
+
+  for (const user of newFollows) {
+    await prisma.twitterAccount.upsert({
+      where: { id: user.id },
+      create: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        description: user.description ?? null,
+        followersCount: user.followersCount ?? null,
+        followingCount: user.followingCount ?? null,
+        tweetCount: user.tweetCount ?? null,
+        likeCount: user.likeCount ?? null,
+        isBlueVerified: user.isBlueVerified ?? null,
+        profileImageUrl: user.profileImageUrl ?? null,
+        profileBannerUrl: user.profileBannerUrl ?? null,
+        location: user.location ?? null,
+        createdAt: user.createdAt ? new Date(user.createdAt) : null,
+      },
+      update: {
+        username: user.username,
+        name: user.name,
+        description: user.description ?? null,
+        followersCount: user.followersCount ?? null,
+        followingCount: user.followingCount ?? null,
+        tweetCount: user.tweetCount ?? null,
+        likeCount: user.likeCount ?? null,
+        isBlueVerified: user.isBlueVerified ?? null,
+        profileImageUrl: user.profileImageUrl ?? null,
+        profileBannerUrl: user.profileBannerUrl ?? null,
+        location: user.location ?? null,
+        createdAt: user.createdAt ? new Date(user.createdAt) : null,
+      },
+    });
+  }
 
   return { newFollows, watchListId, username: entry.username };
 }
