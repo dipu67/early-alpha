@@ -15,7 +15,8 @@ async function sendAlert(
     const alertMessage = formatNewFollowAlert(influencerUsername, user);
     await sendTelegramAlert(alertMessage);
   } catch (error) {
-    bot.api.sendMessage(process.env.ADMIN_IDS as string, `Failed to send alert for @${user.username}: ${error.description ?? error.message ?? "Unknown error"}`);
+    const msg = error instanceof Error ? error.message : String(error);
+    bot.api.sendMessage(process.env.ADMIN_IDS as string, `Failed to send alert for @${user.username}: ${msg}`);
     console.error(`Failed to send alert for @${user.username}:`, error);
   }
 }

@@ -12,8 +12,8 @@ export function formatNewFollowAlert(
     ? `\n💬 ${escapeMarkdown(newFollow.description)}`
     : '';
 
-  const accountAge = getAccountAge(newFollow.createdAt!);
-  const followerTier = getFollowerTier(newFollow.followersCount!);
+  const accountAge = newFollow.createdAt ? getAccountAge(newFollow.createdAt) : 'Unknown';
+  const followerTier = getFollowerTier(newFollow.followersCount ?? 0);
 
   return (
     `🔔 *New Follow Detected*\n` +
@@ -21,9 +21,9 @@ export function formatNewFollowAlert(
     `👤 *[${escapeMarkdown(newFollow.name)}${verified}](https://twitter.com/${newFollow.username})*\n` +
     `🐦 @${escapeMarkdown(newFollow.username)}${description}${location}\n\n` +
     `📊 *Stats*\n` +
-    `├ ${followerTier} Followers: \`${formatNumber(newFollow.followersCount!)}\`\n` +
-    `├ 🐦 Tweets: \`${formatNumber(newFollow.tweetCount!)}\`\n` +
-    `├ ❤️ Likes: \`${formatNumber(newFollow.likeCount!)}\`\n` +
+    `├ ${followerTier} Followers: \`${formatNumber(newFollow.followersCount ?? 0)}\`\n` +
+    `├ 🐦 Tweets: \`${formatNumber(newFollow.tweetCount ?? 0)}\`\n` +
+    `├ ❤️ Likes: \`${formatNumber(newFollow.likeCount ?? 0)}\`\n` +
     `└ 🕐 Account Age: \`${accountAge}\`\n\n` +
     `Watched: @${escapeMarkdown(watchedUsername)}\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
