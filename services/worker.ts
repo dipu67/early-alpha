@@ -5,6 +5,7 @@ import { checkFollowingDiff } from "./followDiff.js";
 import { prisma } from "../db/prisma.js";
 import { formatNewFollowAlert } from "./formatAlert.js";
 import { sendTelegramAlert } from "../tg/sendAlert.js";
+import { bot } from "../index.js";
 
 async function sendAlert(
   influencerUsername: string,
@@ -14,6 +15,7 @@ async function sendAlert(
     const alertMessage = formatNewFollowAlert(influencerUsername, user);
     await sendTelegramAlert(alertMessage);
   } catch (error) {
+    bot.api.sendMessage(process.env.ADMIN_IDS as string, `Failed to send alert for @${user.username}: ${error.description ?? error.message ?? "Unknown error"}`);
     console.error(`Failed to send alert for @${user.username}:`, error);
   }
 }
