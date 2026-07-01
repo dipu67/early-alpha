@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { Bot } from "grammy";
-import type { UserData } from "../TwitterClient/TwitterClient.js";
+import type { UserData } from "../TwitterClient/types/index.js";
 
 
 const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN as string);

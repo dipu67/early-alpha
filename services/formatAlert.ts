@@ -1,4 +1,4 @@
-import type { UserData } from "../TwitterClient/TwitterClient.js";
+import type { UserData } from "../TwitterClient/types/index.js";
 
 export function formatNewFollowAlert(
   watchedUsername: string,
@@ -7,7 +7,7 @@ export function formatNewFollowAlert(
 ): {text: string, user: UserData} {
   const verified = newFollow.isBlueVerified ? " ✅" : "";
   const description = newFollow.description
-    ? `\n💬 ${escapeMarkdown(newFollow.description)}`
+    ? `\n${escapeMarkdown(newFollow.description)}`
     : "";
 
   const accountAge = newFollow.createdAt

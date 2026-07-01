@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { bot } from "./tg/bots.js";
+import {grokBot} from "./tg/grokBot.js";
 import "./services/worker.js";
 import "./services/seedWorker.js";
 import {
@@ -18,6 +19,8 @@ export { bot } from "./tg/bots.js";
 
 bot.start();
 console.log("[bot] Telegram bot started");
+grokBot.start();
+console.log("[bot] Grok bot started");
 
 await addSeedTrackingJob();
 await addDailyFullSyncJob();

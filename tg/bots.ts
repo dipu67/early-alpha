@@ -3,8 +3,8 @@ import "dotenv/config";
 import { prisma } from "../db/prisma.js";
 import { getTwitterClient, markRateLimited } from "../twitter/getClient.js";
 import { addWatchJob, removeWatchJob } from "../services/queue.js";
-import type { UserData } from "../TwitterClient/TwitterClient.js";
-import {TwitterClient} from "../TwitterClient/TwitterClient.js";
+import type { UserData } from "../TwitterClient/types/index.js";
+import { TwitterClient } from "../TwitterClient/TwitterClient.js";
 
 const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN as string);
 
@@ -35,16 +35,16 @@ bot.command("start", (ctx) => ctx.reply("Hello! I'm your follow tracker bot."));
 bot.command("chat_id", (ctx) => ctx.reply(`Your ID is: ${ctx.from?.id}`));
 
 bot.command("group_info", (ctx) => {
-  
-
   const chatId = ctx.chat.id;
   const chatTitle = ctx.chat.title ?? "Unknown";
   if (ctx.chat.type !== "group" && ctx.chat.type !== "supergroup") {
     return ctx.reply("This command can only be used in a group chat.");
   }
   if (ctx.message?.is_topic_message) {
-   const topicId = ctx.message.message_thread_id;
-   return ctx.reply(`Group Name: ${chatTitle}\nGroup ID: ${chatId}\nTopic ID: ${topicId}`); 
+    const topicId = ctx.message.message_thread_id;
+    return ctx.reply(
+      `Group Name: ${chatTitle}\nGroup ID: ${chatId}\nTopic ID: ${topicId}`,
+    );
   }
 
   return ctx.reply(`Group Name: ${chatTitle}\nGroup ID: ${chatId}`);
@@ -101,11 +101,13 @@ bot.command("watch", async (ctx) => {
     }
 
     if (!result.success || !result.user) {
-      return ctx.reply(`Failed to fetch @${screenName}: ${result.error ?? "User not found"}`);
+      return ctx.reply(
+        `Failed to fetch @${screenName}: ${result.error ?? "User not found"}`,
+      );
     }
 
     const user: UserData = result.user;
-    console.log(user.id)
+    console.log(user.id);
 
     const watchEntry = existing
       ? await prisma.watchList.update({
@@ -143,7 +145,6 @@ bot.command("watch", async (ctx) => {
         profileImageUrl: user.profileImageUrl ?? null,
       },
     });
-
 
     await addWatchJob(watchEntry.id, user.username);
 
@@ -214,7 +215,9 @@ bot.command("list", async (ctx) => {
     });
 
     if (entries.length === 0) {
-      return ctx.reply("No accounts being watched. Use /watch @username to add one.");
+      return ctx.reply(
+        "No accounts being watched. Use /watch @username to add one.",
+      );
     }
 
     const lines = [`📋 Watch List (${entries.length} accounts)`, ``];
@@ -253,8 +256,19 @@ bot.command("addauth", async (ctx) => {
 
     const account = await prisma.twitterAuthAccount.upsert({
       where: { authToken },
-      create: { authToken, ct0, username: currentUserResult.user.username, id : BigInt(currentUserResult.user?.id), isActive: true },
-      update: { ct0, username: currentUserResult.user.username, isActive: true, rateLimitedUntil: null },
+      create: {
+        authToken,
+        ct0,
+        username: currentUserResult.user.username,
+        id: BigInt(currentUserResult.user?.id),
+        isActive: true,
+      },
+      update: {
+        ct0,
+        username: currentUserResult.user.username,
+        isActive: true,
+        rateLimitedUntil: null,
+      },
     });
 
     return ctx.reply(
@@ -273,15 +287,14 @@ bot.on("message:new_chat_members", async (ctx) => {
     const name = member.username ? `@${member.username}` : member.first_name;
     await ctx.reply(
       `🐺 Welcome to A24 Hunter, ${name}!\n` +
-      `\n` +
-      `We track real-time follows from top crypto influencers to spot alpha before it goes mainstream.\n` +
-      `\n` +
-      `🔔 Alerts fire the moment a new follow is detected\n` +
-      `\n` +
-      `Stay sharp. The alpha is in the follows.`,
+        `\n` +
+        `We track real-time follows from top crypto influencers to spot alpha before it goes mainstream.\n` +
+        `\n` +
+        `🔔 Alerts fire the moment a new follow is detected\n` +
+        `\n` +
+        `Stay sharp. The alpha is in the follows.`,
     );
   }
 });
-
 
 export { bot };

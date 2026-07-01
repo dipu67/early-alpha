@@ -1,6 +1,6 @@
 import { prisma } from "../db/prisma.js";
 import { getTwitterClient, markRateLimited } from "../twitter/getClient.js";
-import type { UserData } from "../TwitterClient/TwitterClient.js";
+import type { UserData } from "../TwitterClient/types/index.js";
 
 export interface DiffResult {
   newFollows: UserData[];

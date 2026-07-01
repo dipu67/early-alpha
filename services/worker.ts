@@ -9,7 +9,7 @@ import { bot } from "../index.js";
 
 async function sendAlert(
   influencerUsername: string,
-  user: import("../TwitterClient/TwitterClient.js").UserData,
+  user: import("../TwitterClient/types/index.js").UserData,
 ): Promise<void> {
   try {
     const alertMessage = formatNewFollowAlert(influencerUsername, user);
