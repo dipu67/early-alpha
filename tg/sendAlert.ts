@@ -1,6 +1,5 @@
 import "dotenv/config";
 import { Bot } from "grammy";
-import { text } from "stream/iter";
 import type { UserData } from "../TwitterClient/TwitterClient.js";
 
 
