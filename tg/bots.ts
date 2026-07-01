@@ -46,7 +46,7 @@ bot.command("group_info", (ctx) => {
    const topicId = ctx.message.message_thread_id;
    return ctx.reply(`Group Name: ${chatTitle}\nGroup ID: ${chatId}\nTopic ID: ${topicId}`); 
   }
-  
+
   return ctx.reply(`Group Name: ${chatTitle}\nGroup ID: ${chatId}`);
 });
 bot.command("help", (ctx) => {
@@ -265,5 +265,23 @@ bot.command("addauth", async (ctx) => {
     return ctx.reply(`Error: ${message}`);
   }
 });
+
+bot.on("message:new_chat_members", async (ctx) => {
+  const newMembers = ctx.message?.new_chat_members ?? [];
+  for (const member of newMembers) {
+    if (member.is_bot) continue;
+    const name = member.username ? `@${member.username}` : member.first_name;
+    await ctx.reply(
+      `🐺 Welcome to A24 Hunter, ${name}!\n` +
+      `\n` +
+      `We track real-time follows from top crypto influencers to spot alpha before it goes mainstream.\n` +
+      `\n` +
+      `🔔 Alerts fire the moment a new follow is detected\n` +
+      `\n` +
+      `Stay sharp. The alpha is in the follows.`,
+    );
+  }
+});
+
 
 export { bot };
