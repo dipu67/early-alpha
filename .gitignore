@@ -11,3 +11,4 @@ build
 *.log
 *.tsbuildinfo
 coverage
+./tg/conversationId.json

@@ -168,7 +168,7 @@ grokBot.on("message", async (ctx) => {
   try {
     ctx.replyWithChatAction("typing");
 
-    const res = await Grok.sendGrokMessage({ message: prompt });
+    const res = await Grok.sendGrokMessage({ message: prompt, conversationId: String(conversationId) });
 
     if (res.success && res.message) {
       return ctx.reply(res.message, {
