@@ -127,7 +127,7 @@ grokBot.on("message", async (ctx) => {
       const res = await Grok.sendGrokMessage(request);
       if (res.success && res.message) {
         return ctx.reply(res.message, {
-          reply_parameters: { message_id: ctx.message.message_id },parse_mode: "MarkdownV2",
+          reply_parameters: { message_id: ctx.message.message_id }
         });
       }
    
@@ -172,7 +172,7 @@ grokBot.on("message", async (ctx) => {
 
     if (res.success && res.message) {
       return ctx.reply(res.message, {
-        reply_parameters: { message_id: ctx.message.message_id }, parse_mode: "MarkdownV2",
+        reply_parameters: { message_id: ctx.message.message_id }
       });
     }
     
