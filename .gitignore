@@ -12,3 +12,6 @@ build
 *.tsbuildinfo
 coverage
 ./tg/conversationId.json
+/getmoni/demo
+/getmoni/background.js
+/getmoni/contentScript.js
