@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prisma } from "../../db/prisma.js";
 import { getTwitterClient, markRateLimited } from "../../twitter/getClient.js";
-import type { UserData } from "../../TwitterClient/types/index.js";
+import type { UserData } from "../../TwitterClient/types.js";
 import { sendTelegramAlert, sendTelegramPlaintext } from "../../tg/sendAlert.js";
 import {
   formatConvergenceAlert,

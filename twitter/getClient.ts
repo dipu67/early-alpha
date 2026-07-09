@@ -1,5 +1,5 @@
 import { prisma } from "../db/prisma.js";
-import { TwitterClient } from "../TwitterClient/TwitterClient.js";
+import { TwitterClient } from "../TwitterClient/index.js";
 
 export async function getTwitterClient(): Promise<{ client: TwitterClient; accountId: bigint }> {
   const account = await prisma.twitterAuthAccount.findFirst({

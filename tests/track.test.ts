@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { categorizeFromBio, passesEarlyStageFilter } from "../Tools/following_Track/track.js";
-import type { UserData } from "../TwitterClient/types/index.js";
+import type { UserData } from "../TwitterClient/types.js";
 
 function makeUser(overrides: Partial<UserData> = {}): UserData {
   return {

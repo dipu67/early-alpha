@@ -3,7 +3,7 @@ import "dotenv/config";
 import { prisma } from "../db/prisma.js";
 import { getTwitterClient, markRateLimited } from "../twitter/getClient.js";
 import { addWatchJob, removeWatchJob } from "../services/queue.js";
-import type { UserData } from "../TwitterClient/types/index.js";
+import type { UserData } from "../TwitterClient/types.js";
 import { TwitterClient } from "../TwitterClient/TwitterClient.js";
 
 const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN as string);
@@ -95,6 +95,8 @@ bot.command("watch", async (ctx) => {
 
     const { client, accountId } = await getTwitterClient();
     const result = await client.getUserByScreenName(screenName);
+    console.log(result)
+    
 
     if (result.rateLimit && result.rateLimit.remaining === 0) {
       await markRateLimited(accountId, result.rateLimit.reset);

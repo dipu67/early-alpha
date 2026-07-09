@@ -1,4 +1,5 @@
 import queryIds from "./query-ids.json" with { type: "json" };
+import { ClientTransaction, fetchXDocument } from "x-client-transaction-id";
 import type {
   TwitterCookies,
   TwitterClientOptions,
@@ -26,7 +27,7 @@ import type {
   GrokSendMessageRequest,
   RateLimit,
   DeleteGrokConversationResult,
-} from "./types/index.js";
+} from "./types.js";
 const GRAPHQL_BASE = "https://x.com/i/api/graphql";
 const REST_BASE = "https://x.com/i/api/1.1";
 const BEARER_TOKEN =
@@ -204,6 +205,9 @@ export class TwitterClient {
   private ct0: string;
   private userAgent: string;
   private cachedUserId: string | undefined;
+  private clientTx: ClientTransaction | undefined;
+  private clientTxCreatedAt = 0;
+  private clientTxInit: Promise<ClientTransaction> | undefined;
   rateLimit: RateLimit | undefined;
 
   constructor(options: TwitterClientOptions) {
@@ -219,19 +223,61 @@ export class TwitterClient {
 
   // ── Headers ──
 
+  // x-client-transaction-id is a validated, time-bound token derived from
+  // x.com's live homepage + ondemand.s.js. It is NOT random. We build a
+  // ClientTransaction once and reuse it (refreshing hourly), generating a
+  // fresh id per request from the HTTP method + endpoint path.
+  private async getClientTransaction(): Promise<ClientTransaction> {
+    const ONE_HOUR = 60 * 60 * 1000;
+    if (this.clientTx && Date.now() - this.clientTxCreatedAt < ONE_HOUR) {
+      return this.clientTx;
+    }
+    if (!this.clientTxInit) {
+      this.clientTxInit = (async () => {
+        const doc = await fetchXDocument();
+        const tx = await ClientTransaction.create(doc);
+        this.clientTx = tx;
+        this.clientTxCreatedAt = Date.now();
+        return tx;
+      })();
+      this.clientTxInit.finally(() => {
+        this.clientTxInit = undefined;
+      });
+    }
+    return this.clientTxInit;
+  }
+
+  private async transactionId(method: string, path: string): Promise<string> {
+    const tx = await this.getClientTransaction();
+    return tx.generateTransactionId(method, path);
+  }
+
   private jsonHeaders(): Record<string, string> {
     return {
-      authorization: BEARER_TOKEN,
-      "content-type": "application/json",
-      "x-csrf-token": this.ct0,
-      "x-twitter-auth-type": "OAuth2Session",
-      "x-twitter-active-user": "yes",
-      "x-twitter-client-language": "en",
-      cookie: `auth_token=${this.authToken}; ct0=${this.ct0}`,
-      "user-agent": this.userAgent,
-      origin: "https://x.com",
-      referer: "https://x.com/",
-    };
+    "accept": "*/*",
+    "accept-language": "en-US,en;q=0.9",
+    "authorization": BEARER_TOKEN,
+    "content-type": "application/json",
+    "priority": "u=1, i",
+    "sec-ch-ua": "\"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"150\", \"Brave\";v=\"150\"",
+    "sec-ch-ua-arch": "\"arm\"",
+    "sec-ch-ua-bitness": "\"64\"",
+    "sec-ch-ua-full-version-list": "\"Not;A=Brand\";v=\"8.0.0.0\", \"Chromium\";v=\"150.0.0.0\", \"Brave\";v=\"150.0.0.0\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-model": "\"\"",
+    "sec-ch-ua-platform": "\"macOS\"",
+    "sec-ch-ua-platform-version": "\"26.5.1\"",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
+    "sec-gpc": "1",
+    "x-csrf-token": this.ct0,
+    "x-twitter-active-user": "yes",
+    "x-twitter-auth-type": "OAuth2Session",
+    "x-twitter-client-language": "en",
+    "cookie": `auth_token=${this.authToken}; ct0=${this.ct0}`,
+    "Referer": "https://x.com/explore"
+  }
   }
 
   private formHeaders(): Record<string, string> {
@@ -274,7 +320,13 @@ export class TwitterClient {
 
     const res = await fetch(url, {
       method: "POST",
-      headers: this.jsonHeaders(),
+      headers: {
+        ...this.jsonHeaders(),
+        "x-client-transaction-id": await this.transactionId(
+          "POST",
+          new URL(url).pathname,
+        ),
+      },
       body: JSON.stringify(body),
     });
     this.updateRateLimit(res);
@@ -306,10 +358,15 @@ export class TwitterClient {
 
     const res = await fetch(url, {
       method: "GET",
-      headers: this.jsonHeaders(),
+      headers: {
+        ...this.jsonHeaders(),
+        "x-client-transaction-id": await this.transactionId(
+          "GET",
+          new URL(url).pathname,
+        ),
+      },
     });
     this.updateRateLimit(res);
-
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
@@ -638,7 +695,13 @@ export class TwitterClient {
     try {
       const res = await fetch(url, {
         method: "POST",
-        headers: this.formHeaders(),
+        headers: {
+          ...this.formHeaders(),
+          "x-client-transaction-id": await this.transactionId(
+            "POST",
+            new URL(url).pathname,
+          ),
+        },
         body: body.toString(),
       });
       this.updateRateLimit(res);
@@ -975,7 +1038,9 @@ export class TwitterClient {
 
       const users: UserData[] = [];
       for (const entry of json.data?.users ?? []) {
-        const mapped = this.mapUserFromGraphql(entry?.result);
+        // UsersByRestIds returns each user object directly; older/other
+        // shapes wrap it in `.result`. Handle both.
+        const mapped = this.mapUserFromGraphql(entry?.result ?? entry);
         if (mapped) users.push(mapped);
       }
       return this.withRateLimit({ success: true, users });
@@ -1332,10 +1397,7 @@ export class TwitterClient {
       "sec-fetch-mode": "cors",
       "sec-fetch-site": "same-site",
       "sec-gpc": "1",
-      "x-client-transaction-id":
-        "pQTHXvF33RlQ7QVFoOF2XB4dmu1gw3lvPjQuJWHEll65pt2MqC16193W9SjhX1MA4ikEUKBN5/uc44rJifFurcDquq3Epg",
-      "x-csrf-token":
-        "e8f8d522f632053f15f1308805dcac071662c7d38dfcf64c19087725ad186da48a728249bcc7205a96922b86c6de6c3b6784b3c2bbcb55b3c0f7a77e7c09bbb2b60335d40274c16c8a290ad6b3d7dd9b",
+      "x-csrf-token":this.ct0,
       "x-twitter-active-user": "yes",
       "x-twitter-auth-type": "OAuth2Session",
       "x-twitter-client-language": "en",
@@ -1391,7 +1453,13 @@ export class TwitterClient {
     const res = await fetch(
       "https://x.com/i/api/graphql/TlKHSWVMVeaa-i7dqQqFQA/ConversationItem_DeleteConversationMutation",
       {
-        headers: this.grokHeaders(),
+        headers: {
+          ...this.grokHeaders(),
+          "x-client-transaction-id": await this.transactionId(
+            "POST",
+            "/i/api/graphql/TlKHSWVMVeaa-i7dqQqFQA/ConversationItem_DeleteConversationMutation",
+          ),
+        },
         body: JSON.stringify(body),
         method: "POST",
       },
@@ -1454,7 +1522,13 @@ export class TwitterClient {
       fileAttachments: [],
     });
 
-    const headers = this.grokHeaders();
+    const headers = {
+      ...this.grokHeaders(),
+      "x-client-transaction-id": await this.transactionId(
+        "POST",
+        "/2/grok/add_response.json",
+      ),
+    };
 
     const body = {
       responses,
@@ -1505,11 +1579,12 @@ export class TwitterClient {
           }
 
           const result = parsed?.result;
-          if (result?.responseType === "limiter"){
+          if (result?.responseType === "limiter") {
             return {
               success: false,
               conversationId,
-              error: "Rate limit exceeded. You've reached your limit of 20 Grok questions per 24 hours for now",
+              error:
+                "Rate limit exceeded. You've reached your limit of 20 Grok questions per 24 hours for now",
             };
           }
           if (result?.message && result?.messageTag === "final") {
@@ -1523,7 +1598,6 @@ export class TwitterClient {
         }
       }
 
-      
       if (finalMessage)
         return {
           success: true,

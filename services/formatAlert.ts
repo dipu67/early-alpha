@@ -1,4 +1,4 @@
-import type { UserData } from "../TwitterClient/types/index.js";
+import type { UserData } from "../TwitterClient/types.js";
 
 export function formatNewFollowAlert(
   watchedUsername: string,
