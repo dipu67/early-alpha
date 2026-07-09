@@ -1,0 +1,52 @@
+{
+    "items": [
+        {
+            "twitterUserId": "2074529477187489792",
+            "username": "playarcia",
+            "name": "Arcia",
+            "status": "UNRANKED",
+            "reportsCount": 0,
+            "reportedByAccount": false,
+            "reportedType": null,
+            "originalUrl": null,
+            "originalDiscoverUrl": null,
+            "followersScore": 11,
+            "type": "human",
+            "level": null,
+            "userTags": [],
+            "adminTags": []
+        },
+        {
+            "twitterUserId": "2074529477187489792",
+            "username": "playarcia",
+            "name": "Arcia",
+            "status": "UNRANKED",
+            "reportsCount": 0,
+            "reportedByAccount": false,
+            "reportedType": null,
+            "originalUrl": null,
+            "originalDiscoverUrl": null,
+            "followersScore": 11,
+            "type": "human",
+            "level": null,
+            "userTags": [],
+            "adminTags": []
+        },
+        {
+            "twitterUserId": "2074529477187489792",
+            "username": "playarcia",
+            "name": "Arcia",
+            "status": "UNRANKED",
+            "reportsCount": 0,
+            "reportedByAccount": false,
+            "reportedType": null,
+            "originalUrl": null,
+            "originalDiscoverUrl": null,
+            "followersScore": 11,
+            "type": "human",
+            "level": null,
+            "userTags": [],
+            "adminTags": []
+        }
+    ]
+}

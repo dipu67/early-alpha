@@ -1,0 +1,63 @@
+{
+    "userTags": [],
+    "adminTags": [],
+    "onchainData": null,
+    "socialData": {
+        "observedId": 5557856978,
+        "observedType": "twitter_account",
+        "username": "playarcia",
+        "twitterUrl": "https://x.com/playarcia",
+        "twitterUserId": "2074529477187489792",
+        "name": "Arcia",
+        "description": "The first MMO on @arc — explore, conquer, trade, and shape the onchain world.",
+        "isProject": false,
+        "tags": [],
+        "profileImageUrl": "https://pbs.twimg.com/profile_images/2074543785330065409/E1T5917M_normal.jpg",
+        "profileBannerUrl": "https://pbs.twimg.com/profile_banners/2074529477187489792/1783444196",
+        "smartFollowersScore": 11,
+        "smartFollowersScoreChange": 0,
+        "smartFollowersCount": 3,
+        "smartFollowersCountChange": 0,
+        "smartFollowersBurstEventsCount": 1,
+        "smartFollowersBurstEventsCountChange": 0,
+        "followersCount": 584,
+        "followersCountChange": 0,
+        "smartMentionsCount": 1,
+        "smartMentionsCountChange": 0,
+        "smartMentionsBurstEventsCount": 0,
+        "smartMentionsBurstEventsCountChange": 0,
+        "mentionsCount": 0,
+        "mentionsCountChange": 0,
+        "usernameChanges": [],
+        "usernameChangeCount": 0,
+        "descriptionChangeCount": 0,
+        "nameChangeCount": 0,
+        "smartLevel": null,
+        "smartTags": [],
+        "smartWalletCount": 0,
+        "smartWalletCountChange": 0,
+        "myWalletCount": 0,
+        "myWalletCountChange": 0,
+        "terminalsInfo": [],
+        "links": [
+            {
+                "url": "https://x.com/playarcia",
+                "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/twitter_logo.png",
+                "type": "TWITTER",
+                "name": "@playarcia"
+            }
+        ],
+        "scamInfo": {
+            "status": "UNRANKED",
+            "reportsCount": 0,
+            "reportedByAccount": false,
+            "reportedType": null,
+            "originalUrl": null,
+            "originalDiscoverUrl": null
+        },
+        "contractAddressesInfo": [],
+        "caCount": 0,
+        "linkedWalletCount": 0,
+        "mentionedWalletCount": 0
+    }
+}

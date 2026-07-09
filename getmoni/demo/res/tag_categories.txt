@@ -1,0 +1,25 @@
+{
+    "items": [
+        {
+            "slug": "daos/groups-members",
+            "name": "DAOs/Groups members",
+            "totalCount": 1
+        },
+        {
+            "slug": "project-team",
+            "name": "Project team",
+            "totalCount": 1
+        },
+        {
+            "slug": "projects",
+            "name": "Projects",
+            "totalCount": 1
+        },
+        {
+            "slug": "influencers",
+            "name": "Influencers",
+            "totalCount": 1
+        }
+    ],
+    "totalCount": 4
+}

@@ -1,0 +1,117 @@
+{
+    "items": [
+        {
+            "id": 1,
+            "links": [],
+            "twitterUrl": "https://x.com/playarcia",
+            "username": "playarcia",
+            "name": "Arcia",
+            "profileImageUrl": "https://pbs.twimg.com/profile_images/2074543785330065409/E1T5917M_normal.jpg",
+            "createdAt": 1783452361,
+            "type": "NEW_MENTION",
+            "text": "🗣 Was mentioned by @kmoney",
+            "data": {
+                "rawTweet": {
+                    "entities": {
+                        "links": []
+                    },
+                    "attachments": null,
+                    "referencedTweets": null,
+                    "referencedTweetAuthorTwitterUserId": null,
+                    "likeCount": 3,
+                    "replyCount": 0,
+                    "retweetCount": 0,
+                    "bookmarkCount": 0,
+                    "impressionCount": 89,
+                    "displayTextRange": [
+                        19,
+                        22
+                    ],
+                    "authorTwitterUserId": "1404603419101306881",
+                    "twitterTweetId": "2074575685923037194",
+                    "sentiment": "neutral"
+                },
+                "mentionBy": {
+                    "userTags": [],
+                    "adminTags": [],
+                    "onchainData": null,
+                    "socialData": {
+                        "observedId": 23539,
+                        "observedType": "twitter_account",
+                        "username": "kmoney",
+                        "twitterUrl": "https://x.com/kmoney",
+                        "twitterUserId": "1404603419101306881",
+                        "name": "kmoney",
+                        "description": null,
+                        "isProject": false,
+                        "tags": [],
+                        "profileImageUrl": "https://pbs.twimg.com/profile_images/2042929530747420672/N_ZKf0E__normal.jpg",
+                        "profileBannerUrl": null,
+                        "smartFollowersScore": 17224,
+                        "smartFollowersScoreChange": 0,
+                        "smartFollowersCount": 0,
+                        "smartFollowersCountChange": 0,
+                        "smartFollowersBurstEventsCount": 0,
+                        "smartFollowersBurstEventsCountChange": 0,
+                        "followersCount": 0,
+                        "followersCountChange": 0,
+                        "smartMentionsCount": 0,
+                        "smartMentionsCountChange": 0,
+                        "smartMentionsBurstEventsCount": 0,
+                        "smartMentionsBurstEventsCountChange": 0,
+                        "mentionsCount": 0,
+                        "mentionsCountChange": 0,
+                        "usernameChanges": [],
+                        "usernameChangeCount": 0,
+                        "descriptionChangeCount": 0,
+                        "nameChangeCount": 0,
+                        "smartLevel": {
+                            "tier": 3,
+                            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/score_3.png"
+                        },
+                        "smartTags": [
+                            {
+                                "name": "Influencer"
+                            },
+                            {
+                                "name": "Photon Team"
+                            },
+                            {
+                                "name": "Alpha Hunter"
+                            }
+                        ],
+                        "smartWalletCount": 0,
+                        "smartWalletCountChange": 0,
+                        "myWalletCount": 0,
+                        "myWalletCountChange": 0,
+                        "terminalsInfo": [],
+                        "links": [
+                            {
+                                "url": "https://x.com/kmoney",
+                                "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/twitter_logo.png",
+                                "type": "TWITTER",
+                                "name": "@kmoney"
+                            }
+                        ],
+                        "scamInfo": {
+                            "status": "APPROVED",
+                            "reportsCount": 0,
+                            "reportedByAccount": false,
+                            "reportedType": null,
+                            "originalUrl": null,
+                            "originalDiscoverUrl": null
+                        },
+                        "contractAddressesInfo": [],
+                        "caCount": 15,
+                        "linkedWalletCount": 0,
+                        "mentionedWalletCount": 1
+                    }
+                },
+                "tweetUrl": "https://x.com/1404603419101306881/status/2074575685923037194",
+                "tweetText": "@vends_ @playarcia 😭😭😭"
+            }
+        }
+    ],
+    "totalCount": 1,
+    "maxAvailableCount": 1
+}
