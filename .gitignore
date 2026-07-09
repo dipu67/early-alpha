@@ -5,8 +5,6 @@ build
 .env
 .env.*
 
-generated/prisma
-
 .DS_Store
 *.log
 *.tsbuildinfo
