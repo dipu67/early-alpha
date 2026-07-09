@@ -5,13 +5,10 @@ build
 .env
 .env.*
 
-/generated/prisma
+generated/prisma
 
 .DS_Store
 *.log
 *.tsbuildinfo
 coverage
-/tg/conversationId.json
-/getmoni/demo*
-/getmoni/background.js
-/getmoni/contentScript.js
+tg/conversationId.json
