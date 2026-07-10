@@ -17,12 +17,30 @@ interface TagRegistryItem {
   name: string;
 }
 
-// tags.json lives at the repo root, one level up from services/. Read it
-// synchronously at module load — it is tiny and never changes at runtime. This
-// avoids JSON import-assertion friction under the project's ESM config.
-const registry = JSON.parse(
-  readFileSync(new URL("../tags.json", import.meta.url), "utf8"),
-) as { items: TagRegistryItem[] };
+// Load tags.json's vocabulary. In dev (tsx) this module lives at services/, so
+// "../tags.json" is the repo root. Compiled to dist/services/, the same relative
+// path points at dist/tags.json (populated by the build's copy step). We try
+// both the dist-local copy and the repo root so it works either way and doesn't
+// depend on the build copy having run.
+const TAGS_CANDIDATES = ["../tags.json", "../../tags.json"] as const;
+
+function loadRegistry(): { items: TagRegistryItem[] } {
+  const errors: string[] = [];
+  for (const rel of TAGS_CANDIDATES) {
+    try {
+      const raw = readFileSync(new URL(rel, import.meta.url), "utf8");
+      return JSON.parse(raw) as { items: TagRegistryItem[] };
+    } catch (err) {
+      errors.push(`${rel}: ${(err as Error).message}`);
+    }
+  }
+  throw new Error(
+    `projectTagger: could not locate tags.json (tried ${TAGS_CANDIDATES.join(", ")}). ` +
+      `Ensure the build copies tags.json into dist/. Details — ${errors.join(" | ")}`,
+  );
+}
+
+const registry = loadRegistry();
 
 /** Every slug the registry knows about — the classifier can never emit anything outside this. */
 export const VALID_SLUGS: ReadonlySet<string> = new Set(
