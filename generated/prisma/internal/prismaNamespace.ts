@@ -1122,6 +1122,7 @@ export const TwitterAccountScalarFieldEnum = {
   username: 'username',
   name: 'name',
   description: 'description',
+  tags: 'tags',
   followersCount: 'followersCount',
   followingCount: 'followingCount',
   tweetCount: 'tweetCount',

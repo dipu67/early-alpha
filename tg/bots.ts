@@ -5,6 +5,7 @@ import { getTwitterClient, markRateLimited } from "../twitter/getClient.js";
 import { addWatchJob, removeWatchJob } from "../services/queue.js";
 import type { UserData } from "../TwitterClient/types.js";
 import { TwitterClient } from "../TwitterClient/TwitterClient.js";
+import { classifyAccount } from "../services/projectTagger.js";
 
 const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN as string);
 
@@ -131,6 +132,7 @@ bot.command("watch", async (ctx) => {
         username: user.username,
         name: user.name,
         description: user.description ?? null,
+        tags: classifyAccount(user),
         followersCount: user.followersCount ?? null,
         followingCount: user.followingCount ?? null,
         isBlueVerified: user.isBlueVerified ?? null,
@@ -141,6 +143,7 @@ bot.command("watch", async (ctx) => {
         username: user.username,
         name: user.name,
         description: user.description ?? null,
+        tags: classifyAccount(user),
         followersCount: user.followersCount ?? null,
         followingCount: user.followingCount ?? null,
         isBlueVerified: user.isBlueVerified ?? null,

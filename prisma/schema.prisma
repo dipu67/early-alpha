@@ -12,6 +12,7 @@ model TwitterAccount {
   username        String    @unique
   name            String    @default("")
   description     String?
+  tags            String[]  @default([])
   followersCount  Int?      @map("followers_count")
   followingCount  Int?      @map("following_count")
   tweetCount      Int?      @map("tweet_count")

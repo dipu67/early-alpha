@@ -83,6 +83,7 @@ export type TwitterAccountCountAggregateOutputType = {
   username: number
   name: number
   description: number
+  tags: number
   followersCount: number
   followingCount: number
   tweetCount: number
@@ -156,6 +157,7 @@ export type TwitterAccountCountAggregateInputType = {
   username?: true
   name?: true
   description?: true
+  tags?: true
   followersCount?: true
   followingCount?: true
   tweetCount?: true
@@ -262,6 +264,7 @@ export type TwitterAccountGroupByOutputType = {
   username: string
   name: string
   description: string | null
+  tags: string[]
   followersCount: number | null
   followingCount: number | null
   tweetCount: number | null
@@ -304,6 +307,7 @@ export type TwitterAccountWhereInput = {
   username?: Prisma.StringFilter<"TwitterAccount"> | string
   name?: Prisma.StringFilter<"TwitterAccount"> | string
   description?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
+  tags?: Prisma.StringNullableListFilter<"TwitterAccount">
   followersCount?: Prisma.IntNullableFilter<"TwitterAccount"> | number | null
   followingCount?: Prisma.IntNullableFilter<"TwitterAccount"> | number | null
   tweetCount?: Prisma.IntNullableFilter<"TwitterAccount"> | number | null
@@ -325,6 +329,7 @@ export type TwitterAccountOrderByWithRelationInput = {
   username?: Prisma.SortOrder
   name?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  tags?: Prisma.SortOrder
   followersCount?: Prisma.SortOrderInput | Prisma.SortOrder
   followingCount?: Prisma.SortOrderInput | Prisma.SortOrder
   tweetCount?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -349,6 +354,7 @@ export type TwitterAccountWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.TwitterAccountWhereInput | Prisma.TwitterAccountWhereInput[]
   name?: Prisma.StringFilter<"TwitterAccount"> | string
   description?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
+  tags?: Prisma.StringNullableListFilter<"TwitterAccount">
   followersCount?: Prisma.IntNullableFilter<"TwitterAccount"> | number | null
   followingCount?: Prisma.IntNullableFilter<"TwitterAccount"> | number | null
   tweetCount?: Prisma.IntNullableFilter<"TwitterAccount"> | number | null
@@ -370,6 +376,7 @@ export type TwitterAccountOrderByWithAggregationInput = {
   username?: Prisma.SortOrder
   name?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  tags?: Prisma.SortOrder
   followersCount?: Prisma.SortOrderInput | Prisma.SortOrder
   followingCount?: Prisma.SortOrderInput | Prisma.SortOrder
   tweetCount?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -397,6 +404,7 @@ export type TwitterAccountScalarWhereWithAggregatesInput = {
   username?: Prisma.StringWithAggregatesFilter<"TwitterAccount"> | string
   name?: Prisma.StringWithAggregatesFilter<"TwitterAccount"> | string
   description?: Prisma.StringNullableWithAggregatesFilter<"TwitterAccount"> | string | null
+  tags?: Prisma.StringNullableListFilter<"TwitterAccount">
   followersCount?: Prisma.IntNullableWithAggregatesFilter<"TwitterAccount"> | number | null
   followingCount?: Prisma.IntNullableWithAggregatesFilter<"TwitterAccount"> | number | null
   tweetCount?: Prisma.IntNullableWithAggregatesFilter<"TwitterAccount"> | number | null
@@ -416,6 +424,7 @@ export type TwitterAccountCreateInput = {
   username: string
   name?: string
   description?: string | null
+  tags?: Prisma.TwitterAccountCreatetagsInput | string[]
   followersCount?: number | null
   followingCount?: number | null
   tweetCount?: number | null
@@ -437,6 +446,7 @@ export type TwitterAccountUncheckedCreateInput = {
   username: string
   name?: string
   description?: string | null
+  tags?: Prisma.TwitterAccountCreatetagsInput | string[]
   followersCount?: number | null
   followingCount?: number | null
   tweetCount?: number | null
@@ -458,6 +468,7 @@ export type TwitterAccountUpdateInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tags?: Prisma.TwitterAccountUpdatetagsInput | string[]
   followersCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followingCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -479,6 +490,7 @@ export type TwitterAccountUncheckedUpdateInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tags?: Prisma.TwitterAccountUpdatetagsInput | string[]
   followersCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followingCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -500,6 +512,7 @@ export type TwitterAccountCreateManyInput = {
   username: string
   name?: string
   description?: string | null
+  tags?: Prisma.TwitterAccountCreatetagsInput | string[]
   followersCount?: number | null
   followingCount?: number | null
   tweetCount?: number | null
@@ -519,6 +532,7 @@ export type TwitterAccountUpdateManyMutationInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tags?: Prisma.TwitterAccountUpdatetagsInput | string[]
   followersCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followingCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -538,6 +552,7 @@ export type TwitterAccountUncheckedUpdateManyInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tags?: Prisma.TwitterAccountUpdatetagsInput | string[]
   followersCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followingCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -552,11 +567,20 @@ export type TwitterAccountUncheckedUpdateManyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type StringNullableListFilter<$PrismaModel = never> = {
+  equals?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel> | null
+  has?: string | Prisma.StringFieldRefInput<$PrismaModel> | null
+  hasEvery?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  hasSome?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  isEmpty?: boolean
+}
+
 export type TwitterAccountCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   username?: Prisma.SortOrder
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  tags?: Prisma.SortOrder
   followersCount?: Prisma.SortOrder
   followingCount?: Prisma.SortOrder
   tweetCount?: Prisma.SortOrder
@@ -628,12 +652,21 @@ export type TwitterAccountScalarRelationFilter = {
   isNot?: Prisma.TwitterAccountWhereInput
 }
 
+export type TwitterAccountCreatetagsInput = {
+  set: string[]
+}
+
 export type StringFieldUpdateOperationsInput = {
   set?: string
 }
 
 export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
+}
+
+export type TwitterAccountUpdatetagsInput = {
+  set?: string[]
+  push?: string | string[]
 }
 
 export type NullableIntFieldUpdateOperationsInput = {
@@ -689,6 +722,7 @@ export type TwitterAccountCreateWithoutFollowEdgesAsFollowingInput = {
   username: string
   name?: string
   description?: string | null
+  tags?: Prisma.TwitterAccountCreatetagsInput | string[]
   followersCount?: number | null
   followingCount?: number | null
   tweetCount?: number | null
@@ -709,6 +743,7 @@ export type TwitterAccountUncheckedCreateWithoutFollowEdgesAsFollowingInput = {
   username: string
   name?: string
   description?: string | null
+  tags?: Prisma.TwitterAccountCreatetagsInput | string[]
   followersCount?: number | null
   followingCount?: number | null
   tweetCount?: number | null
@@ -745,6 +780,7 @@ export type TwitterAccountUpdateWithoutFollowEdgesAsFollowingInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tags?: Prisma.TwitterAccountUpdatetagsInput | string[]
   followersCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followingCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -765,6 +801,7 @@ export type TwitterAccountUncheckedUpdateWithoutFollowEdgesAsFollowingInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tags?: Prisma.TwitterAccountUpdatetagsInput | string[]
   followersCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followingCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -785,6 +822,7 @@ export type TwitterAccountCreateWithoutAlertsInput = {
   username: string
   name?: string
   description?: string | null
+  tags?: Prisma.TwitterAccountCreatetagsInput | string[]
   followersCount?: number | null
   followingCount?: number | null
   tweetCount?: number | null
@@ -805,6 +843,7 @@ export type TwitterAccountUncheckedCreateWithoutAlertsInput = {
   username: string
   name?: string
   description?: string | null
+  tags?: Prisma.TwitterAccountCreatetagsInput | string[]
   followersCount?: number | null
   followingCount?: number | null
   tweetCount?: number | null
@@ -841,6 +880,7 @@ export type TwitterAccountUpdateWithoutAlertsInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tags?: Prisma.TwitterAccountUpdatetagsInput | string[]
   followersCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followingCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -861,6 +901,7 @@ export type TwitterAccountUncheckedUpdateWithoutAlertsInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tags?: Prisma.TwitterAccountUpdatetagsInput | string[]
   followersCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followingCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -921,6 +962,7 @@ export type TwitterAccountSelect<ExtArgs extends runtime.Types.Extensions.Intern
   username?: boolean
   name?: boolean
   description?: boolean
+  tags?: boolean
   followersCount?: boolean
   followingCount?: boolean
   tweetCount?: boolean
@@ -943,6 +985,7 @@ export type TwitterAccountSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   username?: boolean
   name?: boolean
   description?: boolean
+  tags?: boolean
   followersCount?: boolean
   followingCount?: boolean
   tweetCount?: boolean
@@ -962,6 +1005,7 @@ export type TwitterAccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   username?: boolean
   name?: boolean
   description?: boolean
+  tags?: boolean
   followersCount?: boolean
   followingCount?: boolean
   tweetCount?: boolean
@@ -981,6 +1025,7 @@ export type TwitterAccountSelectScalar = {
   username?: boolean
   name?: boolean
   description?: boolean
+  tags?: boolean
   followersCount?: boolean
   followingCount?: boolean
   tweetCount?: boolean
@@ -995,7 +1040,7 @@ export type TwitterAccountSelectScalar = {
   updatedAt?: boolean
 }
 
-export type TwitterAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "name" | "description" | "followersCount" | "followingCount" | "tweetCount" | "likeCount" | "isBlueVerified" | "profileImageUrl" | "profileBannerUrl" | "location" | "createdAt" | "detectedAt" | "firstSeenAt" | "updatedAt", ExtArgs["result"]["twitterAccount"]>
+export type TwitterAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "name" | "description" | "tags" | "followersCount" | "followingCount" | "tweetCount" | "likeCount" | "isBlueVerified" | "profileImageUrl" | "profileBannerUrl" | "location" | "createdAt" | "detectedAt" | "firstSeenAt" | "updatedAt", ExtArgs["result"]["twitterAccount"]>
 export type TwitterAccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   followEdgesAsFollowing?: boolean | Prisma.TwitterAccount$followEdgesAsFollowingArgs<ExtArgs>
   alerts?: boolean | Prisma.TwitterAccount$alertsArgs<ExtArgs>
@@ -1015,6 +1060,7 @@ export type $TwitterAccountPayload<ExtArgs extends runtime.Types.Extensions.Inte
     username: string
     name: string
     description: string | null
+    tags: string[]
     followersCount: number | null
     followingCount: number | null
     tweetCount: number | null
@@ -1456,6 +1502,7 @@ export interface TwitterAccountFieldRefs {
   readonly username: Prisma.FieldRef<"TwitterAccount", 'String'>
   readonly name: Prisma.FieldRef<"TwitterAccount", 'String'>
   readonly description: Prisma.FieldRef<"TwitterAccount", 'String'>
+  readonly tags: Prisma.FieldRef<"TwitterAccount", 'String[]'>
   readonly followersCount: Prisma.FieldRef<"TwitterAccount", 'Int'>
   readonly followingCount: Prisma.FieldRef<"TwitterAccount", 'Int'>
   readonly tweetCount: Prisma.FieldRef<"TwitterAccount", 'Int'>

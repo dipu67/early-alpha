@@ -1,4 +1,5 @@
 import type { UserData } from "../TwitterClient/types.js";
+import { classifyAccount, tagLabel } from "./projectTagger.js";
 
 export function formatNewFollowAlert(
   watchedUsername: string,
@@ -10,6 +11,12 @@ export function formatNewFollowAlert(
     ? `\n${escapeMarkdown(newFollow.description)}`
     : "";
 
+  const tags = classifyAccount(newFollow);
+  const tagLine =
+    tags.length > 0
+      ? `🏷️ ${escapeMarkdown(tags.map(tagLabel).join(" · "))}\n`
+      : "";
+
   const accountAge = newFollow.createdAt
     ? getAccountAge(newFollow.createdAt)
     : "Unknown";
@@ -20,6 +27,7 @@ export function formatNewFollowAlert(
       `━━━━━━━━━━━━━━━━━━\n` +
       `👤 *${escapeMarkdown(newFollow.name)}${verified}*\n` +
       `🐦 [@${escapeMarkdown(newFollow.username)}](https://x.com/${newFollow.username}) \nBio: \n${description}\n\n` +
+      tagLine +
       `📊 *Stats*\n` +
       `├ ${followerTier} Followers: \`${formatNumber(newFollow.followersCount ?? 0)}\`\n` +
       `├ 🐦 Tweets: \`${formatNumber(newFollow.tweetCount ?? 0)}\`\n` +

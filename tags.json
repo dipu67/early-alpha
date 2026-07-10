@@ -1,0 +1,472 @@
+{
+    "items": [
+        {
+            "id": 83,
+            "slug": "launchpad",
+            "name": "Launchpad",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/rocket_1f680.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 2395
+        },
+        {
+            "id": 87,
+            "slug": "l1",
+            "name": "L1",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/link_1f517.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 1387
+        },
+        {
+            "id": 92,
+            "slug": "l2",
+            "name": "L2",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/puzzle-piece_1f9e9.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 575
+        },
+        {
+            "id": 70,
+            "slug": "meme",
+            "name": "Meme",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/frog_1f438.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 30319
+        },
+        {
+            "id": 59,
+            "slug": "rwa",
+            "name": "RWA",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/rwa.png",
+            "color": "#899CFF",
+            "hoverColor": "#899CFF",
+            "totalCount": 2472
+        },
+        {
+            "id": 43,
+            "slug": "defi",
+            "name": "DeFi",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/defi.png",
+            "color": "#9CDEFF",
+            "hoverColor": "#9CDEFF",
+            "totalCount": 15578
+        },
+        {
+            "id": 56,
+            "slug": "ai",
+            "name": "AI",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/ai.png",
+            "color": "#FF89C9",
+            "hoverColor": "#FF89C9",
+            "totalCount": 11936
+        },
+        {
+            "id": 88,
+            "slug": "derivatives",
+            "name": "Derivatives",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/chart-increasing_1f4c8.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 1484
+        },
+        {
+            "id": 42,
+            "slug": "nft",
+            "name": "NFT",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/nft.png",
+            "color": "#BCF165",
+            "hoverColor": "#BCF165",
+            "totalCount": 12485
+        },
+        {
+            "id": 98,
+            "slug": "lending-yield",
+            "name": "Lending / Yield",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/credit-card_1f4b3.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 3055
+        },
+        {
+            "id": 67,
+            "slug": "depin",
+            "name": "DePIN",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/depin.png",
+            "color": "#FF8989",
+            "hoverColor": "#FF8989",
+            "totalCount": 1282
+        },
+        {
+            "id": 68,
+            "slug": "desci",
+            "name": "DeSci",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/desci.png",
+            "color": "#FF8989",
+            "hoverColor": "#FF8989",
+            "totalCount": 356
+        },
+        {
+            "id": 55,
+            "slug": "socialfi",
+            "name": "SocialFi",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/socialfi.png",
+            "color": "#FFD789",
+            "hoverColor": "#FFD789",
+            "totalCount": 2250
+        },
+        {
+            "id": 75,
+            "slug": "tools",
+            "name": "Tools",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/toolbox_1f9f0.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 13408
+        },
+        {
+            "id": 77,
+            "slug": "ai-agents",
+            "name": "AI Agents",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/robot_1f916.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 7838
+        },
+        {
+            "id": 78,
+            "slug": "infra-data",
+            "name": "Infra & Data",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/hammer-and-wrench_1f6e0-fe0f.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 5345
+        },
+        {
+            "id": 79,
+            "slug": "dao-community",
+            "name": "DAO & Community",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/classical-building_1f3db-fe0f.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 6391
+        },
+        {
+            "id": 80,
+            "slug": "dex",
+            "name": "DEX",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/counterclockwise-arrows-button_1f504.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 2221
+        },
+        {
+            "id": 82,
+            "slug": "gambling",
+            "name": "Gambling",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/game-die_1f3b2.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 1905
+        },
+        {
+            "id": 50,
+            "slug": "stablecoin",
+            "name": "Stablecoin",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/stablecoin.png",
+            "color": "#E7DDD0",
+            "hoverColor": "#E7DDD0",
+            "totalCount": 1062
+        },
+        {
+            "id": 85,
+            "slug": "btc-eco",
+            "name": "BTC Eco",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/inscriptions.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 1602
+        },
+        {
+            "id": 49,
+            "slug": "other",
+            "name": "Other",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/other.png",
+            "color": "#E7DDD0",
+            "hoverColor": "#E7DDD0",
+            "totalCount": 1394
+        },
+        {
+            "id": 47,
+            "slug": "metaverse",
+            "name": "Metaverse",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/metaverse.png",
+            "color": "#DE9FEE",
+            "hoverColor": "#DE9FEE",
+            "totalCount": 298
+        },
+        {
+            "id": 89,
+            "slug": "cex-cefi",
+            "name": "CEX / CeFi",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/bank_1f3e6.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 1291
+        },
+        {
+            "id": 91,
+            "slug": "investment-entity",
+            "name": "Investment Entity",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/money-bag_1f4b0.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 1182
+        },
+        {
+            "id": 45,
+            "slug": "gamefi",
+            "name": "GameFi",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/gamefi.png",
+            "color": "#F6B996",
+            "hoverColor": "#F6B996",
+            "totalCount": 7832
+        },
+        {
+            "id": 93,
+            "slug": "news-media",
+            "name": "News & Media",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/newspaper_1f4f0.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 2494
+        },
+        {
+            "id": 94,
+            "slug": "services",
+            "name": "Services",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/bellhop-bell_1f6ce-fe0f.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 2533
+        },
+        {
+            "id": 96,
+            "slug": "defai",
+            "name": "DeFAI",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/diamond-with-a-dot_1f4a0.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 286
+        },
+        {
+            "id": 97,
+            "slug": "nft-fi",
+            "name": "NFT-Fi",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/flower-playing-cards_1f3b4.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 467
+        },
+        {
+            "id": 99,
+            "slug": "multi-chain",
+            "name": "Multi-chain",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/woman-and-man-holding-hands_1f46b.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 2337
+        },
+        {
+            "id": 101,
+            "slug": "perps",
+            "name": "Perps",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/balance-scale_2696-fe0f.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 348
+        },
+        {
+            "id": 103,
+            "slug": "funds",
+            "name": "Funds",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/bank_1f3e6.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 146
+        },
+        {
+            "id": 104,
+            "slug": "erc-404",
+            "name": "ERC-404",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/shuffle-tracks-button_1f500.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 126
+        },
+        {
+            "id": 105,
+            "slug": "studios",
+            "name": "Studios",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/artist-palette_1f3a8.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 121
+        },
+        {
+            "id": 106,
+            "slug": "lrt",
+            "name": "LRT",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/large-green-circle_1f7e2.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 90
+        },
+        {
+            "id": 107,
+            "slug": "oracles",
+            "name": "Oracles",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/crystal-ball_1f52e.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 83
+        },
+        {
+            "id": 108,
+            "slug": "vc",
+            "name": "VC",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/gem-stone_1f48e.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 47
+        },
+        {
+            "id": 109,
+            "slug": "incubators",
+            "name": "Incubators",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/hatching-chick_1f423.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 47
+        },
+        {
+            "id": 111,
+            "slug": "mms",
+            "name": "MMs",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/bar-chart_1f4ca.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 19
+        },
+        {
+            "id": 112,
+            "slug": "accelerators",
+            "name": "Accelerators",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/rocket_1f680.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 19
+        },
+        {
+            "id": 113,
+            "slug": "wallet",
+            "name": "Wallet",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/purse_1f45b.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 13
+        },
+        {
+            "id": 114,
+            "slug": "erc-314",
+            "name": "ERC-314",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/bookmark-tabs_1f4d1.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 6
+        },
+        {
+            "id": 115,
+            "slug": "lst",
+            "name": "LST",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/cut-of-meat_1f969.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 22
+        },
+        {
+            "id": 116,
+            "slug": "predict",
+            "name": "Predict Markets",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/crystal-ball_1f52e.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 1403
+        },
+        {
+            "id": 117,
+            "slug": "bridge",
+            "name": "Bridge",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/bridge-at-night_1f309.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 251
+        },
+        {
+            "id": 118,
+            "slug": "robotics",
+            "name": "Robotics",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/robot_1f916.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 168
+        },
+        {
+            "id": 119,
+            "slug": "x402",
+            "name": "x402",
+            "logoUrl": "https://storage.googleapis.com/moni-mobile/watchlist-logos/smiles-super-small/3066_small_dollar-banknote.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 802
+        },
+        {
+            "id": 121,
+            "slug": "privacy",
+            "name": "Privacy",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/locked_1f512.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 615
+        },
+        {
+            "id": 61,
+            "slug": "dn404",
+            "name": "DN404",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/dn404.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 23
+        },
+        {
+            "id": 122,
+            "slug": "erc-8004",
+            "name": "ERC-8004",
+            "logoUrl": "https://em-content.zobj.net/source/apple/419/detective_1f575-fe0f.png",
+            "color": "#46D3FF",
+            "hoverColor": "41BBE1",
+            "totalCount": 113
+        },
+        {
+            "id": null,
+            "slug": "unknown",
+            "name": "Unknown",
+            "logoUrl": "https://storage.googleapis.com/moni-twitter-bot/statics/images/project_tag_logo/unknown.png",
+            "color": "#EFE591",
+            "hoverColor": "#EFE591",
+            "totalCount": -72900
+        }
+    ]
+}

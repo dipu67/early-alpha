@@ -13,6 +13,7 @@ import {
   formatDailyDigest,
   getAccountAge,
 } from "../../services/formatAlert.js";
+import { classifyAccount } from "../../services/projectTagger.js";
 
 // --- Category tagging ---
 
@@ -126,6 +127,7 @@ async function importSeeds(): Promise<void> {
           username: user.username,
           name: user.name,
           description: user.description ?? null,
+          tags: classifyAccount(user),
           followersCount: user.followersCount ?? null,
           followingCount: user.followingCount ?? null,
           isBlueVerified: user.isBlueVerified ?? null,
@@ -136,6 +138,7 @@ async function importSeeds(): Promise<void> {
           username: user.username,
           name: user.name,
           description: user.description ?? null,
+          tags: classifyAccount(user),
           followersCount: user.followersCount ?? null,
           followingCount: user.followingCount ?? null,
           isBlueVerified: user.isBlueVerified ?? null,
@@ -250,6 +253,7 @@ export async function runTrackingCycle(options: TrackOptions = {}): Promise<void
             username: user.username,
             name: user.name,
             description: user.description ?? null,
+            tags: classifyAccount(user),
             followersCount: user.followersCount ?? null,
             followingCount: user.followingCount ?? null,
             isBlueVerified: user.isBlueVerified ?? null,
@@ -259,6 +263,7 @@ export async function runTrackingCycle(options: TrackOptions = {}): Promise<void
           update: {
             username: user.username,
             name: user.name,
+            tags: classifyAccount(user),
             followersCount: user.followersCount ?? null,
             followingCount: user.followingCount ?? null,
             isBlueVerified: user.isBlueVerified ?? null,

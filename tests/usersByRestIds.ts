@@ -12,7 +12,7 @@ const userIds = [
   "1388477070523572227",
 ];
 
-const res = await client.getUserByScreenName("dipuweb3");
+const res = await client.getMyLists()
 
 if (!res.success) {
   console.error("getUsersByIds failed:", res);

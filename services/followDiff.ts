@@ -1,6 +1,7 @@
 import { prisma } from "../db/prisma.js";
 import { getTwitterClient, markRateLimited } from "../twitter/getClient.js";
 import type { UserData } from "../TwitterClient/types.js";
+import { classifyAccount } from "./projectTagger.js";
 
 export interface DiffResult {
   newFollows: UserData[];
@@ -61,6 +62,7 @@ export async function checkFollowingDiff(
         username: user.username,
         name: user.name,
         description: user.description ?? null,
+        tags: classifyAccount(user),
         followersCount: user.followersCount ?? null,
         followingCount: user.followingCount ?? null,
         tweetCount: user.tweetCount ?? null,
@@ -75,6 +77,7 @@ export async function checkFollowingDiff(
         username: user.username,
         name: user.name,
         description: user.description ?? null,
+        tags: classifyAccount(user),
         followersCount: user.followersCount ?? null,
         followingCount: user.followingCount ?? null,
         tweetCount: user.tweetCount ?? null,
