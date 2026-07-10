@@ -1,7 +1,10 @@
 import { prisma } from "../db/prisma.js";
 import { TwitterClient } from "../TwitterClient/index.js";
 
-export async function getTwitterClient(): Promise<{ client: TwitterClient; accountId: bigint }> {
+export async function getTwitterClient(): Promise<{
+  client: TwitterClient;
+  accountId: bigint;
+}> {
   const account = await prisma.twitterAuthAccount.findFirst({
     where: {
       isActive: true,
@@ -14,7 +17,9 @@ export async function getTwitterClient(): Promise<{ client: TwitterClient; accou
   });
 
   if (!account) {
-    throw new Error("No available Twitter auth accounts (all rate-limited or inactive)");
+    throw new Error(
+      "No available Twitter auth accounts (all rate-limited or inactive)",
+    );
   }
 
   await prisma.twitterAuthAccount.update({
@@ -29,7 +34,10 @@ export async function getTwitterClient(): Promise<{ client: TwitterClient; accou
   return { client, accountId: account.id };
 }
 
-export async function markRateLimited(accountId: bigint, resetEpoch: number): Promise<void> {
+export async function markRateLimited(
+  accountId: bigint,
+  resetEpoch: number,
+): Promise<void> {
   await prisma.twitterAuthAccount.update({
     where: { id: accountId },
     data: { rateLimitedUntil: new Date(resetEpoch * 1000) },

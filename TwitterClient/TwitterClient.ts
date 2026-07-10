@@ -254,30 +254,32 @@ export class TwitterClient {
 
   private jsonHeaders(): Record<string, string> {
     return {
-    "accept": "*/*",
-    "accept-language": "en-US,en;q=0.9",
-    "authorization": BEARER_TOKEN,
-    "content-type": "application/json",
-    "priority": "u=1, i",
-    "sec-ch-ua": "\"Not;A=Brand\";v=\"8\", \"Chromium\";v=\"150\", \"Brave\";v=\"150\"",
-    "sec-ch-ua-arch": "\"arm\"",
-    "sec-ch-ua-bitness": "\"64\"",
-    "sec-ch-ua-full-version-list": "\"Not;A=Brand\";v=\"8.0.0.0\", \"Chromium\";v=\"150.0.0.0\", \"Brave\";v=\"150.0.0.0\"",
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-model": "\"\"",
-    "sec-ch-ua-platform": "\"macOS\"",
-    "sec-ch-ua-platform-version": "\"26.5.1\"",
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "sec-gpc": "1",
-    "x-csrf-token": this.ct0,
-    "x-twitter-active-user": "yes",
-    "x-twitter-auth-type": "OAuth2Session",
-    "x-twitter-client-language": "en",
-    "cookie": `auth_token=${this.authToken}; ct0=${this.ct0}`,
-    "Referer": "https://x.com/explore"
-  }
+      accept: "*/*",
+      "accept-language": "en-US,en;q=0.9",
+      authorization: BEARER_TOKEN,
+      "content-type": "application/json",
+      priority: "u=1, i",
+      "sec-ch-ua": '"Not;A=Brand";v="8", "Chromium";v="150", "Brave";v="150"',
+      "sec-ch-ua-arch": '"arm"',
+      "sec-ch-ua-bitness": '"64"',
+      "sec-ch-ua-full-version-list":
+        '"Not;A=Brand";v="8.0.0.0", "Chromium";v="150.0.0.0", "Brave";v="150.0.0.0"',
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-model": '""',
+      "sec-ch-ua-platform": '"macOS"',
+      "sec-ch-ua-platform-version": '"26.5.1"',
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "same-origin",
+      "sec-gpc": "1",
+      "x-csrf-token": this.ct0,
+      "x-twitter-active-user": "yes",
+      "x-twitter-auth-type": "OAuth2Session",
+      "x-twitter-client-language": "en",
+      cookie: `auth_token=${this.authToken}; ct0=${this.ct0}`,
+      Referer: "https://x.com/explore",
+      "User-Agent": this.userAgent,
+    };
   }
 
   private formHeaders(): Record<string, string> {
@@ -317,7 +319,6 @@ export class TwitterClient {
     const url = `${GRAPHQL_BASE}/${QUERY_IDS[op]}/${op}`;
     const body: Record<string, unknown> = { variables, queryId: QUERY_IDS[op] };
     if (features) body.features = features;
-
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -1397,7 +1398,7 @@ export class TwitterClient {
       "sec-fetch-mode": "cors",
       "sec-fetch-site": "same-site",
       "sec-gpc": "1",
-      "x-csrf-token":this.ct0,
+      "x-csrf-token": this.ct0,
       "x-twitter-active-user": "yes",
       "x-twitter-auth-type": "OAuth2Session",
       "x-twitter-client-language": "en",

@@ -96,7 +96,6 @@ bot.command("watch", async (ctx) => {
 
     const { client, accountId } = await getTwitterClient();
     const result = await client.getUserByScreenName(screenName);
-    console.log(result)
     
 
     if (result.rateLimit && result.rateLimit.remaining === 0) {

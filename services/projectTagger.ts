@@ -212,7 +212,7 @@ const SLUG_KEYWORDS: Record<string, (string | RegExp)[]> = {
     "gamefi", "game-fi", "gaming", "play to earn", "play-to-earn", "p2e",
     "web3 game", "web3 gaming", "web3 games", "blockchain game",
     "blockchain gaming", "on-chain game", "on-chain gaming", "move to earn",
-    "move-to-earn", "gaming guild", "game economy", "nft game", "autobattler",
+    "move-to-earn", "gaming guild", "game economy", "nft game", "autobattler","mmo","play","rpg","game", 
   ],
   "news-media": [
     "news", "media outlet", "newsletter", "journalism", "magazine", "podcast",
@@ -253,7 +253,7 @@ const SLUG_KEYWORDS: Record<string, (string | RegExp)[]> = {
   studios: [
     "game studio", "creative studio", "dev studio", "development studio",
     "studios", "animation studio", "design studio", "web3 studio",
-    "gaming studio", "venture studio", "product studio","play"
+    "gaming studio", "venture studio", "product studio",
   ],
   lrt: [
     "lrt", "liquid restaking", "liquid restaking token", "restaking token",
@@ -348,7 +348,7 @@ const HANDLE_TOKENS: Record<string, string[]> = {
   "dao-community": ["dao"],
   dex: ["dex", "swap"],
   meme: ["meme"],
-  gamefi: ["gamefi", "gamer","play"],
+  gamefi: ["gamefi", "gamer","play","mmo","rpg","game"],
   metaverse: ["meta"],
   socialfi: ["social"],
   wallet: ["wallet"],
@@ -375,7 +375,7 @@ const HANDLE_TOKENS: Record<string, string[]> = {
 const HANDLE_SUFFIX_TOKENS: Record<string, string[]> = {
   nft: ["nft"],
   "dao-community": ["dao"],
-  gamefi: ["gamefi","play"],
+  gamefi: ["gamefi","play","mmo","rpg","game"],
   socialfi: ["socialfi"],
   defi: ["defi"],
   defai: ["defai"],
