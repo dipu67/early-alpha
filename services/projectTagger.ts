@@ -235,7 +235,7 @@ const SLUG_KEYWORDS: Record<string, (string | RegExp)[]> = {
   studios: [
     "game studio", "creative studio", "dev studio", "development studio",
     "studios", "animation studio", "design studio", "web3 studio",
-    "gaming studio", "venture studio", "product studio",
+    "gaming studio", "venture studio", "product studio","play"
   ],
   lrt: [
     "lrt", "liquid restaking", "liquid restaking token", "restaking token",
@@ -309,6 +309,76 @@ for (const slug of Object.keys(SLUG_KEYWORDS)) {
   }
 }
 
+// ── Username / handle detection ───────────────────────────────────────────
+//
+// Projects often encode their vertical in the handle itself (@unsealednft,
+// @pixel_art, @someone_defi). We match the lowercased handle (@ stripped) in two
+// tiers to keep recall high without tagging unrelated handles.
+
+/**
+ * Tokens matched against the handle only when bounded by an underscore, a digit,
+ * or the handle edges — so `_nft`, `nft_`, `nft2`, and a bare `@nft` all hit,
+ * but `@smart` / `@chair` do not. Safe for short/ambiguous tokens. `art` has no
+ * slug of its own; it signals the NFT/art vertical, so it maps to `nft`.
+ */
+const HANDLE_TOKENS: Record<string, string[]> = {
+  nft: ["nft", "art"],
+  "nft-fi": ["nftfi"],
+  ai: ["ai"],
+  "ai-agents": ["agent", "agents"],
+  defi: ["defi"],
+  "dao-community": ["dao"],
+  dex: ["dex", "swap"],
+  meme: ["meme"],
+  gamefi: ["gamefi", "gamer","play"],
+  metaverse: ["meta"],
+  socialfi: ["social"],
+  wallet: ["wallet"],
+  bridge: ["bridge"],
+  rwa: ["rwa"],
+  perps: ["perp", "perps"],
+  lst: ["lst"],
+  lrt: ["lrt"],
+  vc: ["vc"],
+  privacy: ["zk"],
+  "btc-eco": ["btc"],
+  l1: ["l1"],
+  l2: ["l2"],
+  depin: ["depin"],
+  stablecoin: ["stable"],
+};
+
+/**
+ * Distinctive tokens additionally allowed to match as a *glued suffix* at the end
+ * of a handle (`@unsealednft` → nft, `@sushiswap` → dex). Curated to tokens that
+ * rarely end unrelated words; short/common ones (art, dex, ai) are intentionally
+ * excluded so `@smart` / `@codex` / `@chair` don't false-fire.
+ */
+const HANDLE_SUFFIX_TOKENS: Record<string, string[]> = {
+  nft: ["nft"],
+  "dao-community": ["dao"],
+  gamefi: ["gamefi","play"],
+  socialfi: ["socialfi"],
+  defi: ["defi"],
+  defai: ["defai"],
+  depin: ["depin"],
+  dex: ["swap"],
+  perps: ["perps"],
+  meme: ["meme"],
+  wallet: ["wallet"],
+};
+
+for (const slug of [
+  ...Object.keys(HANDLE_TOKENS),
+  ...Object.keys(HANDLE_SUFFIX_TOKENS),
+]) {
+  if (!VALID_SLUGS.has(slug)) {
+    throw new Error(
+      `projectTagger: handle-token slug "${slug}" is not in tags.json`,
+    );
+  }
+}
+
 /** Escape a plain-string keyword for safe embedding in a RegExp. */
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -326,24 +396,67 @@ const COMPILED: [string, RegExp[]][] = Object.entries(SLUG_KEYWORDS).map(
   ],
 );
 
+/** Handle tokens compiled to underscore/digit/edge-delimited matchers. */
+const HANDLE_DELIM_COMPILED: [string, RegExp[]][] = Object.entries(
+  HANDLE_TOKENS,
+).map(([slug, tokens]) => [
+  slug,
+  tokens.map(
+    (t) => new RegExp(`(?:^|[_\\d])${escapeRegExp(t)}(?:[_\\d]|$)`, "i"),
+  ),
+]);
+
+/** Glued-suffix handle tokens: [slug, lowercased token]. */
+const HANDLE_SUFFIX_COMPILED: [string, string][] = Object.entries(
+  HANDLE_SUFFIX_TOKENS,
+).flatMap(([slug, tokens]) => tokens.map((t): [string, string] => [slug, t.toLowerCase()]));
+
+/** Lowercase a username and strip any leading `@`. */
+function normalizeHandle(username?: string | null): string {
+  return (username ?? "").toLowerCase().replace(/^@+/, "");
+}
+
+/** Slugs implied by the handle itself (both delimited and glued-suffix tiers). */
+function tagsFromHandle(username?: string | null): string[] {
+  const handle = normalizeHandle(username);
+  if (!handle) return [];
+
+  const matched: string[] = [];
+  for (const [slug, patterns] of HANDLE_DELIM_COMPILED) {
+    if (patterns.some((re) => re.test(handle))) matched.push(slug);
+  }
+  for (const [slug, token] of HANDLE_SUFFIX_COMPILED) {
+    if (handle.endsWith(token)) matched.push(slug);
+  }
+  return matched;
+}
+
 export interface ClassifiableAccount {
+  username?: string | null;
   name?: string | null;
   description?: string | null;
 }
 
+/** Fallback slug applied when nothing else matches (exists in tags.json). */
+export const DEFAULT_SLUG = "unknown";
+
 /**
- * Infer project-type tag slugs for an account from its name + description.
- * Returns a de-duplicated array of valid slugs, or `[]` when nothing matches.
+ * Infer project-type tag slugs for an account from its username, name, and
+ * description. Returns a de-duplicated array of valid slugs. When nothing
+ * matches (or all fields are empty), falls back to `["unknown"]` so every
+ * account carries at least one tag.
  */
 export function classifyAccount(account: ClassifiableAccount): string[] {
-  const haystack = `${account.name ?? ""} ${account.description ?? ""}`;
-  if (!haystack.trim()) return [];
+  const matched = new Set<string>();
 
-  const matched: string[] = [];
-  for (const [slug, patterns] of COMPILED) {
-    if (patterns.some((re) => re.test(haystack))) {
-      matched.push(slug);
+  const haystack = `${account.name ?? ""} ${account.description ?? ""}`;
+  if (haystack.trim()) {
+    for (const [slug, patterns] of COMPILED) {
+      if (patterns.some((re) => re.test(haystack))) matched.add(slug);
     }
   }
-  return matched;
+
+  for (const slug of tagsFromHandle(account.username)) matched.add(slug);
+
+  return matched.size > 0 ? [...matched] : [DEFAULT_SLUG];
 }

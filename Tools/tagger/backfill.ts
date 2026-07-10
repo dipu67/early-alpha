@@ -30,7 +30,7 @@ async function main(): Promise<void> {
       take: BATCH_SIZE,
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
       orderBy: { id: "asc" },
-      select: { id: true, name: true, description: true, tags: true },
+      select: { id: true, username: true, name: true, description: true, tags: true },
     });
 
     if (rows.length === 0) break;

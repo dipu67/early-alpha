@@ -1,5 +1,5 @@
 import type { UserData } from "../TwitterClient/types.js";
-import { classifyAccount, tagLabel } from "./projectTagger.js";
+import { classifyAccount, tagLabel, DEFAULT_SLUG } from "./projectTagger.js";
 
 export function formatNewFollowAlert(
   watchedUsername: string,
@@ -12,9 +12,12 @@ export function formatNewFollowAlert(
     : "";
 
   const tags = classifyAccount(newFollow);
+  // Show the tag line only when we have a real classification — a lone
+  // "unknown" fallback carries no signal, so omit it from the alert.
+  const meaningfulTags = tags.filter((t) => t !== DEFAULT_SLUG);
   const tagLine =
-    tags.length > 0
-      ? `🏷️ ${escapeMarkdown(tags.map(tagLabel).join(" · "))}\n`
+    meaningfulTags.length > 0
+      ? `🏷️ ${escapeMarkdown(meaningfulTags.map(tagLabel).join(" · "))}\n`
       : "";
 
   const accountAge = newFollow.createdAt
