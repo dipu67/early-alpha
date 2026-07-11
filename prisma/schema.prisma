@@ -25,11 +25,54 @@ model TwitterAccount {
   detectedAt      DateTime  @default(now()) @map("detected_at") @db.Timestamptz
   firstSeenAt     DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  listsSyncedAt   DateTime? @map("lists_synced_at") @db.Timestamptz
 
   followEdgesAsFollowing FollowEdge[] @relation("following")
   alerts                 Alert[]
+  listMemberships        ListMember[]
 
   @@map("twitter_accounts")
+}
+
+model ProjectList {
+  id            BigInt    @id @default(autoincrement())
+  slug          String    @unique
+  twitterListId String    @unique @map("twitter_list_id")
+  name          String
+  lastTweetId   String?   @map("last_tweet_id")
+  lastPolledAt  DateTime? @map("last_polled_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  members ListMember[]
+
+  @@map("project_lists")
+}
+
+model ListMember {
+  listSlug  String   @map("list_slug")
+  accountId String   @map("account_id")
+  addedAt   DateTime @default(now()) @map("added_at") @db.Timestamptz
+
+  list    ProjectList    @relation(fields: [listSlug], references: [slug], onDelete: Cascade)
+  account TwitterAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([listSlug, accountId])
+  @@index([accountId])
+  @@map("list_members")
+}
+
+model PostAlert {
+  tweetId   String    @id @map("tweet_id")
+  accountId String    @map("account_id")
+  username  String
+  slug      String
+  signals   String[]  @default([])
+  text      String
+  postedAt  DateTime? @map("posted_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([accountId, createdAt(sort: Desc)])
+  @@map("post_alerts")
 }
 
 model SeedAccount {

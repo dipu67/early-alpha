@@ -19,6 +19,7 @@
     "track:digest": "bun run Tools/following_Track/track.ts digest",
     "track:health": "bun run Tools/following_Track/track.ts health",
     "tag:backfill": "tsx Tools/tagger/backfill.ts",
+    "list:sync": "tsx Tools/tagger/syncLists.ts",
     "seed-worker": "bun run services/seedWorker.ts"
   },
   "keywords": [],

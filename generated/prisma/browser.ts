@@ -23,6 +23,21 @@ export * from './enums.js';
  */
 export type TwitterAccount = Prisma.TwitterAccountModel
 /**
+ * Model ProjectList
+ * 
+ */
+export type ProjectList = Prisma.ProjectListModel
+/**
+ * Model ListMember
+ * 
+ */
+export type ListMember = Prisma.ListMemberModel
+/**
+ * Model PostAlert
+ * 
+ */
+export type PostAlert = Prisma.PostAlertModel
+/**
  * Model SeedAccount
  * 
  */

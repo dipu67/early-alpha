@@ -459,6 +459,21 @@ export interface ClassifiableAccount {
 export const DEFAULT_SLUG = "unknown";
 
 /**
+ * Run the keyword lexicon over arbitrary free text (a tweet body, a bio, …) and
+ * return the matching tag slugs. No handle logic and no `unknown` fallback — an
+ * empty array means "no type detected". Used both by `classifyAccount` and by
+ * post-based reclassification.
+ */
+export function classifyText(text: string): string[] {
+  if (!text.trim()) return [];
+  const matched: string[] = [];
+  for (const [slug, patterns] of COMPILED) {
+    if (patterns.some((re) => re.test(text))) matched.push(slug);
+  }
+  return matched;
+}
+
+/**
  * Infer project-type tag slugs for an account from its username, name, and
  * description. Returns a de-duplicated array of valid slugs. When nothing
  * matches (or all fields are empty), falls back to `["unknown"]` so every
@@ -467,11 +482,8 @@ export const DEFAULT_SLUG = "unknown";
 export function classifyAccount(account: ClassifiableAccount): string[] {
   const matched = new Set<string>();
 
-  const haystack = `${account.name ?? ""} ${account.description ?? ""}`;
-  if (haystack.trim()) {
-    for (const [slug, patterns] of COMPILED) {
-      if (patterns.some((re) => re.test(haystack))) matched.add(slug);
-    }
+  for (const slug of classifyText(`${account.name ?? ""} ${account.description ?? ""}`)) {
+    matched.add(slug);
   }
 
   for (const slug of tagsFromHandle(account.username)) matched.add(slug);

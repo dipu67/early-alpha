@@ -3,11 +3,15 @@ import { bot } from "./tg/bots.js";
 import {grokBot} from "./tg/grokBot.js";
 import "./services/worker.js";
 import "./services/seedWorker.js";
+import "./services/listWorker.js";
 import {
   addSeedTrackingJob,
   addDailyFullSyncJob,
   addDailyDigestJob,
   addHealthCheckJob,
+  addListReconcileJob,
+  addListPollJob,
+  addEarlyDigestJob,
 } from "./services/queue.js";
 
 export { prisma } from "./db/prisma.js";
@@ -26,4 +30,7 @@ await addSeedTrackingJob();
 await addDailyFullSyncJob();
 await addDailyDigestJob();
 await addHealthCheckJob();
-console.log("[scheduler] Seed tracking jobs registered");
+await addListReconcileJob();
+await addListPollJob();
+await addEarlyDigestJob();
+console.log("[scheduler] Seed tracking + list monitoring jobs registered");

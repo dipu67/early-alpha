@@ -1,6 +1,78 @@
 import type { UserData } from "../TwitterClient/types.js";
 import { classifyAccount, tagLabel, DEFAULT_SLUG } from "./projectTagger.js";
 
+/** Truncate a tweet body for inclusion in an alert card. */
+function excerpt(text: string, maxLen = 220): string {
+  const oneLine = text.replace(/\s+/g, " ").trim();
+  return oneLine.length <= maxLen ? oneLine : oneLine.slice(0, maxLen - 1) + "…";
+}
+
+export interface SignalAlertInput {
+  accountId: string;
+  username: string;
+  name: string;
+  slug: string;
+  signals: string[];
+  text: string;
+  tweetId: string;
+}
+
+/** A signal post alert (🚨) — a list member posted mint/launch/TGE-type news. */
+export function formatSignalAlert(
+  input: SignalAlertInput,
+): { text: string; user: UserData } {
+  const postUrl = `https://x.com/${input.username}/status/${input.tweetId}`;
+  const signalLine = input.signals.length
+    ? `🏷️ ${escapeMarkdown(input.signals.join(" · "))}\n`
+    : "";
+
+  const text =
+    `🚨 *Signal · ${escapeMarkdown(tagLabel(input.slug))}*\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `👤 *${escapeMarkdown(input.name)}*  [@${escapeMarkdown(input.username)}](https://x.com/${input.username})\n` +
+    signalLine +
+    `\n${escapeMarkdown(excerpt(input.text))}\n\n` +
+    `🔗 [View post](${postUrl})\n` +
+    `━━━━━━━━━━━━━━━━━━\n`;
+
+  return {
+    text,
+    user: { id: input.accountId, username: input.username, name: input.name } as UserData,
+  };
+}
+
+export interface ReclassifyAlertInput {
+  accountId: string;
+  username: string;
+  name: string;
+  from: string;
+  to: string[];
+  signals?: string[];
+  tweetId: string;
+}
+
+/** A reclassification alert (🔀) — an alpha project revealed its type via a post. */
+export function formatReclassifyAlert(
+  input: ReclassifyAlertInput,
+): { text: string; user: UserData } {
+  const postUrl = `https://x.com/${input.username}/status/${input.tweetId}`;
+  const toLabels = input.to.map(tagLabel).join(" · ");
+  const signalLine = input.signals?.length
+    ? `🏷️ ${escapeMarkdown(input.signals.join(" · "))}\n`
+    : "";
+
+  const text =
+    `🔀 *Reclassified* — [@${escapeMarkdown(input.username)}](https://x.com/${input.username})\n` +
+    `${escapeMarkdown(tagLabel(input.from))} → *${escapeMarkdown(toLabels)}*\n` +
+    signalLine +
+    `🔗 [View post](${postUrl})\n`;
+
+  return {
+    text,
+    user: { id: input.accountId, username: input.username, name: input.name } as UserData,
+  };
+}
+
 export function formatNewFollowAlert(
   watchedUsername: string,
   newFollow: UserData,

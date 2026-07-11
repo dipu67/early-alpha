@@ -427,14 +427,6 @@ export type SeedAccountScalarRelationFilter = {
   isNot?: Prisma.SeedAccountWhereInput
 }
 
-export type BigIntFieldUpdateOperationsInput = {
-  set?: bigint | number
-  increment?: bigint | number
-  decrement?: bigint | number
-  multiply?: bigint | number
-  divide?: bigint | number
-}
-
 export type BoolFieldUpdateOperationsInput = {
   set?: boolean
 }

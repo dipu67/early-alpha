@@ -59,3 +59,29 @@ export async function addHealthCheckJob(): Promise<void> {
     { name: "health-check", data: {} },
   );
 }
+
+export const listTrackerQueue = new Queue("list-tracker", { connection });
+
+export async function addListReconcileJob(): Promise<void> {
+  await listTrackerQueue.upsertJobScheduler(
+    "list-reconcile",
+    { every: 60 * 60 * 1000 },
+    { name: "reconcile-lists", data: {} },
+  );
+}
+
+export async function addListPollJob(): Promise<void> {
+  await listTrackerQueue.upsertJobScheduler(
+    "list-poll",
+    { every: 5 * 60 * 1000 },
+    { name: "poll-lists", data: {} },
+  );
+}
+
+export async function addEarlyDigestJob(): Promise<void> {
+  await listTrackerQueue.upsertJobScheduler(
+    "early-digest",
+    { every: 12 * 60 * 60 * 1000 },
+    { name: "early-digest", data: {} },
+  );
+}

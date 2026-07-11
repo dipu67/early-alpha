@@ -52,6 +52,9 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   TwitterAccount: 'TwitterAccount',
+  ProjectList: 'ProjectList',
+  ListMember: 'ListMember',
+  PostAlert: 'PostAlert',
   SeedAccount: 'SeedAccount',
   TrackingRun: 'TrackingRun',
   FollowEdge: 'FollowEdge',
@@ -95,10 +98,47 @@ export const TwitterAccountScalarFieldEnum = {
   createdAt: 'createdAt',
   detectedAt: 'detectedAt',
   firstSeenAt: 'firstSeenAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  listsSyncedAt: 'listsSyncedAt'
 } as const
 
 export type TwitterAccountScalarFieldEnum = (typeof TwitterAccountScalarFieldEnum)[keyof typeof TwitterAccountScalarFieldEnum]
+
+
+export const ProjectListScalarFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  twitterListId: 'twitterListId',
+  name: 'name',
+  lastTweetId: 'lastTweetId',
+  lastPolledAt: 'lastPolledAt',
+  createdAt: 'createdAt'
+} as const
+
+export type ProjectListScalarFieldEnum = (typeof ProjectListScalarFieldEnum)[keyof typeof ProjectListScalarFieldEnum]
+
+
+export const ListMemberScalarFieldEnum = {
+  listSlug: 'listSlug',
+  accountId: 'accountId',
+  addedAt: 'addedAt'
+} as const
+
+export type ListMemberScalarFieldEnum = (typeof ListMemberScalarFieldEnum)[keyof typeof ListMemberScalarFieldEnum]
+
+
+export const PostAlertScalarFieldEnum = {
+  tweetId: 'tweetId',
+  accountId: 'accountId',
+  username: 'username',
+  slug: 'slug',
+  signals: 'signals',
+  text: 'text',
+  postedAt: 'postedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PostAlertScalarFieldEnum = (typeof PostAlertScalarFieldEnum)[keyof typeof PostAlertScalarFieldEnum]
 
 
 export const SeedAccountScalarFieldEnum = {
