@@ -1246,6 +1246,39 @@ export class TwitterClient {
     }
   }
 
+  /** Delete a list you own (REST v1.1 lists/destroy). */
+  async deleteList(listId: string): Promise<ActionResult> {
+    const url = `${REST_BASE}/lists/destroy.json`;
+    const body = new URLSearchParams({ list_id: listId });
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          ...this.formHeaders(),
+          "x-client-transaction-id": await this.transactionId(
+            "POST",
+            new URL(url).pathname,
+          ),
+        },
+        body: body.toString(),
+      });
+      this.updateRateLimit(res);
+      if (!res.ok) {
+        const text = await res.text();
+        return this.withRateLimit({
+          success: false,
+          error: `HTTP ${res.status}: ${text.slice(0, 200)}`,
+        });
+      }
+      return this.withRateLimit({ success: true });
+    } catch (error) {
+      return this.withRateLimit({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   async getList(listId: string): Promise<ListResult> {
     try {
       // biome-ignore lint/suspicious/noExplicitAny: Twitter GraphQL response

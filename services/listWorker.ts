@@ -38,29 +38,29 @@ async function runPoll(): Promise<void> {
   await pollAllLists({ client: client, authAccountId: accountId, ownerUserId });
 }
 
-const worker = new Worker(
-  "list-tracker",
-  async (job) => {
-    if (job.name === "reconcile-lists") {
-      await runReconcile();
-    } else if (job.name === "poll-lists") {
-      await runPoll();
-    } else if (job.name === "early-digest") {
-      const { sendEarlyProjectDigest } = await import("./earlyDigest.js");
-      await sendEarlyProjectDigest();
-    }
-  },
-  { connection, concurrency: 1 },
-);
+// const worker = new Worker(
+//   "list-tracker",
+//   async (job) => {
+//     if (job.name === "reconcile-lists") {
+//       await runReconcile();
+//     } else if (job.name === "poll-lists") {
+//       await runPoll();
+//     } else if (job.name === "early-digest") {
+//       const { sendEarlyProjectDigest } = await import("./earlyDigest.js");
+//       await sendEarlyProjectDigest();
+//     }
+//   },
+//   { connection, concurrency: 1 },
+// );
 
-worker.on("failed", (job, err) => {
-  console.error(`[list-worker] Job ${job?.name} failed:`, err.message);
-});
+// worker.on("failed", (job, err) => {
+//   console.error(`[list-worker] Job ${job?.name} failed:`, err.message);
+// });
 
-worker.on("completed", (job) => {
-  console.log(`[list-worker] Job ${job.name} completed`);
-});
+// worker.on("completed", (job) => {
+//   console.log(`[list-worker] Job ${job.name} completed`);
+// });
 
-console.log("[list-worker] List tracker worker started");
+// console.log("[list-worker] List tracker worker started");
 
-export { worker };
+// export { worker };
