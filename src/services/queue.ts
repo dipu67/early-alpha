@@ -120,8 +120,9 @@ export const SCHEDULERS: SchedulerDef[] = [
     schedulerId: "early-digest",
     jobName: "early-digest",
     data: {},
-    defaultEvery: 12 * 60 * 60 * 1000,
-    label: "Early-project digest",
+    // Every 12h clock-aligned: 09:00 and 21:00 UTC
+    defaultCron: "0 9,21 * * *",
+    label: "Early-project digest (09:00 & 21:00 UTC)",
   },
   {
     key: "search-poll",
@@ -157,6 +158,51 @@ export function getScheduler(key: string): SchedulerDef | undefined {
 }
 
 /**
+ * Resolve active repeat options for a scheduler.
+ *
+ * Settings keys `sched.<key>.cron` / `sched.<key>.every`:
+ * - missing / JSON null → use def.defaultCron or def.defaultEvery
+ * - non-empty cron string → cron mode
+ * - numeric every ≥ 10s → interval mode (only if cron override not set)
+ * Cron and every are mutually exclusive; cron wins if both overrides exist.
+ */
+export async function resolveSchedulerRepeat(
+  def: SchedulerDef,
+): Promise<{ pattern: string } | { every: number }> {
+  // No fallback: undefined = key absent, null = explicitly cleared
+  const cronRaw = await getConfig<string | null | undefined>(
+    schedCronKey(def.key),
+    undefined,
+  );
+  const everyRaw = await getConfig<number | null | undefined>(
+    schedEveryKey(def.key),
+    undefined,
+  );
+
+  const cronOverride =
+    typeof cronRaw === "string" && cronRaw.trim().length > 0
+      ? cronRaw.trim()
+      : null;
+  const everyOverride =
+    typeof everyRaw === "number" &&
+    Number.isFinite(everyRaw) &&
+    everyRaw >= 10_000
+      ? everyRaw
+      : null;
+
+  if (cronOverride) return { pattern: cronOverride };
+  if (everyOverride != null) return { every: everyOverride };
+
+  if (def.defaultCron && def.defaultCron.trim().length > 0) {
+    return { pattern: def.defaultCron.trim() };
+  }
+  if (def.defaultEvery != null && def.defaultEvery >= 10_000) {
+    return { every: def.defaultEvery };
+  }
+  return { every: 60_000 };
+}
+
+/**
  * Register (or, if paused, remove) one scheduler using its config-overridable
  * interval/cron. Called at startup and by the API after an edit.
  */
@@ -168,11 +214,7 @@ export async function registerScheduler(def: SchedulerDef): Promise<void> {
     return;
   }
 
-  const cron = await getConfig<string | null>(schedCronKey(def.key), def.defaultCron ?? null);
-  const every = await getConfig<number | null>(schedEveryKey(def.key), def.defaultEvery ?? null);
-
-  const repeat = cron ? { pattern: cron } : { every: every ?? def.defaultEvery ?? 60_000 };
-
+  const repeat = await resolveSchedulerRepeat(def);
   await queue.upsertJobScheduler(def.schedulerId, repeat, {
     name: def.jobName,
     data: def.data,
@@ -186,13 +228,16 @@ export async function registerAllSchedulers(): Promise<void> {
   }
 }
 
-// ── Per-watch dynamic schedulers (unchanged; driven by the WatchList) ──
+// ── Per-watch dynamic schedulers (driven by the WatchList) ──
+
+/** How often each watched account is polled for new follows. */
+export const FOLLOW_TRACKER_EVERY_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function addWatchJob(watchListId: bigint, username: string): Promise<void> {
   const jobId = `watch-${watchListId.toString()}`;
   await followTrackerQueue.upsertJobScheduler(
     jobId,
-    { every: 15 * 60 * 1000 },
+    { every: FOLLOW_TRACKER_EVERY_MS },
     { name: "check-following", data: { watchListId: watchListId.toString(), username } },
   );
 }

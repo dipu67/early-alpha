@@ -30,10 +30,45 @@ import type {
   RateLimit,
   DeleteGrokConversationResult,
 } from "./types.js";
+/** Primary GraphQL host (most ops). Some ops (e.g. UsersByRestIds) are CF-blocked here. */
 const GRAPHQL_BASE = "https://x.com/i/api/graphql";
+/**
+ * Alternate GraphQL host used by the web client for several queries.
+ * Transaction path is `/graphql/{queryId}/{op}` (see x-client-transaction-id docs).
+ */
+const GRAPHQL_API_X = "https://api.x.com/graphql";
 const REST_BASE = "https://x.com/i/api/1.1";
 const BEARER_TOKEN =
   "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
+
+/** Path string for generateTransactionId — must match host layout, not necessarily URL origin. */
+function graphqlTransactionPath(
+  style: "i-api" | "api-x",
+  queryId: string,
+  op: string,
+): string {
+  // Docs: "/graphql/abcdefg/TweetDetail" for api-style; browser uses /i/api/graphql/... on x.com
+  return style === "api-x"
+    ? `/graphql/${queryId}/${op}`
+    : `/i/api/graphql/${queryId}/${op}`;
+}
+
+function isCloudflareHtmlBlock(status: number, body: string): boolean {
+  if (status !== 403 && status !== 503) return false;
+  return (
+    body.includes("<!DOCTYPE") ||
+    body.includes("<html") ||
+    body.includes("cf-browser-verification") ||
+    body.includes("Just a moment")
+  );
+}
+
+function formatHttpError(status: number, text: string): string {
+  if (isCloudflareHtmlBlock(status, text) || text.includes("<!DOCTYPE")) {
+    return `HTTP ${status}: Cloudflare/edge HTML block (bad host or x-client-transaction-id path)`;
+  }
+  return `HTTP ${status}: ${text.slice(0, 200)}`;
+}
 
 /**
  * Detect confirmed dead Twitter session (code 32).
@@ -312,7 +347,7 @@ export class TwitterClient {
     this.ct0 = options.cookies.ct0;
     this.userAgent =
       options.userAgent ||
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36";
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36";
   }
 
   // ── Headers ──
@@ -449,35 +484,58 @@ export class TwitterClient {
     return result;
   }
 
+  /**
+   * GraphQL hosts to try. Transaction-id path must match style (x-client-transaction-id).
+   * api.x.com is required for some ops (UsersByRestIds) that CF-block on x.com/i/api.
+   */
+  private graphqlHosts(
+    preferApiX = false,
+  ): { base: string; style: "i-api" | "api-x" }[] {
+    const iApi = { base: GRAPHQL_BASE, style: "i-api" as const };
+    const apiX = { base: GRAPHQL_API_X, style: "api-x" as const };
+    return preferApiX ? [apiX, iApi] : [iApi, apiX];
+  }
+
   private async graphqlPost<T = unknown>(
     op: OperationName,
     variables: Record<string, unknown>,
     features?: Record<string, boolean>,
   ): Promise<{ data?: T; errors?: Array<{ message: string; code?: number }> }> {
-    const url = `${GRAPHQL_BASE}/${QUERY_IDS[op]}/${op}`;
-    const body: Record<string, unknown> = { variables, queryId: QUERY_IDS[op] };
+    const qid = QUERY_IDS[op];
+    const body: Record<string, unknown> = { variables, queryId: qid };
     if (features) body.features = features;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        ...this.jsonHeaders(),
-        "x-client-transaction-id": await this.transactionId(
-          "POST",
-          new URL(url).pathname,
-        ),
-      },
-      body: JSON.stringify(body),
-    });
-    this.updateRateLimit(res);
 
-    if (!res.ok) {
+    let lastErr: Error | undefined;
+    for (const { base, style } of this.graphqlHosts()) {
+      const url = `${base}/${qid}/${op}`;
+      const txPath = graphqlTransactionPath(style, qid, op);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          ...this.jsonHeaders(),
+          "x-client-transaction-id": await this.transactionId("POST", txPath),
+          ...(style === "api-x" ? { Referer: "https://x.com/" } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+      this.updateRateLimit(res);
+      if (res.ok) {
+        return res.json() as Promise<{
+          data?: T;
+          errors?: Array<{ message: string; code?: number }>;
+        }>;
+      }
       const text = await res.text();
-      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+      lastErr = new Error(formatHttpError(res.status, text));
+      if (isCloudflareHtmlBlock(res.status, text) && style === "i-api") {
+        console.warn(
+          `[twitter] ${op} POST blocked on x.com/i/api — retry api.x.com (tx path ${graphqlTransactionPath("api-x", qid, op)})`,
+        );
+        continue;
+      }
+      throw lastErr;
     }
-    return res.json() as Promise<{
-      data?: T;
-      errors?: Array<{ message: string; code?: number }>;
-    }>;
+    throw lastErr ?? new Error(`graphql_post_failed:${op}`);
   }
 
   private async graphqlGet<T = unknown>(
@@ -485,7 +543,9 @@ export class TwitterClient {
     variables: Record<string, unknown>,
     features?: Record<string, boolean>,
     fieldToggles?: Record<string, boolean>,
+    opts?: { preferApiX?: boolean },
   ): Promise<{ data?: T; errors?: Array<{ message: string; code?: number }> }> {
+    const qid = QUERY_IDS[op];
     const params = new URLSearchParams({
       variables: JSON.stringify(variables),
     });
@@ -493,27 +553,42 @@ export class TwitterClient {
       params.set("features", JSON.stringify(features));
     if (fieldToggles) params.set("fieldToggles", JSON.stringify(fieldToggles));
 
-    const url = `${GRAPHQL_BASE}/${QUERY_IDS[op]}/${op}?${params}`;
-
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        ...this.jsonHeaders(),
-        "x-client-transaction-id": await this.transactionId(
-          "GET",
-          new URL(url).pathname,
-        ),
-      },
-    });
-    this.updateRateLimit(res);
-    if (!res.ok) {
+    let lastErr: Error | undefined;
+    for (const { base, style } of this.graphqlHosts(opts?.preferApiX)) {
+      const url = `${base}/${qid}/${op}?${params}`;
+      // Per x-client-transaction-id: path is the API path used to mint the header
+      // e.g. "/graphql/{queryId}/UsersByRestIds" on api.x.com
+      const txPath = graphqlTransactionPath(style, qid, op);
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          ...this.jsonHeaders(),
+          "x-client-transaction-id": await this.transactionId("GET", txPath),
+          ...(style === "api-x" ? { Referer: "https://x.com/" } : {}),
+        },
+      });
+      this.updateRateLimit(res);
+      if (res.ok) {
+        return res.json() as Promise<{
+          data?: T;
+          errors?: Array<{ message: string; code?: number }>;
+        }>;
+      }
       const text = await res.text();
-      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+      lastErr = new Error(formatHttpError(res.status, text));
+      if (isCloudflareHtmlBlock(res.status, text) && style === "i-api") {
+        console.warn(
+          `[twitter] ${op} GET blocked on x.com/i/api — retry api.x.com (tx path ${graphqlTransactionPath("api-x", qid, op)})`,
+        );
+        continue;
+      }
+      // If api.x.com also fails, surface that error
+      if (style === "api-x") throw lastErr;
+      // Non-CF errors on primary: still try api.x.com once for resilience
+      if (res.status >= 500) continue;
+      throw lastErr;
     }
-    return res.json() as Promise<{
-      data?: T;
-      errors?: Array<{ message: string; code?: number }>;
-    }>;
+    throw lastErr ?? new Error(`graphql_get_failed:${op}`);
   }
 
   private extractErrors(
@@ -1272,13 +1347,25 @@ export class TwitterClient {
     }
   }
 
+  /**
+   * Bulk user lookup by rest id.
+   * Uses UsersByRestIds — prefer api.x.com host (x.com/i/api is CF-blocked for this op).
+   * x-client-transaction-id path: `/graphql/{queryId}/UsersByRestIds`.
+   */
   async getUsersByIds(userIds: string[]): Promise<UsersResult> {
+    const ids = [...new Set(userIds.map((id) => id.trim()).filter(Boolean))];
+    if (ids.length === 0) {
+      return this.withRateLimit({ success: true, users: [] });
+    }
     try {
       // biome-ignore lint/suspicious/noExplicitAny: Twitter GraphQL response
       const json = await this.graphqlGet<any>(
         "UsersByRestIds",
-        { userIds },
+        { userIds: ids },
+        // Feature switches from live web client metadata for this op
         BASIC_FEATURES,
+        { withPayments: false, withAuxiliaryUserLabels: false },
+        { preferApiX: true },
       );
       const err = this.extractErrors(json.errors);
       if (err) return this.withRateLimit({ success: false, error: err });

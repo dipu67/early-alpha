@@ -136,7 +136,7 @@ const worker = new Worker(
       const { backfillAccountTags } = await import("./tagTools.js");
       const r = await backfillAccountTags({
         onlyUnknown: data.onlyUnknown ?? false,
-        limit: data.limit,
+        ...(data.limit !== undefined ? { limit: data.limit } : {}),
         onProgress: (p) =>
           console.log(
             `[list-worker] tag-backfill progress scanned=${p.scanned} updated=${p.updated}`,

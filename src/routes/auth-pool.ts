@@ -2,7 +2,9 @@
 // Tokens are ALWAYS masked in responses; they are never returned in full.
 //
 //   GET    /auth-accounts            -> pool status (masked), rate-limit state
-//   POST   /auth-accounts            -> add/update an auth account
+//   POST   /auth-accounts            -> body: { authToken, ct0 } only
+//                                       validates via TwitterClient.getCurrentUser
+//                                       then upserts twitter_auth_accounts
 //   PATCH  /auth-accounts/:id        -> activate / deactivate
 //   DELETE /auth-accounts/:id        -> remove one credential
 //   DELETE /auth-accounts            -> wipe entire pool (dead cookies etc.)
@@ -12,6 +14,7 @@ import { z } from "zod";
 import { prisma } from "../db/prisma.js";
 import { asyncHandler, HttpError } from "../middleware/error.js";
 import { jsonSafe } from "../http.js";
+import { TwitterClient } from "../TwitterClient/index.js";
 
 export const authPoolRouter: Router = Router();
 
@@ -36,7 +39,9 @@ authPoolRouter.get(
           authToken: mask(a.authToken),
           ct0: mask(a.ct0),
           isActive: a.isActive,
-          rateLimited: a.rateLimitedUntil ? a.rateLimitedUntil.getTime() > now : false,
+          rateLimited: a.rateLimitedUntil
+            ? a.rateLimitedUntil.getTime() > now
+            : false,
           rateLimitedUntil: a.rateLimitedUntil,
           lastUsedAt: a.lastUsedAt,
         })),
@@ -45,39 +50,87 @@ authPoolRouter.get(
   }),
 );
 
+/** Only cookies — id + username resolved from Twitter after validation. */
 const addBody = z.object({
-  id: z.string().min(1), // BigInt id as string
-  username: z.string().min(1),
-  authToken: z.string().min(1),
-  ct0: z.string().min(1),
-  isActive: z.boolean().default(true),
+  authToken: z.string().min(10),
+  ct0: z.string().min(10),
+  isActive: z.boolean().optional().default(true),
 });
 
 authPoolRouter.post(
   "/",
   asyncHandler(async (req, res) => {
-    const body = addBody.parse(req.body);
-    const id = parseBigId(body.id);
+    const body = addBody.parse(req.body ?? {});
+    const authToken = body.authToken.trim();
+    const ct0 = body.ct0.trim();
+    if (!authToken || !ct0) {
+      throw new HttpError(400, "auth_token_and_ct0_required");
+    }
+
+    // Validate cookies with Twitter before writing to DB
+    const client = new TwitterClient({
+      cookies: { authToken, ct0 },
+    });
+    let me = await client.getCurrentUser();
+
+    // settings.json often returns screen_name without user id — resolve via GraphQL
+    if (
+      me.success &&
+      me.user?.username &&
+      (!me.user.id || !/^\d+$/.test(me.user.id))
+    ) {
+      const byName = await client.getUserByScreenName(me.user.username);
+      if (byName.success && byName.user?.id) {
+        me = {
+          success: true,
+          user: {
+            id: byName.user.id,
+            username: byName.user.username,
+            name: byName.user.name || byName.user.username,
+          },
+        };
+      }
+    }
+
+    if (!me.success || !me.user?.id || !me.user.username) {
+      throw new HttpError(
+        400,
+        me.error
+          ? `invalid_cookies: ${me.error.slice(0, 180)}`
+          : "invalid_cookies: getCurrentUser failed",
+      );
+    }
+
+    const id = parseBigId(me.user.id);
+    const username = me.user.username.replace(/^@/, "").toLowerCase();
+
     const row = await prisma.twitterAuthAccount.upsert({
       where: { id },
       create: {
         id,
-        username: body.username,
-        authToken: body.authToken,
-        ct0: body.ct0,
-        isActive: body.isActive,
+        username,
+        authToken,
+        ct0,
+        isActive: body.isActive ?? true,
         rateLimitedUntil: null,
       },
       update: {
-        username: body.username,
-        authToken: body.authToken,
-        ct0: body.ct0,
-        isActive: body.isActive,
+        username,
+        authToken,
+        ct0,
+        isActive: body.isActive ?? true,
         // Fresh cookies clear rate-limit / dead-auth pause
         rateLimitedUntil: null,
       },
     });
-    res.status(201).json({ id: row.id.toString(), username: row.username, isActive: row.isActive });
+
+    res.status(201).json({
+      id: row.id.toString(),
+      username: row.username,
+      isActive: row.isActive,
+      name: me.user.name ?? row.username,
+      validated: true,
+    });
   }),
 );
 

@@ -94,7 +94,7 @@ export default async function WatchlistPage() {
                           size="sm"
                           path={`/api/watchlist/${w.id}/track-now`}
                           confirmTitle={`Reactivate @${w.username}?`}
-                          confirm={`Resume tracking @${w.username} (registers the 15-min schedule and runs one check now).`}
+                          confirm={`Resume tracking @${w.username} (registers the 5-min schedule and runs one check now).`}
                         />
                       )}
                       <ActionButton

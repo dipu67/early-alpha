@@ -22,8 +22,8 @@ Twitter following tracker for crypto influencers and early project hunters. Moni
 ```sh
 cp .env.example .env   # fill in your credentials
 docker compose up -d
-npm install
-npx prisma migrate dev
+npm run install:all    # root API + admin UI deps
+npx prisma migrate deploy
 ```
 
 ### Environment Variables
@@ -42,13 +42,30 @@ Admin UI env: see `admin/.env.example` (`BACKEND_URL`, `BACKEND_API_KEY`, `SESSI
 
 ## Usage
 
+### Build & start (API + admin)
+
 ```sh
-# Start everything (bot + workers + scheduler)
-npm run dev
+# One-shot: compile API (tsc) + admin (Next.js)
+npm run build          # same as build:all
+npm run build:api      # API only → dist/
+npm run build:admin    # admin only
+
+# Production: run both together (API :4000, admin :3000 by default)
+npm start              # same as start:all
+npm run start:api      # API only
+npm run start:admin    # admin only
+```
+
+### Dev (hot reload)
+
+```sh
+npm run dev:all        # API + admin together
+npm run dev:api        # API only (tsx)
+npm run dev:admin      # admin only (next dev)
 
 # Or run components individually
-npm run bot        # Telegram bot only
-npm run worker     # BullMQ worker only
+npm run bot            # Telegram bot only
+npm run worker         # BullMQ worker only
 ```
 
 ### Tracking CLI

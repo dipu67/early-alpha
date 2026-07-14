@@ -20,7 +20,7 @@ export const SCHEDULERS: SchedulerDef[] = [
   { key: "health-check", queue: "seed-tracker", schedulerId: "health-check", jobName: "health-check", data: {}, defaultEvery: 6 * 60 * 60 * 1000, label: "Health check" },
   { key: "list-reconcile", queue: "list-tracker", schedulerId: "list-reconcile", jobName: "reconcile-lists", data: {}, defaultEvery: 60 * 60 * 1000, label: "List reconcile" },
   { key: "list-poll", queue: "list-tracker", schedulerId: "list-poll", jobName: "poll-lists", data: {}, defaultEvery: 5 * 60 * 1000, label: "List poll" },
-  { key: "early-digest", queue: "list-tracker", schedulerId: "early-digest", jobName: "early-digest", data: {}, defaultEvery: 12 * 60 * 60 * 1000, label: "Early-project digest" },
+  { key: "early-digest", queue: "list-tracker", schedulerId: "early-digest", jobName: "early-digest", data: {}, defaultCron: "0 9,21 * * *", label: "Early-project digest (09:00 & 21:00 UTC)" },
   { key: "search-poll", queue: "list-tracker", schedulerId: "search-poll", jobName: "poll-searches", data: {}, defaultEvery: 60 * 1000, label: "Twitter search poll" },
   { key: "monitor-poll", queue: "list-tracker", schedulerId: "monitor-poll", jobName: "poll-monitors", data: {}, defaultEvery: 2 * 60 * 1000, label: "User timeline monitors" },
   { key: "home-signal-poll", queue: "list-tracker", schedulerId: "home-signal-poll", jobName: "poll-home-signals", data: {}, defaultEvery: 2 * 60 * 1000, label: "HomeLatest signal scans" },

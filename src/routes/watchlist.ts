@@ -7,7 +7,7 @@
 //   POST   /watchlist/:id/track-now  -> re-activate + enqueue immediate follow check
 //
 // POST accepts username only. We call getUserByScreenName to resolve the Twitter
-// user id, upsert the profile, register the 15-min scheduler, and activate.
+// user id, upsert the profile, register the 5-min scheduler, and activate.
 
 import { Router } from "express";
 import { z } from "zod";
@@ -186,7 +186,7 @@ watchlistRouter.delete(
     const existing = await prisma.watchList.findUnique({ where: { id } });
     if (!existing) throw new HttpError(404, "watchlist entry not found");
 
-    // Stop the 15-min scheduler first so no job fires after the row is gone.
+    // Stop the 5-min scheduler first so no job fires after the row is gone.
     await removeWatchJob(id).catch(() => undefined);
 
     // Hard delete — FollowSnapshot + AlertLog cascade via schema onDelete.

@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   const result = await backfillAccountTags({
     onlyUnknown: ONLY_UNKNOWN,
     dryRun: DRY_RUN,
-    limit: LIMIT,
+    ...(LIMIT !== undefined ? { limit: LIMIT } : {}),
     onProgress: ({ scanned, updated, unchanged }) => {
       console.log(
         `[tag:backfill] progress scanned=${scanned} updated=${updated} unchanged=${unchanged}`,

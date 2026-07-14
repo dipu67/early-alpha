@@ -189,12 +189,14 @@ export async function classifyAccount(account: ClassifiableAccount): Promise<str
   refreshSnapshot(lex);
 
   const matched = new Set<string>();
+  // Bio + display name: keywords / regex (chain tags: ethereum, @ethereum, $ETH, …)
   const text = `${account.name ?? ""} ${account.description ?? ""}`;
   if (text.trim()) {
     for (const [slug, patterns] of lex.compiled) {
       if (patterns.some((re) => re.test(text))) matched.add(slug);
     }
   }
+  // Username tokens/suffixes (e.g. @ethereum handle itself)
   for (const slug of tagsFromHandle(account.username, lex)) matched.add(slug);
   return matched.size > 0 ? [...matched] : [DEFAULT_SLUG];
 }

@@ -186,7 +186,7 @@ bot.command("watch", async (ctx) => {
       `Followers: ${user.followersCount?.toLocaleString() ?? "N/A"}`,
       `Following: ${user.followingCount?.toLocaleString() ?? "N/A"}`,
       ``,
-      `Will check for new follows every 15 minutes.`,
+      `Will check for new follows every 5 minutes.`,
     ].join("\n");
 
     return ctx.reply(summary);

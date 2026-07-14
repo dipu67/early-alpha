@@ -8,6 +8,8 @@
 //   POST   /tags/seed           -> enqueue seed keywords from lexicon file
 //   POST   /tags/backfill       -> enqueue re-classify accounts from lexicon
 //   GET    /projects            -> tagged TwitterAccounts, filter by tag/search
+//   POST   /projects/fetch-profiles -> getUsersByIds → fill null bios (+ re-tag)
+//   POST   /projects/:id/fetch-profile -> same for one project
 //   DELETE /projects/:id        -> remove project account from DB (+ list mirror)
 //   GET    /lists               -> ProjectLists with member counts
 //   POST   /lists               -> create list (slug + auth owner)
@@ -24,6 +26,7 @@ import { asyncHandler, HttpError } from "../middleware/error.js";
 import { paginationSchema, jsonSafe } from "../http.js";
 import { enqueueJob } from "../enqueue.js";
 import { invalidateLexiconCache } from "../services/projectTagger.js";
+import { fetchAndUpdateProjectProfiles } from "../services/projectProfile.js";
 import {
   createProjectList,
   deleteProjectList,
@@ -214,6 +217,10 @@ const projectsQuery = paginationSchema.extend({
   tag: z.string().optional(),
   search: z.string().optional(),
   sort: z.enum(PROJECT_SORTS).optional().default("latest"),
+  /** Only accounts with null/empty description (bio). */
+  missingBio: z
+    .union([z.literal("1"), z.literal("0"), z.literal("true"), z.literal("false")])
+    .optional(),
 });
 
 function projectsOrderBy(
@@ -244,6 +251,13 @@ tagsListsRouter.get(
   "/projects",
   asyncHandler(async (req, res) => {
     const q = projectsQuery.parse(req.query);
+    const missingBio =
+      q.missingBio === "1" || q.missingBio === "true"
+        ? true
+        : q.missingBio === "0" || q.missingBio === "false"
+          ? false
+          : null;
+
     const where = {
       ...(q.tag ? { tags: { has: q.tag } } : {}),
       ...(q.search
@@ -254,9 +268,12 @@ tagsListsRouter.get(
             ],
           }
         : {}),
+      ...(missingBio
+        ? { OR: [{ description: null }, { description: "" }] }
+        : {}),
     };
 
-    const [items, total] = await Promise.all([
+    const [items, total, missingBioCount] = await Promise.all([
       prisma.twitterAccount.findMany({
         where,
         orderBy: projectsOrderBy(q.sort),
@@ -266,6 +283,7 @@ tagsListsRouter.get(
           id: true,
           username: true,
           name: true,
+          description: true,
           tags: true,
           followersCount: true,
           isBlueVerified: true,
@@ -275,6 +293,9 @@ tagsListsRouter.get(
         },
       }),
       prisma.twitterAccount.count({ where }),
+      prisma.twitterAccount.count({
+        where: { OR: [{ description: null }, { description: "" }] },
+      }),
     ]);
 
     res.json({
@@ -282,8 +303,65 @@ tagsListsRouter.get(
       limit: q.limit,
       offset: q.offset,
       sort: q.sort,
+      missingBioCount,
       items: jsonSafe(items),
     });
+  }),
+);
+
+const fetchProfilesBody = z.object({
+  ids: z.array(z.string().min(1)).max(200).optional(),
+  /** Default true when no ids — only rows with null/empty bio. */
+  missingBioOnly: z.boolean().optional(),
+  limit: z.number().int().min(1).max(500).optional(),
+  /** Re-run tag classifier after bio update (default true). */
+  reclassify: z.boolean().optional(),
+});
+
+/** Bulk: getUsersByIds → update description/name/counts (+ optional re-tag). */
+tagsListsRouter.post(
+  "/projects/fetch-profiles",
+  asyncHandler(async (req, res) => {
+    const body = fetchProfilesBody.parse(req.body ?? {});
+    const result = await fetchAndUpdateProjectProfiles({
+      ...(body.ids ? { ids: body.ids } : {}),
+      missingBioOnly: body.missingBioOnly ?? !(body.ids && body.ids.length > 0),
+      ...(body.limit !== undefined ? { limit: body.limit } : {}),
+      reclassify: body.reclassify ?? true,
+    });
+    res.json({ ok: true, ...result });
+  }),
+);
+
+/** Single project: getUsersByIds([id]) → fill bio. */
+tagsListsRouter.post(
+  "/projects/:id/fetch-profile",
+  asyncHandler(async (req, res) => {
+    const idRaw = req.params.id;
+    const id = Array.isArray(idRaw) ? idRaw[0]! : idRaw!;
+    const exists = await prisma.twitterAccount.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!exists) throw new HttpError(404, "project_not_found");
+
+    const reclassify =
+      req.body && typeof req.body === "object" && "reclassify" in req.body
+        ? Boolean((req.body as { reclassify?: boolean }).reclassify)
+        : true;
+
+    const result = await fetchAndUpdateProjectProfiles({
+      ids: [id],
+      missingBioOnly: false,
+      reclassify,
+    });
+    if (result.updated === 0) {
+      throw new HttpError(
+        502,
+        result.errors[0] ?? "user_not_found_or_fetch_failed",
+      );
+    }
+    res.json({ ok: true, ...result, item: result.items[0] ?? null });
   }),
 );
 
@@ -385,8 +463,10 @@ tagsListsRouter.post(
     try {
       const item = await createProjectList({
         slug: body.slug,
-        name: body.name,
-        description: body.description,
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.description !== undefined
+          ? { description: body.description }
+          : {}),
         authAccountId,
       });
       res.status(201).json({ item: jsonSafe(item) });

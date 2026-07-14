@@ -1,6 +1,7 @@
-// Early-project digest — every 12h, summarize the projects detected in the last
-// 12 hours and route each to its tag's Telegram topic (nft, gamefi, …). Projects
-// whose tag has no dedicated topic roll into the general "early project" topic.
+// Early-project digest — scheduled 09:00 & 21:00 (every 12h, clock-aligned).
+// Summarizes projects firstSeen in the last 12 hours and routes each to its
+// tag's Telegram topic (nft, gamefi, …). Untagged destinations use the general
+// "early project" topic.
 //
 // Grouping is per-project by a single primary topic: the first of the project's
 // typed tags that has a mapped topic wins; otherwise the general topic. This
@@ -51,7 +52,11 @@ async function routeProject(
     }
   }
   const general = await earlyProjectTopic();
-  return { key: `general:${general ?? "default"}`, topicId: general, label: "Early Projects" };
+  return {
+    key: `general:${general ?? "default"}`,
+    topicId: general,
+    label: "Early Projects",
+  };
 }
 
 /** One line per project in a digest message. */
@@ -64,8 +69,62 @@ function projectLine(a: DigestAccount): string {
   return `• [@${escapeMarkdown(a.username)}](https://x.com/${a.username})${followers}${tagStr}`;
 }
 
+/** Split projects into pages of at most `size` each. */
+function chunkProjects<T>(items: T[], size: number): T[][] {
+  const n = Math.max(1, size);
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += n) {
+    out.push(items.slice(i, i + n));
+  }
+  return out.length > 0 ? out : [[]];
+}
+
 /**
- * Build and send the 12h early-project digest, one message per destination topic.
+ * Build one Telegram message for a project page.
+ * part / parts: 1-based part index when multiple messages are needed.
+ */
+function buildDigestMessage(opts: {
+  label: string;
+  window: string;
+  page: DigestAccount[];
+  part: number;
+  parts: number;
+  total: number;
+}): string {
+  const { label, window, page, part, parts, total } = opts;
+  const partLabel =
+    parts > 1
+      ? ` · part ${part}/${parts}`
+      : "";
+
+  const lines = [
+    `🆕 *Early Projects · ${escapeMarkdown(label)}* \\(last ${escapeMarkdown(window)}${escapeMarkdown(partLabel)}\\)`,
+    `━━━━━━━━━━━━━━━━━━`,
+    ...page.map(projectLine),
+    `━━━━━━━━━━━━━━━━━━`,
+  ];
+
+  if (parts > 1) {
+    const from = (part - 1) * MAX_PER_TOPIC + 1;
+    const to = (part - 1) * MAX_PER_TOPIC + page.length;
+    lines.push(
+      `*Showing:* ${from}\–${to} of ${total}`,
+    );
+    if (part < parts) {
+      lines.push(`_Continued in next message…_`);
+    } else {
+      lines.push(`*Total:* ${total}`);
+    }
+  } else {
+    lines.push(`*Total:* ${total}`);
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Build and send the early-project digest.
+ * One topic → one or more messages (part 2+ for projects that didn't fit part 1).
  * Returns the number of projects included.
  */
 export async function sendEarlyProjectDigest(): Promise<number> {
@@ -102,23 +161,42 @@ export async function sendEarlyProjectDigest(): Promise<number> {
   }
 
   const window = `${WINDOW_HOURS}h`;
+  let messages = 0;
+
   for (const bucket of buckets.values()) {
-    const shown = bucket.accounts.slice(0, MAX_PER_TOPIC);
-    const extra = bucket.accounts.length - shown.length;
+    const pages = chunkProjects(bucket.accounts, MAX_PER_TOPIC);
+    const parts = pages.length;
+    const total = bucket.accounts.length;
 
-    const lines = [
-      `🆕 *Early Projects · ${escapeMarkdown(bucket.label)}* \\(last ${escapeMarkdown(window)}\\)`,
-      `━━━━━━━━━━━━━━━━━━`,
-      ...shown.map(projectLine),
-    ];
-    if (extra > 0) lines.push(`…and ${extra} more`);
-    lines.push(`━━━━━━━━━━━━━━━━━━`, `*Total:* ${bucket.accounts.length}`);
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i]!;
+      const text = buildDigestMessage({
+        label: bucket.label,
+        window,
+        page,
+        part: i + 1,
+        parts,
+        total,
+      });
 
-    await sendTelegramTopic(lines.join("\n"), bucket.topicId, "MarkdownV2", "earlyDigest");
+      await sendTelegramTopic(
+        text,
+        bucket.topicId,
+        "MarkdownV2",
+        "earlyDigest",
+      );
+      messages += 1;
+    }
+
+    if (parts > 1) {
+      console.log(
+        `[early-digest] ${bucket.label}: ${total} projects in ${parts} messages`,
+      );
+    }
   }
 
   console.log(
-    `[early-digest] sent ${accounts.length} projects across ${buckets.size} topic(s)`,
+    `[early-digest] sent ${accounts.length} projects · ${buckets.size} topic(s) · ${messages} message(s)`,
   );
   return accounts.length;
 }

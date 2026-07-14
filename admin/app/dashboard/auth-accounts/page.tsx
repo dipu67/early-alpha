@@ -15,7 +15,7 @@ export default async function AuthAccountsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Auth Pool"
-        description="Twitter session cookies (auth_token + ct0). On code 32 (dead session) the account is soft-paused (rate-limited), not permanently deactivated. Re-add fresh cookies if Activate keeps failing — old tokens will error again on the next poll."
+        description="Paste auth_token + ct0 only. We validate with Twitter getCurrentUser, then store the real user id and @username. Dead sessions are soft-paused (rate-limited), not permanently deleted."
       />
 
       <AddAuthForm />
@@ -29,7 +29,7 @@ export default async function AuthAccountsPage() {
       {data.items.length === 0 ? (
         <EmptyState
           title="No auth accounts"
-          description="Add a live session: twitter user id, username, auth_token, ct0."
+          description="Add auth_token and ct0 from a live X session. Username and id are filled automatically."
         />
       ) : (
         <AuthPoolTable initialItems={data.items} />

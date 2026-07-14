@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { proxy } from "@/lib/client";
@@ -10,22 +10,55 @@ import { toast } from "@/components/ui/sonner";
 import { useCan } from "@/components/role-context";
 import { ReclassifyControl } from "./reclassify-control";
 
-/** Edit tags + remove project from the system. */
+/** Edit tags + fetch bio + remove project. */
 export function ProjectActions({
   accountId,
   username,
   currentTags,
+  missingBio = false,
 }: {
   accountId: string;
   username: string;
   currentTags: string[];
+  missingBio?: boolean;
 }) {
   const router = useRouter();
   const canWrite = useCan("editor");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
   if (!canWrite) return null;
+
+  async function fetchProfile() {
+    setFetching(true);
+    try {
+      const res = await proxy(
+        `/api/projects/${encodeURIComponent(accountId)}/fetch-profile`,
+        {
+          method: "POST",
+          body: { reclassify: true },
+        },
+      );
+      if (res.ok) {
+        const b = res.body as {
+          item?: { description?: string | null; tags?: string[] };
+        };
+        const bio = b.item?.description?.trim();
+        toast.success(
+          bio
+            ? `Updated @${username} bio (+ re-tagged)`
+            : `Fetched @${username} — bio still empty on Twitter`,
+        );
+        router.refresh();
+      } else {
+        const err = res.body as { error?: string } | null;
+        toast.error(err?.error ?? `Fetch failed (${res.status})`);
+      }
+    } finally {
+      setFetching(false);
+    }
+  }
 
   async function remove() {
     setBusy(true);
@@ -48,10 +81,30 @@ export function ProjectActions({
       <ReclassifyControl accountId={accountId} currentTags={currentTags} />
       <Button
         type="button"
+        variant={missingBio ? "secondary" : "outline"}
+        size="sm"
+        className="h-8"
+        disabled={fetching || busy}
+        onClick={() => void fetchProfile()}
+        title={
+          missingBio
+            ? "Bio is empty — fetch via getUsersByIds and update"
+            : "Re-fetch profile/bio via getUsersByIds"
+        }
+      >
+        {fetching ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <RefreshCw className="size-3.5" />
+        )}
+        {missingBio ? "Fetch bio" : "Refresh"}
+      </Button>
+      <Button
+        type="button"
         variant="ghost"
         size="sm"
         className="h-8 text-destructive hover:text-destructive"
-        disabled={busy}
+        disabled={busy || fetching}
         onClick={() => setOpen(true)}
         title={`Remove @${username}`}
       >

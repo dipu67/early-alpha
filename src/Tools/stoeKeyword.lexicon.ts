@@ -337,6 +337,149 @@ export const KEYWORDS: Record<string, (string | RegExp)[]> = {
     "mev", "maximal extractable", "mev protection", "mev-boost", "mev boost",
     "proposer builder", "pbs", "block builder", "flashbots",
   ],
+
+  // ── Chain / ecosystem tags ──────────────────────────────────────────────
+  // Matched primarily from bio/name text (projectTagger: name + description).
+  // Prefer phrases over bare short tokens to avoid false positives (near/ton/base).
+  // Also match @handles and $TICKERS when people put them in bios.
+  ethereum: [
+    "ethereum", "ethereum ecosystem", "on ethereum", "built on ethereum",
+    "deployed on ethereum", "ethereum mainnet", "eth mainnet", "ethereum network",
+    "ethereum foundation", "ethereum l1", "eth ecosystem", "built on eth",
+    "on eth", "eth l1", "erc-20", "erc20", "erc-721", "erc721", "erc-1155",
+    "erc1155", "solidity", "ethereum dapp", "ethereum protocol",
+    "ethereum defi", "ethereum nft",
+    "@ethereum",
+    /\$eth\b/i,
+  ],
+  solana: [
+    "solana", "on solana", "built on solana", "deployed on solana",
+    "solana ecosystem", "solana network", "solana mainnet", "solana program",
+    "solana dapp", "solana defi", "spl token", "spl tokens", "svm",
+    "solana vm", "solana nft", "solana sealevel",
+    "@solana",
+    /\$sol\b/i,
+  ],
+  base: [
+    "base chain", "base network", "base ecosystem", "on base", "built on base",
+    "deployed on base", "base mainnet", "base l2", "coinbase l2",
+    "base appchain", "base superchain", "base.org",
+    "@base",
+  ],
+  arbitrum: [
+    "arbitrum", "on arbitrum", "built on arbitrum", "arbitrum ecosystem",
+    "arbitrum one", "arbitrum nova", "arbitrum orbit", "arb chain",
+    "arbitrum l2", "stylus",
+    "@arbitrum",
+    /\$arb\b/i,
+  ],
+  optimism: [
+    "optimism", "on optimism", "built on optimism", "optimism ecosystem",
+    "op mainnet", "op stack", "opstack", "superchain", "optimism l2",
+    "op chain",
+    "@optimism",
+    /\$op\b/i,
+  ],
+  polygon: [
+    "polygon", "on polygon", "built on polygon", "polygon ecosystem",
+    "polygon pos", "polygon zkevm", "polygon cdk", "matic network",
+    "polygon chain",
+    "@0xpolygon", "@polygon",
+    /\$matic\b/i, /\$pol\b/i,
+  ],
+  bnb: [
+    "bnb chain", "bnb smart chain", "binance smart chain", "bsc",
+    "on bsc", "built on bsc", "built on bnb", "on bnb", "bnb ecosystem",
+    "opbnb", "bnb greenfield",
+    "@bnbchain",
+    /\$bnb\b/i,
+  ],
+  avalanche: [
+    "avalanche", "on avalanche", "built on avalanche", "avalanche ecosystem",
+    "avax", "avax c-chain", "avalanche c-chain", "avalanche subnet",
+    "@avax", "@avalancheavax",
+    /\$avax\b/i,
+  ],
+  sui: [
+    "sui network", "on sui", "built on sui", "sui ecosystem",
+    "sui blockchain", "sui move", "sui mainnet", "sui chain",
+    "@suinetwork", "@sui",
+    /\$sui\b/i,
+  ],
+  aptos: [
+    "aptos", "on aptos", "built on aptos", "aptos network", "aptos ecosystem",
+    "aptos blockchain", "aptos move", "aptos mainnet",
+    "@aptos",
+    /\$apt\b/i,
+  ],
+  cosmos: [
+    "cosmos", "cosmos sdk", "cosmos ecosystem", "ibc", "interchain",
+    "cosmos hub", "appchain cosmos", "built with cosmos",
+    "tendermint", "cometbft",
+    "@cosmos",
+    /\$atom\b/i,
+  ],
+  near: [
+    "near protocol", "on near", "built on near", "near ecosystem",
+    "near blockchain", "near mainnet", "near chain",
+    "@nearprotocol",
+    /\$near\b/i,
+  ],
+  ton: [
+    "the open network", "on ton", "built on ton", "ton ecosystem",
+    "ton blockchain", "toncoin", "telegram open network", "ton chain",
+    "@ton_blockchain", "@toncoin",
+    /\$ton\b/i,
+  ],
+  tron: [
+    "tron", "on tron", "built on tron", "tron network", "tron ecosystem",
+    "trc-20", "trc20", "tron blockchain",
+    "@trondao", "@tronfoundation",
+    /\$trx\b/i,
+  ],
+  berachain: [
+    "berachain", "on berachain", "built on berachain", "bera chain",
+    "berachain ecosystem", "proof of liquidity",
+    "@berachain",
+    /\$bera\b/i,
+  ],
+  monad: [
+    "monad", "on monad", "built on monad", "monad chain", "monad ecosystem",
+    "monad blockchain",
+    "@monad_xyz", "@monad",
+  ],
+  starknet: [
+    "starknet", "on starknet", "built on starknet", "starknet ecosystem",
+    "starkware", "cairo", "starkex",
+    "@starknet",
+    /\$strk\b/i,
+  ],
+  zksync: [
+    "zksync", "zk sync", "zk-sync", "on zksync", "built on zksync",
+    "zksync era", "zksync ecosystem", "matter labs",
+    "@zksync",
+  ],
+  scroll: [
+    "scroll", "on scroll", "built on scroll", "scroll ecosystem",
+    "scroll l2", "scroll zk", "scroll network",
+    "@scroll_zkp", "@scroll",
+  ],
+  linea: [
+    "linea", "on linea", "built on linea", "linea ecosystem", "linea l2",
+    "consensys linea", "linea network",
+    "@lineabuild",
+  ],
+  blast: [
+    "blast l2", "on blast", "built on blast", "blast ecosystem",
+    "blast network", "blast chain",
+    "@blast",
+  ],
+  hyperliquid: [
+    "hyperliquid", "on hyperliquid", "hyperliquid l1", "hyperliquid chain",
+    "hyperliquid ecosystem", "hypercore",
+    "@hyperliquidx",
+    /\$hype\b/i,
+  ],
 };
 
 /** Username delim tokens: match as (?:^|[_\\d])token(?:[_\\d]|$). */
@@ -370,6 +513,29 @@ export const HANDLE_TOKENS: Record<string, string[]> = {
   oracles: ["oracle"],
   identity: ["id", "did"],
   payments: ["pay"],
+  // Official-style chain handles only (bio is the main source for chain tags)
+  ethereum: ["ethereum"],
+  solana: ["solana"],
+  base: ["base"],
+  arbitrum: ["arbitrum"],
+  optimism: ["optimism"],
+  polygon: ["polygon"],
+  bnb: ["bnbchain"],
+  avalanche: ["avalanche", "avax"],
+  sui: ["sui"],
+  aptos: ["aptos"],
+  cosmos: ["cosmos"],
+  near: ["nearprotocol"],
+  ton: ["toncoin"],
+  tron: ["tron"],
+  berachain: ["berachain"],
+  monad: ["monad"],
+  starknet: ["starknet"],
+  zksync: ["zksync"],
+  scroll: ["scroll"],
+  linea: ["linea"],
+  blast: ["blast"],
+  hyperliquid: ["hyperliquid"],
 };
 
 /** Username suffix tokens: handle.endsWith(token). */
@@ -389,4 +555,15 @@ export const HANDLE_SUFFIX_TOKENS: Record<string, string[]> = {
   bridge: ["bridge"],
   launchpad: ["pad"],
   rwa: ["rwa"],
+  // Prefer full names; short suffixes (eth/sol/arb) are too noisy
+  ethereum: ["ethereum"],
+  solana: ["solana"],
+  arbitrum: ["arbitrum"],
+  optimism: ["optimism"],
+  polygon: ["polygon"],
+  avalanche: ["avalanche"],
+  berachain: ["berachain"],
+  starknet: ["starknet"],
+  zksync: ["zksync"],
+  hyperliquid: ["hyperliquid"],
 };

@@ -9,6 +9,8 @@ import {
   getQueue,
   SCHEDULERS,
   getScheduler,
+  registerScheduler,
+  resolveSchedulerRepeat,
   type SchedulerDef,
 } from "../services/queue.js";
 import {
@@ -23,42 +25,31 @@ import { jsonSafe } from "../http.js";
 
 export const queuesRouter: Router = Router();
 
-/** Re-apply a scheduler on Redis from its current config (or remove if paused). */
-async function applyScheduler(def: SchedulerDef): Promise<void> {
-  const queue = getQueue(def.queue);
-  const paused = await getConfig<boolean>(schedPausedKey(def.key), false);
-  if (paused) {
-    await queue.removeJobScheduler(def.schedulerId).catch(() => undefined);
-    return;
-  }
-  const cron = await getConfig<string | null>(schedCronKey(def.key), def.defaultCron ?? null);
-  const every = await getConfig<number | null>(schedEveryKey(def.key), def.defaultEvery ?? null);
-  const repeat = cron ? { pattern: cron } : { every: every ?? def.defaultEvery ?? 60_000 };
-  await queue.upsertJobScheduler(def.schedulerId, repeat, { name: def.jobName, data: def.data });
-}
-
 queuesRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
     const items = await Promise.all(
       SCHEDULERS.map(async (def) => {
         const queue = getQueue(def.queue);
-        const [paused, cron, every, schedulers, counts] = await Promise.all([
+        const [paused, repeat, schedulers, counts] = await Promise.all([
           getConfig<boolean>(schedPausedKey(def.key), false),
-          getConfig<string | null>(schedCronKey(def.key), def.defaultCron ?? null),
-          getConfig<number | null>(schedEveryKey(def.key), def.defaultEvery ?? null),
+          resolveSchedulerRepeat(def),
           queue.getJobSchedulers(0, 50).catch(() => []),
-          queue.getJobCounts("waiting", "active", "delayed", "failed", "completed").catch(() => ({})),
+          queue
+            .getJobCounts("waiting", "active", "delayed", "failed", "completed")
+            .catch(() => ({})),
         ]);
         const sched = schedulers.find((s) => s.key === def.schedulerId);
+        const cron = "pattern" in repeat ? repeat.pattern : null;
+        const every = "every" in repeat ? repeat.every : null;
         return {
           key: def.key,
           label: def.label,
           queue: def.queue,
           jobName: def.jobName,
           paused,
-          cron: cron ?? null,
-          every: every ?? def.defaultEvery ?? null,
+          cron,
+          every,
           nextRun: sched?.next ?? null,
           counts,
         };
@@ -80,7 +71,7 @@ queuesRouter.post(
   asyncHandler(async (req, res) => {
     const def = defOr404(req.params.key);
     await setConfig(schedPausedKey(def.key), true);
-    await applyScheduler(def);
+    await registerScheduler(def);
     res.json({ ok: true, paused: true });
   }),
 );
@@ -90,7 +81,7 @@ queuesRouter.post(
   asyncHandler(async (req, res) => {
     const def = defOr404(req.params.key);
     await setConfig(schedPausedKey(def.key), false);
-    await applyScheduler(def);
+    await registerScheduler(def);
     res.json({ ok: true, paused: false });
   }),
 );
@@ -133,15 +124,17 @@ queuesRouter.patch(
     const body = patchBody.parse(req.body);
     // Setting one mode clears the other so only one schedule is active.
     if (body.cron !== undefined) {
-      const pattern = body.cron?.trim() ?? null;
+      const pattern = body.cron?.trim() || null;
       await setConfig(schedCronKey(def.key), pattern);
+      // Cron mode clears interval override
       if (pattern) await setConfig(schedEveryKey(def.key), null);
     }
     if (body.every !== undefined) {
       await setConfig(schedEveryKey(def.key), body.every);
-      if (body.every) await setConfig(schedCronKey(def.key), null);
+      // Interval mode clears cron override
+      if (body.every != null) await setConfig(schedCronKey(def.key), null);
     }
-    await applyScheduler(def);
+    await registerScheduler(def);
     res.json({ ok: true });
   }),
 );

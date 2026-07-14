@@ -15,6 +15,8 @@ export interface Project {
   id: string;
   username: string;
   name: string;
+  /** Twitter bio — null/empty when never fetched */
+  description?: string | null;
   tags: string[];
   followersCount: number | null;
   isBlueVerified: boolean | null;

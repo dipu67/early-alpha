@@ -114,15 +114,17 @@ export async function backfillAccountTags(opts: {
   while (scanned < limit) {
     const take = Math.min(batchSize, limit - scanned);
     const rows = await prisma.twitterAccount.findMany({
-      where: onlyUnknown
+      ...(onlyUnknown
         ? {
-            OR: [
-              { tags: { equals: [] } },
-              { tags: { equals: [DEFAULT_SLUG] } },
-              { tags: { has: DEFAULT_SLUG } },
-            ],
+            where: {
+              OR: [
+                { tags: { equals: [] } },
+                { tags: { equals: [DEFAULT_SLUG] } },
+                { tags: { has: DEFAULT_SLUG } },
+              ],
+            },
           }
-        : undefined,
+        : {}),
       orderBy: { id: "asc" },
       take,
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),

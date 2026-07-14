@@ -71,7 +71,7 @@ export const JOBS = {
   }),
 
   // ── follow-tracker (services/worker.ts) ──
-  // "track a watched account NOW" == the same job the 15-min scheduler enqueues.
+  // "track a watched account NOW" == the same job the 5-min scheduler enqueues.
   "track-now": def({
     queue: "follow-tracker",
     jobName: "check-following",
