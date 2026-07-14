@@ -15,6 +15,15 @@ const nextConfig: NextConfig = {
       allowedOrigins: ["admin.dipu.app", "localhost:4000"],
     }
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:4000/api/:path*', // আপনার Express যে port এ চলছে সেটা বসান
+      },
+    ];
+  },
+
 };
 
 export default nextConfig;
