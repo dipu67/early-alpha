@@ -45,15 +45,28 @@ Admin UI env: see `admin/.env.example` (`BACKEND_URL`, `BACKEND_API_KEY`, `SESSI
 ### Build & start (API + admin)
 
 ```sh
+# On a fresh VPS / clone — install BOTH root and admin deps first
+npm run install:all
+
 # One-shot: compile API (tsc) + admin (Next.js)
+# build:admin also runs npm install --prefix admin if needed
 npm run build          # same as build:all
 npm run build:api      # API only → dist/
-npm run build:admin    # admin only
+npm run build:admin    # admin only (installs admin deps then next build)
 
 # Production: run both together (API :4000, admin :3000 by default)
 npm start              # same as start:all
 npm run start:api      # API only
 npm run start:admin    # admin only
+```
+
+If you see `next: not found`, admin deps are missing:
+
+```sh
+npm install --prefix admin
+# or
+npm run install:all
+npm run build
 ```
 
 ### Dev (hot reload)

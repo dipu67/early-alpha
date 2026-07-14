@@ -10,7 +10,7 @@
     "dev:admin": "npm run dev --prefix admin",
     "dev:all": "concurrently -k -n api,admin -c blue,magenta \"npm run dev:api\" \"npm run dev:admin\"",
     "build:api": "tsc",
-    "build:admin": "npm run build --prefix admin",
+    "build:admin": "npm install --prefix admin --no-fund --no-audit && npm run build --prefix admin",
     "build": "npm run build:api && npm run build:admin",
     "build:all": "npm run build",
     "start:api": "node dist/index.js",
