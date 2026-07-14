@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
   turbopack: {
     root,
   },
+  experimental: {
+    serverActions: {
+      allowedOrigins: ["admin.dipu.app", "localhost:4000"],
+    }
+  },
 };
 
 export default nextConfig;
