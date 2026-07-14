@@ -1,36 +1,39 @@
 import "dotenv/config";
-import { bot } from "./tg/bots.js";
-import {grokBot} from "./tg/grokBot.js";
-import "./services/worker.js";
-import "./services/seedWorker.js";
-import "./services/listWorker.js";
-import {
-  addSeedTrackingJob,
-  addDailyFullSyncJob,
-  addDailyDigestJob,
-  addHealthCheckJob,
-  addListReconcileJob,
-  addListPollJob,
-  addEarlyDigestJob,
-} from "./services/queue.js";
+import "./src/services/worker.js";
+import "./src/services/seedWorker.js";
+import "./src/services/listWorker.js";
+import { registerAllSchedulers } from "./src/services/queue.js";
+import { startMainBot } from "./src/tg/bots.js";
+import { startGrokBot } from "./src/tg/grokBot.js";
 
-export { prisma } from "./db/prisma.js";
-export { getTwitterClient, markRateLimited } from "./twitter/getClient.js";
-export { TwitterClient } from "./TwitterClient/TwitterClient.js";
-export { followTrackerQueue, addWatchJob, removeWatchJob } from "./services/queue.js";
-export { checkFollowingDiff } from "./services/followDiff.js";
-export { bot } from "./tg/bots.js";
+export { prisma } from "./src/db/prisma.js";
+export { getTwitterClient, markRateLimited } from "./src/twitter/getClient.js";
+export { TwitterClient } from "./src/TwitterClient/TwitterClient.js";
+export { followTrackerQueue, addWatchJob, removeWatchJob } from "./src/services/queue.js";
+export { checkFollowingDiff } from "./src/services/followDiff.js";
 
-bot.start();
-console.log("[bot] Telegram bot started");
-grokBot.start();
-console.log("[bot] Grok bot started");
+import { createApp } from "./src/server.js";
+import { env } from "./src/env.js";
 
-await addSeedTrackingJob();
-await addDailyFullSyncJob();
-await addDailyDigestJob();
-await addHealthCheckJob();
-await addListReconcileJob();
-await addListPollJob();
-await addEarlyDigestJob();
-console.log("[scheduler] Seed tracking + list monitoring jobs registered");
+const app = createApp();
+
+app.listen(env.port, () => {
+  console.log(`[api] early-alpha admin API listening on :${env.port}`);
+});
+
+// Bots load tokens from telegram_bots (DB). Failures are logged; API continues.
+function startBot(name: string, start: () => Promise<void> | void): void {
+  Promise.resolve()
+    .then(() => start())
+    .then(() => console.log(`[bot] ${name} started`))
+    .catch((err) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[bot] ${name} failed to start (API continues):`, msg);
+    });
+}
+
+startBot("Telegram", () => startMainBot());
+startBot("Grok", () => startGrokBot());
+
+await registerAllSchedulers();
+console.log("[scheduler] Schedulers registered from registry");

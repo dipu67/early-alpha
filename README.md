@@ -28,12 +28,17 @@ npx prisma migrate dev
 
 ### Environment Variables
 
+Copy `.env.example` → `.env`. **Only these are required:**
+
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `REDIS_URL` | Redis connection string |
-| `TELEGRAM_BOT_TOKEN` | Grammy bot token |
-| Twitter credentials | API keys for fetching following data |
+| `ADMIN_API_KEY` | Shared secret for admin API / UI proxy |
+
+Configure in **admin UI / DB** (not env): Telegram bots, alert chat & topics, admin user ids (`tg.adminIds`), Grok bot, Twitter auth pool, list owners.
+
+Admin UI env: see `admin/.env.example` (`BACKEND_URL`, `BACKEND_API_KEY`, `SESSION_SECRET`).
 
 ## Usage
 

@@ -1,0 +1,167 @@
+/* Restrict class detection to admin source only. Without this, Tailwind v4 can
+   scan monorepo/node_modules/.next junk and emit invalid selectors (e.g. binary
+   control chars in data-[...] variants → PostCSS parse errors). */
+@import "tailwindcss" source(none);
+@source "../app/**/*.{js,ts,jsx,tsx}";
+@source "../components/**/*.{js,ts,jsx,tsx}";
+@source "../lib/**/*.{js,ts,jsx,tsx}";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.55 0.2 262);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.3);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.6 0.13 160);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.55 0.2 262);
+  --chart-1: oklch(0.55 0.2 262);
+  --chart-2: oklch(0.6 0.13 160);
+  --chart-3: oklch(0.7 0.15 70);
+  --chart-4: oklch(0.65 0.2 320);
+  --chart-5: oklch(0.65 0.19 20);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0.01 260);
+  --foreground: oklch(0.95 0 0);
+  --card: oklch(0.18 0.012 260);
+  --card-foreground: oklch(0.95 0 0);
+  --popover: oklch(0.18 0.012 260);
+  --popover-foreground: oklch(0.95 0 0);
+  --primary: oklch(0.62 0.19 262);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.24 0.012 260);
+  --secondary-foreground: oklch(0.95 0 0);
+  --muted: oklch(0.24 0.012 260);
+  --muted-foreground: oklch(0.65 0.01 260);
+  --accent: oklch(0.26 0.014 260);
+  --accent-foreground: oklch(0.95 0 0);
+  --destructive: oklch(0.65 0.2 25);
+  --destructive-foreground: oklch(0.95 0 0);
+  --success: oklch(0.7 0.14 162);
+  --border: oklch(0.28 0.012 260);
+  --input: oklch(0.3 0.012 260);
+  --ring: oklch(0.62 0.19 262);
+  --chart-1: oklch(0.62 0.19 262);
+  --chart-2: oklch(0.7 0.14 162);
+  --chart-3: oklch(0.75 0.15 70);
+  --chart-4: oklch(0.7 0.2 320);
+  --chart-5: oklch(0.7 0.19 20);
+  --sidebar: oklch(0.17 0.012 260);
+  --sidebar-foreground: oklch(0.95 0 0);
+  --sidebar-border: oklch(0.28 0.012 260);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  /* Avoid horizontal bounce / overflow from wide tables & drawers */
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* iOS notch / home indicator */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Touch-friendly hit targets without changing desktop density too much */
+@media (max-width: 639px) {
+  button,
+  a,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Tables: keep cells from crushing into unreadability when scrolling */
+.table-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 6px;
+}
+
+/* cmdk command palette (avoids arbitrary attribute-selector variants that
+   Tailwind v4 mis-parses). */
+.ea-cmdk {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ea-cmdk [cmdk-group-heading] {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.ea-cmdk [cmdk-item] {
+  padding: 0.5rem;
+}

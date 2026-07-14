@@ -1,0 +1,549 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model ProjectTag {
+  slug               String   @id
+  label              String
+  isBuiltin          Boolean  @default(false) @map("is_builtin")
+  enabled            Boolean  @default(true)
+  keywords           String[] @default([])
+  regexKeywords      String[] @default([]) @map("regex_keywords")
+  /// Username delim tokens: match as (?:^|[_\\d])token(?:[_\\d]|$)
+  handleTokens       String[] @default([]) @map("handle_tokens")
+  /// Username suffix tokens: handle ends with token
+  handleSuffixTokens String[] @default([]) @map("handle_suffix_tokens")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("project_tags")
+}
+
+model AdminUser {
+  id           BigInt   @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("viewer")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("admin_users")
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("settings")
+}
+
+model TelegramBot {
+  id        BigInt   @id @default(autoincrement())
+  token     String   @unique
+  name      String
+  username  String?
+  isDefault Boolean  @default(false) @map("is_default")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("telegram_bots")
+}
+
+model TwitterAccount {
+  id              String    @id
+  username        String    @unique
+  name            String    @default("")
+  description     String?
+  tags            String[]  @default([])
+  followersCount  Int?      @map("followers_count")
+  followingCount  Int?      @map("following_count")
+  tweetCount      Int?      @map("tweet_count")
+  likeCount       Int?      @map("like_count")
+  isBlueVerified  Boolean?  @map("is_blue_verified")
+  profileImageUrl String?   @map("profile_image_url")
+  profileBannerUrl String?  @map("profile_banner_url")
+  location        String?
+  createdAt       DateTime? @map("created_at") @db.Timestamptz
+  detectedAt      DateTime  @default(now()) @map("detected_at") @db.Timestamptz
+  firstSeenAt     DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  listsSyncedAt   DateTime? @map("lists_synced_at") @db.Timestamptz
+  /// Pro-hunter funnel: noise | soft | hot | skip | taken
+  huntStage       String    @default("noise") @map("hunt_stage")
+  huntNote        String?   @map("hunt_note")
+  huntUpdatedAt   DateTime? @map("hunt_updated_at") @db.Timestamptz
+
+  followEdgesAsFollowing FollowEdge[] @relation("following")
+  alerts                 Alert[]
+  listMemberships        ListMember[]
+
+  @@index([huntStage])
+  @@index([firstSeenAt(sort: Desc)])
+  @@map("twitter_accounts")
+}
+
+model ProjectList {
+  id            BigInt    @id @default(autoincrement())
+  slug          String    @unique
+  twitterListId String    @unique @map("twitter_list_id")
+  name          String
+  /// Auth account that owns this Twitter list (must be used for add/remove).
+  authAccountId BigInt?   @map("auth_account_id")
+  lastTweetId   String?   @map("last_tweet_id")
+  lastPolledAt  DateTime? @map("last_polled_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  members     ListMember[]
+  authAccount TwitterAuthAccount? @relation(fields: [authAccountId], references: [id], onDelete: SetNull)
+
+  @@map("project_lists")
+}
+
+model ListMember {
+  listSlug  String   @map("list_slug")
+  accountId String   @map("account_id")
+  addedAt   DateTime @default(now()) @map("added_at") @db.Timestamptz
+
+  list    ProjectList    @relation(fields: [listSlug], references: [slug], onDelete: Cascade)
+  account TwitterAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([listSlug, accountId])
+  @@index([accountId])
+  @@map("list_members")
+}
+
+model PostAlert {
+  tweetId   String    @id @map("tweet_id")
+  accountId String    @map("account_id")
+  username  String
+  slug      String
+  signals   String[]  @default([])
+  text      String
+  postedAt  DateTime? @map("posted_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([accountId, createdAt(sort: Desc)])
+  // Feed keeps latest N per tag — prune + list by slug/createdAt
+  @@index([slug, createdAt(sort: Desc)])
+  @@map("post_alerts")
+}
+
+model SeedAccount {
+  id        BigInt   @id @default(autoincrement())
+  twitterId String?  @unique @map("twitter_id")
+  username  String   @unique
+  category  String
+  label     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  followEdges FollowEdge[]
+
+  @@map("seed_accounts")
+}
+
+model TrackingRun {
+  id              BigInt    @id @default(autoincrement())
+  startedAt       DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  finishedAt      DateTime? @map("finished_at") @db.Timestamptz
+  status          String    @default("running")
+  error           String?
+  seedsProcessed  Int       @default(0) @map("seeds_processed")
+  accountsSeen    Int       @default(0) @map("accounts_seen")
+  newFollowEdges  Int       @default(0) @map("new_follow_edges")
+
+  firstSeenEdges FollowEdge[] @relation("firstSeenRun")
+  lastSeenEdges  FollowEdge[] @relation("lastSeenRun")
+  alerts         Alert[]
+
+  @@map("tracking_runs")
+}
+
+model FollowEdge {
+  seedId        BigInt   @map("seed_id")
+  followingId   String   @map("following_id")
+  firstSeenRunId BigInt? @map("first_seen_run_id")
+  lastSeenRunId  BigInt? @map("last_seen_run_id")
+  firstSeenAt   DateTime @default(now()) @map("first_seen_at") @db.Timestamptz
+  lastSeenAt    DateTime @default(now()) @map("last_seen_at") @db.Timestamptz
+  active        Boolean  @default(true)
+
+  seed         SeedAccount    @relation(fields: [seedId], references: [id], onDelete: Cascade)
+  following    TwitterAccount @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  firstSeenRun TrackingRun?   @relation("firstSeenRun", fields: [firstSeenRunId], references: [id])
+  lastSeenRun  TrackingRun?   @relation("lastSeenRun", fields: [lastSeenRunId], references: [id])
+
+  @@id([seedId, followingId])
+  @@index([followingId, firstSeenAt(sort: Desc)])
+  @@index([followingId])
+  @@index([active])
+  @@map("follow_edges")
+}
+
+model Alert {
+  id            BigInt   @id @default(autoincrement())
+  followingId   String   @map("following_id")
+  runId         BigInt?  @map("run_id")
+  alertType     String   @map("alert_type")
+  score         Int
+  seedCount     Int      @map("seed_count")
+  categories    String[] @default([])
+  seedUsernames String[] @default([]) @map("seed_usernames")
+  reason        String
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  following TwitterAccount @relation(fields: [followingId], references: [id], onDelete: Cascade)
+  run       TrackingRun?   @relation(fields: [runId], references: [id])
+
+  @@index([followingId, alertType, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([score(sort: Desc)])
+  @@map("alerts")
+}
+
+model TwitterAuthAccount {
+  id              BigInt    @id 
+  username        String    @unique
+  authToken       String    @unique @map("auth_token")
+  ct0             String
+  isActive        Boolean   @default(true) @map("is_active")
+  rateLimitedUntil DateTime? @map("rate_limited_until") @db.Timestamptz
+  lastUsedAt      DateTime? @map("last_used_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  searchQueries SearchQuery[]
+  projectLists  ProjectList[]
+  signalScans   SignalScan[]
+  authFollows   AuthFollow[]
+
+  @@index([isActive, rateLimitedUntil])
+  @@map("twitter_auth_accounts")
+}
+
+/// Per-tag HomeLatest signal scanner: pin an auth account that follows projects of this tag.
+/// Polls getHomeLatestTimeline → watermark lastTweetId → detectSignal rules → Telegram.
+model SignalScan {
+  id            BigInt    @id @default(autoincrement())
+  /// Project tag slug (e.g. nft). One scanner row per tag.
+  tagSlug       String    @unique @map("tag_slug")
+  /// Auth account that follows projects of this tag and whose HomeLatest is polled.
+  authAccountId BigInt    @map("auth_account_id")
+  enabled       Boolean   @default(true)
+  /// When true, newly classified projects with this tag are auto-followed by this auth.
+  /// Default OFF — follow early projects manually from UI.
+  autoFollow    Boolean   @default(false) @map("auto_follow")
+  alertEnabled  Boolean   @default(true) @map("alert_enabled")
+  topicId       Int?      @map("topic_id")
+  intervalSec   Int       @default(120) @map("interval_sec")
+  /// Snowflake watermark: only tweets with id > this are processed.
+  lastTweetId   String?   @map("last_tweet_id")
+  lastPolledAt  DateTime? @map("last_polled_at") @db.Timestamptz
+  lastError     String?   @map("last_error")
+  hitCount      Int       @default(0) @map("hit_count")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  authAccount TwitterAuthAccount @relation(fields: [authAccountId], references: [id], onDelete: Cascade)
+
+  @@index([enabled, lastPolledAt])
+  @@map("signal_scans")
+}
+
+/// Editable signal detection rules (mint, wl, etc.). slug null = generic all tags.
+model SignalRule {
+  id        BigInt   @id @default(autoincrement())
+  /// Tag slug extras (nft) or null for generic
+  slug      String?
+  /// UI group: mint | wl | tge | launch | claim | other
+  category  String   @default("other")
+  /// Human label shown on alerts (e.g. "public mint")
+  label     String
+  /// Match keyword or regex source
+  pattern   String
+  isRegex   Boolean  @default(false) @map("is_regex")
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([slug, enabled])
+  @@index([enabled])
+  @@map("signal_rules")
+}
+
+/// Projects followed by a signal-scan auth account (manual UI or auto-classify).
+model AuthFollow {
+  id            BigInt   @id @default(autoincrement())
+  authAccountId BigInt   @map("auth_account_id")
+  twitterUserId String   @map("twitter_user_id")
+  username      String
+  tagSlug       String?  @map("tag_slug")
+  /// manual | auto_classify
+  source        String   @default("manual")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  authAccount TwitterAuthAccount @relation(fields: [authAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([authAccountId, twitterUserId])
+  @@index([tagSlug])
+  @@index([username])
+  @@map("auth_follows")
+}
+
+/// Live Twitter search queries polled for realtime posts (e.g. "nft mint", "mint live").
+/// Flow: poll → watermark lastTweetId → only newer tweets → Telegram topic alert.
+/// Each query can pin a TwitterAuthAccount as its client provider.
+model SearchQuery {
+  id            BigInt    @id @default(autoincrement())
+  query         String
+  label         String?
+  enabled       Boolean   @default(true)
+  /// Pinned auth account for this query; null = rotate from the pool.
+  authAccountId BigInt?   @map("auth_account_id")
+  /// Telegram forum topic (message_thread_id) for alerts from this query.
+  topicId       Int?      @map("topic_id")
+  /// When true, new hits after the watermark send a Telegram alert.
+  alertEnabled  Boolean   @default(true) @map("alert_enabled")
+  /// Minimum seconds between polls for this query (scheduler still runs often).
+  intervalSec   Int       @default(120) @map("interval_sec")
+  lastPolledAt  DateTime? @map("last_polled_at") @db.Timestamptz
+  /// Snowflake watermark: only tweets newer than this are alerted.
+  lastTweetId   String?   @map("last_tweet_id")
+  lastError     String?   @map("last_error")
+  hitCount      Int       @default(0) @map("hit_count")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  authAccount TwitterAuthAccount? @relation(fields: [authAccountId], references: [id], onDelete: SetNull)
+  hits        SearchHit[]
+
+  @@index([enabled, lastPolledAt])
+  @@map("search_queries")
+}
+
+model SearchHit {
+  id        BigInt    @id @default(autoincrement())
+  queryId   BigInt    @map("query_id")
+  tweetId   String    @map("tweet_id")
+  username  String
+  name      String    @default("")
+  text      String
+  authorId  String?   @map("author_id")
+  postedAt  DateTime? @map("posted_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  query SearchQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+
+  @@unique([queryId, tweetId])
+  @@index([createdAt(sort: Desc)])
+  @@index([queryId, createdAt(sort: Desc)])
+  @@map("search_hits")
+}
+
+model WatchList {
+  id             BigInt   @id @default(autoincrement())
+  twitterUserId  String   @map("twitter_user_id")
+  username       String   @unique
+  isActive       Boolean  @default(true) @map("is_active")
+  addedBy        String?  @map("added_by")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  snapshots FollowSnapshot[]
+  alertLogs AlertLog[]
+
+  @@map("watch_list")
+}
+
+model FollowSnapshot {
+  id          BigInt   @id @default(autoincrement())
+  watchListId BigInt   @map("watch_list_id")
+  userIds     String[] @map("user_ids")
+  takenAt     DateTime @default(now()) @map("taken_at") @db.Timestamptz
+
+  watchList WatchList @relation(fields: [watchListId], references: [id], onDelete: Cascade)
+
+  @@index([watchListId, takenAt(sort: Desc)])
+  @@map("follow_snapshots")
+}
+
+model AlertLog {
+  id               BigInt   @id @default(autoincrement())
+  watchListId      BigInt   @map("watch_list_id")
+  newFollowId      String   @map("new_follow_id")
+  newFollowUsername String?  @map("new_follow_username")
+  analysis         String?
+  sentAt           DateTime @default(now()) @map("sent_at") @db.Timestamptz
+
+  watchList WatchList @relation(fields: [watchListId], references: [id], onDelete: Cascade)
+
+  @@index([watchListId, sentAt(sort: Desc)])
+  @@map("alert_logs")
+}
+
+/// Grok (X) chat session bound to a Telegram chat. Replaces conversationId.json.
+model GrokConversation {
+  id                 BigInt    @id @default(autoincrement())
+  /// X/Grok conversation rest id from CreateGrokConversation
+  grokConversationId String    @unique @map("grok_conversation_id")
+  /// Telegram chat id this session is used in
+  telegramChatId     String    @map("telegram_chat_id")
+  chatType           String    @map("chat_type") // private | group | supergroup
+  title              String?
+  /// Only one active conversation is used per telegram chat for new messages
+  isActive           Boolean   @default(true) @map("is_active")
+  createdByUserId    String?   @map("created_by_user_id")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  lastMessageAt      DateTime? @map("last_message_at") @db.Timestamptz
+
+  messages GrokMessage[]
+
+  @@index([telegramChatId, isActive])
+  @@index([telegramChatId, createdAt(sort: Desc)])
+  @@map("grok_conversations")
+}
+
+/// Local transcript of Grok bot exchanges (user + assistant).
+model GrokMessage {
+  id                BigInt   @id @default(autoincrement())
+  conversationDbId  BigInt   @map("conversation_db_id")
+  role              String // user | assistant
+  content           String
+  telegramUserId    String?  @map("telegram_user_id")
+  telegramMessageId BigInt?  @map("telegram_message_id")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  conversation GrokConversation @relation(fields: [conversationDbId], references: [id], onDelete: Cascade)
+
+  @@index([conversationDbId, createdAt])
+  @@map("grok_messages")
+}
+
+/// Saved research prompt templates. Placeholders: {{tag}} {{count}} {{handles}} {{projects}}
+model GrokResearchPrompt {
+  id          BigInt   @id @default(autoincrement())
+  slug        String   @unique
+  name        String
+  description String?
+  /// Template body with {{tag}}, {{count}}, {{handles}}, {{projects}}
+  template    String
+  /// Optional default tag filter hint (e.g. nft)
+  defaultTag  String?  @map("default_tag")
+  isBuiltin   Boolean  @default(false) @map("is_builtin")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  runs GrokResearchRun[]
+
+  @@map("grok_research_prompts")
+}
+
+/// One research execution: selected projects + rendered prompt + Grok answer.
+model GrokResearchRun {
+  id                 BigInt    @id @default(autoincrement())
+  promptId           BigInt?   @map("prompt_id")
+  title              String?
+  tag                String?
+  /// Project account ids included in the run
+  projectIds         String[]  @default([]) @map("project_ids")
+  /// @handles snapshot at run time
+  projectHandles     String[]  @default([]) @map("project_handles")
+  renderedPrompt     String    @map("rendered_prompt")
+  response           String?
+  status             String    @default("pending") // pending | success | error
+  error              String?
+  grokConversationId String?   @map("grok_conversation_id")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  completedAt        DateTime? @map("completed_at") @db.Timestamptz
+
+  prompt GrokResearchPrompt? @relation(fields: [promptId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([tag])
+  @@map("grok_research_runs")
+}
+
+/// Telegram group/supergroup managed via grammy (Bot API cannot list topics natively).
+model TelegramGroup {
+  id        BigInt   @id @default(autoincrement())
+  /// Telegram chat id (e.g. -100…)
+  chatId    String   @unique @map("chat_id")
+  title     String?
+  /// group | supergroup | channel
+  type      String   @default("supergroup")
+  isForum   Boolean  @default(false) @map("is_forum")
+  username  String?
+  /// Optional TelegramBot row used for API calls
+  botDbId   BigInt?  @map("bot_db_id")
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  topics TelegramTopic[]
+
+  @@map("telegram_groups")
+}
+
+/// Forum topics discovered/created by the bot (catalog for admin UI).
+model TelegramTopic {
+  id                BigInt    @id @default(autoincrement())
+  groupId           BigInt    @map("group_id")
+  /// Telegram message_thread_id
+  messageThreadId   Int       @map("message_thread_id")
+  name              String
+  iconColor         Int?      @map("icon_color")
+  iconCustomEmojiId String?   @map("icon_custom_emoji_id")
+  isClosed          Boolean   @default(false) @map("is_closed")
+  isHidden          Boolean   @default(false) @map("is_hidden")
+  /// General topic is message_thread_id = 1 typically
+  isGeneral         Boolean   @default(false) @map("is_general")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  group TelegramGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, messageThreadId])
+  @@index([groupId])
+  @@map("telegram_topics")
+}
+
+/// Live tweet monitor for high-potential project accounts.
+/// Polls getUserTweets, watermarks lastTweetId, Telegram alert on new posts.
+model ProjectMonitor {
+  id            BigInt    @id @default(autoincrement())
+  twitterUserId String    @map("twitter_user_id")
+  username      String    @unique
+  name          String    @default("")
+  /// Primary tag slug for topic routing (from classify)
+  primaryTag    String?   @map("primary_tag")
+  tags          String[]  @default([])
+  isActive      Boolean   @default(true) @map("is_active")
+  /// manual | hunter | stage — auto-enroll can drop hunter/stage when cold
+  source        String    @default("manual")
+  /// all = every new post; signals = mint/TGE/launch lexicon only
+  alertMode     String    @default("all") @map("alert_mode")
+  /// When true, new posts after watermark send Telegram
+  alertEnabled  Boolean   @default(true) @map("alert_enabled")
+  /// Optional forum topic override
+  topicId       Int?      @map("topic_id")
+  lastTweetId   String?   @map("last_tweet_id")
+  lastPolledAt  DateTime? @map("last_polled_at") @db.Timestamptz
+  lastError     String?   @map("last_error")
+  alertCount    Int       @default(0) @map("alert_count")
+  /// Heat at enroll time (hunter auto)
+  heatAtEnroll  Float?    @map("heat_at_enroll")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([isActive, lastPolledAt])
+  @@index([twitterUserId])
+  @@map("project_monitors")
+}
