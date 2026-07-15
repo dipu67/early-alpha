@@ -13,17 +13,13 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: ["admin.dipu.app", "localhost:4000"],
-    }
+    },
   },
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:4000/api/:path*', // আপনার Express যে port এ চলছে সেটা বসান
-      },
-    ];
-  },
-
+  // Do NOT rewrite /api/* to the Express backend.
+  // Admin is a BFF: /api/login, /api/logout, and /api/proxy/[...path] are
+  // Next.js route handlers. A catch-all rewrite to Express wins over the
+  // dynamic /api/proxy/[...path] handler (afterFiles rewrites run before
+  // dynamic routes) and returns 401 because the browser has no API key.
 };
 
 export default nextConfig;
