@@ -172,3 +172,9 @@ export type TelegramTopic = Prisma.TelegramTopicModel
  * Polls getUserTweets, watermarks lastTweetId, Telegram alert on new posts.
  */
 export type ProjectMonitor = Prisma.ProjectMonitorModel
+/**
+ * Model KnownChain
+ * EVM chains seen via chainlist.org / chainid.network snapshot.
+ * Diff = new chainId since last poll → "catalog confirmed" new chain.
+ */
+export type KnownChain = Prisma.KnownChainModel

@@ -80,7 +80,8 @@ export const ModelName = {
   GrokResearchRun: 'GrokResearchRun',
   TelegramGroup: 'TelegramGroup',
   TelegramTopic: 'TelegramTopic',
-  ProjectMonitor: 'ProjectMonitor'
+  ProjectMonitor: 'ProjectMonitor',
+  KnownChain: 'KnownChain'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -557,6 +558,25 @@ export const ProjectMonitorScalarFieldEnum = {
 } as const
 
 export type ProjectMonitorScalarFieldEnum = (typeof ProjectMonitorScalarFieldEnum)[keyof typeof ProjectMonitorScalarFieldEnum]
+
+
+export const KnownChainScalarFieldEnum = {
+  chainId: 'chainId',
+  name: 'name',
+  shortName: 'shortName',
+  nativeSymbol: 'nativeSymbol',
+  rpcUrl: 'rpcUrl',
+  explorerUrl: 'explorerUrl',
+  infoUrl: 'infoUrl',
+  isTestnet: 'isTestnet',
+  source: 'source',
+  rpcLive: 'rpcLive',
+  firstSeenAt: 'firstSeenAt',
+  lastSeenAt: 'lastSeenAt',
+  alertedAt: 'alertedAt'
+} as const
+
+export type KnownChainScalarFieldEnum = (typeof KnownChainScalarFieldEnum)[keyof typeof KnownChainScalarFieldEnum]
 
 
 export const SortOrder = {

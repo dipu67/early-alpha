@@ -162,6 +162,68 @@ export interface ListMonitorAlertInput {
   tweetId: string;
 }
 
+export interface ChainlistAlertInput {
+  chainId: string;
+  name: string;
+  shortName?: string | null;
+  nativeSymbol?: string | null;
+  rpcUrl?: string | null;
+  explorerUrl?: string | null;
+  infoUrl?: string | null;
+  isTestnet: boolean;
+  rpcLive: boolean | null;
+  source: string;
+}
+
+/** New EVM chain appeared on chainlist / chainid.network catalog. */
+export function formatChainlistAlert(input: ChainlistAlertInput): {
+  text: string;
+  user: UserData;
+} {
+  const kind = input.isTestnet ? "testnet" : "mainnet";
+  const live =
+    input.rpcLive === true
+      ? "RPC live ✅"
+      : input.rpcLive === false
+        ? "RPC failed ❌"
+        : "RPC unchecked";
+  const symbol = input.nativeSymbol ? ` · ${escapeMarkdown(input.nativeSymbol)}` : "";
+  const short = input.shortName
+    ? ` \\(${escapeMarkdown(input.shortName)}\\)`
+    : "";
+
+  const links: string[] = [];
+  if (input.explorerUrl) {
+    links.push(`[Explorer](${input.explorerUrl.replace(/\)/g, "%29")})`);
+  }
+  if (input.infoUrl) {
+    links.push(`[Info](${input.infoUrl.replace(/\)/g, "%29")})`);
+  }
+  links.push(`[Chainlist](https://chainlist.org/chain/${input.chainId})`);
+
+  const text =
+    `⛓ *New chain · ${escapeMarkdown(kind)}*\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `*${escapeMarkdown(input.name)}*${short}\n` +
+    `🆔 Chain ID: \`${escapeMarkdown(input.chainId)}\`${symbol}\n` +
+    `📡 ${escapeMarkdown(live)}\n` +
+    `📚 source: \`${escapeMarkdown(input.source)}\`\n` +
+    (input.rpcUrl
+      ? `RPC: \`${escapeMarkdown(input.rpcUrl.slice(0, 80))}${input.rpcUrl.length > 80 ? "…" : ""}\`\n`
+      : "") +
+    `\n${links.join(" · ")}\n` +
+    `━━━━━━━━━━━━━━━━━━\n`;
+
+  return {
+    text,
+    user: {
+      id: input.chainId,
+      username: input.shortName || input.name,
+      name: input.name,
+    } as UserData,
+  };
+}
+
 /** New post on a watched public Twitter list. */
 export function formatListMonitorAlert(
   input: ListMonitorAlertInput,

@@ -413,7 +413,8 @@ export const ModelName = {
   GrokResearchRun: 'GrokResearchRun',
   TelegramGroup: 'TelegramGroup',
   TelegramTopic: 'TelegramTopic',
-  ProjectMonitor: 'ProjectMonitor'
+  ProjectMonitor: 'ProjectMonitor',
+  KnownChain: 'KnownChain'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -429,7 +430,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "projectTag" | "adminUser" | "setting" | "telegramBot" | "twitterAccount" | "projectList" | "listMember" | "postAlert" | "seedAccount" | "trackingRun" | "followEdge" | "alert" | "twitterAuthAccount" | "signalScan" | "signalRule" | "authFollow" | "searchQuery" | "searchHit" | "listMonitor" | "listMonitorHit" | "watchList" | "followSnapshot" | "alertLog" | "grokConversation" | "grokMessage" | "grokResearchPrompt" | "grokResearchRun" | "telegramGroup" | "telegramTopic" | "projectMonitor"
+    modelProps: "projectTag" | "adminUser" | "setting" | "telegramBot" | "twitterAccount" | "projectList" | "listMember" | "postAlert" | "seedAccount" | "trackingRun" | "followEdge" | "alert" | "twitterAuthAccount" | "signalScan" | "signalRule" | "authFollow" | "searchQuery" | "searchHit" | "listMonitor" | "listMonitorHit" | "watchList" | "followSnapshot" | "alertLog" | "grokConversation" | "grokMessage" | "grokResearchPrompt" | "grokResearchRun" | "telegramGroup" | "telegramTopic" | "projectMonitor" | "knownChain"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2653,6 +2654,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    KnownChain: {
+      payload: Prisma.$KnownChainPayload<ExtArgs>
+      fields: Prisma.KnownChainFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.KnownChainFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.KnownChainFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>
+        }
+        findFirst: {
+          args: Prisma.KnownChainFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.KnownChainFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>
+        }
+        findMany: {
+          args: Prisma.KnownChainFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>[]
+        }
+        create: {
+          args: Prisma.KnownChainCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>
+        }
+        createMany: {
+          args: Prisma.KnownChainCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.KnownChainCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>[]
+        }
+        delete: {
+          args: Prisma.KnownChainDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>
+        }
+        update: {
+          args: Prisma.KnownChainUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>
+        }
+        deleteMany: {
+          args: Prisma.KnownChainDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.KnownChainUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.KnownChainUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>[]
+        }
+        upsert: {
+          args: Prisma.KnownChainUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>
+        }
+        aggregate: {
+          args: Prisma.KnownChainAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateKnownChain>
+        }
+        groupBy: {
+          args: Prisma.KnownChainGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.KnownChainGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.KnownChainCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.KnownChainCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -3152,6 +3227,25 @@ export const ProjectMonitorScalarFieldEnum = {
 export type ProjectMonitorScalarFieldEnum = (typeof ProjectMonitorScalarFieldEnum)[keyof typeof ProjectMonitorScalarFieldEnum]
 
 
+export const KnownChainScalarFieldEnum = {
+  chainId: 'chainId',
+  name: 'name',
+  shortName: 'shortName',
+  nativeSymbol: 'nativeSymbol',
+  rpcUrl: 'rpcUrl',
+  explorerUrl: 'explorerUrl',
+  infoUrl: 'infoUrl',
+  isTestnet: 'isTestnet',
+  source: 'source',
+  rpcLive: 'rpcLive',
+  firstSeenAt: 'firstSeenAt',
+  lastSeenAt: 'lastSeenAt',
+  alertedAt: 'alertedAt'
+} as const
+
+export type KnownChainScalarFieldEnum = (typeof KnownChainScalarFieldEnum)[keyof typeof KnownChainScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -3398,6 +3492,7 @@ export type GlobalOmitConfig = {
   telegramGroup?: Prisma.TelegramGroupOmit
   telegramTopic?: Prisma.TelegramTopicOmit
   projectMonitor?: Prisma.ProjectMonitorOmit
+  knownChain?: Prisma.KnownChainOmit
 }
 
 /* Types for Logging */

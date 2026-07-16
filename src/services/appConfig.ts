@@ -40,7 +40,8 @@ export type AlertType =
   | "convergence"
   | "search"
   | "monitor"
-  | "listMonitor";
+  | "listMonitor"
+  | "chainlist";
 
 /** All alert types, for iteration (API config listing, routing, etc.). */
 export const ALERT_TYPES: AlertType[] = [
@@ -52,6 +53,7 @@ export const ALERT_TYPES: AlertType[] = [
   "search",
   "monitor",
   "listMonitor",
+  "chainlist",
 ];
 
 export function alertEnabledKey(type: AlertType): string {

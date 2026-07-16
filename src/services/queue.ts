@@ -143,6 +143,15 @@ export const SCHEDULERS: SchedulerDef[] = [
     label: "Public Twitter list monitors",
   },
   {
+    key: "chainlist-poll",
+    queue: "list-tracker",
+    schedulerId: "chainlist-poll",
+    jobName: "poll-chainlist",
+    data: {},
+    defaultEvery: 60 * 60 * 1000,
+    label: "Chainlist catalog (new chainId)",
+  },
+  {
     key: "monitor-poll",
     queue: "list-tracker",
     schedulerId: "monitor-poll",

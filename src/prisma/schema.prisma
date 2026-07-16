@@ -600,3 +600,29 @@ model ProjectMonitor {
   @@index([twitterUserId])
   @@map("project_monitors")
 }
+
+/// EVM chains seen via chainlist.org / chainid.network snapshot.
+/// Diff = new chainId since last poll → "catalog confirmed" new chain.
+model KnownChain {
+  /// EIP-155 chain id (decimal string for bigint-safe uniqueness)
+  chainId       String    @id @map("chain_id")
+  name          String
+  shortName     String?   @map("short_name")
+  nativeSymbol  String?   @map("native_symbol")
+  rpcUrl        String?   @map("rpc_url")
+  explorerUrl   String?   @map("explorer_url")
+  infoUrl       String?   @map("info_url")
+  isTestnet     Boolean   @default(false) @map("is_testnet")
+  /// chainlist | chainid.network | manual
+  source        String    @default("chainlist")
+  /// null = not checked; true = eth_blockNumber ok; false = failed
+  rpcLive       Boolean?  @map("rpc_live")
+  firstSeenAt   DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz
+  lastSeenAt    DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz
+  /// First discovery fired Telegram
+  alertedAt     DateTime? @map("alerted_at") @db.Timestamptz
+
+  @@index([firstSeenAt(sort: Desc)])
+  @@index([isTestnet, firstSeenAt(sort: Desc)])
+  @@map("known_chains")
+}

@@ -243,6 +243,24 @@ export interface ListMonitorHitItem {
   createdAt: string;
 }
 
+export interface KnownChainItem {
+  chainId: string;
+  name: string;
+  shortName: string | null;
+  nativeSymbol: string | null;
+  rpcUrl: string | null;
+  explorerUrl: string | null;
+  infoUrl: string | null;
+  isTestnet: boolean;
+  source: string;
+  rpcLive: boolean | null;
+  firstSeenAt: string;
+  lastSeenAt?: string;
+  alertedAt?: string | null;
+  alerted?: boolean;
+  chainlistUrl: string;
+}
+
 export const ALERT_TYPES = [
   "newFollow",
   "signal",
@@ -252,6 +270,7 @@ export const ALERT_TYPES = [
   "search",
   "monitor",
   "listMonitor",
+  "chainlist",
 ] as const;
 export type AlertTypeName = (typeof ALERT_TYPES)[number];
 

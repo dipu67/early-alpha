@@ -15,6 +15,7 @@ import {
   Crosshair,
   Radar,
   ClipboardList,
+  Link2,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "./rbac";
@@ -34,6 +35,7 @@ export const NAV: NavItem[] = [
   { href: "/dashboard/signals", label: "Signals", icon: Radio },
   { href: "/dashboard/search", label: "Live Search", icon: Search },
   { href: "/dashboard/list-monitors", label: "List Monitors", icon: ClipboardList },
+  { href: "/dashboard/chains", label: "New Chains", icon: Link2 },
   { href: "/dashboard/projects", label: "Projects & Tags", icon: Tag },
   { href: "/dashboard/keywords", label: "Keywords", icon: Hash },
   { href: "/dashboard/lists", label: "Lists", icon: List },
@@ -54,6 +56,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   signals: "Signals",
   search: "Live Search",
   "list-monitors": "List Monitors",
+  chains: "New Chains",
   projects: "Projects & Tags",
   keywords: "Keywords",
   lists: "Lists",

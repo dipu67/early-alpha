@@ -32,7 +32,8 @@ export type AlertType =
   | "convergence"
   | "search"
   | "monitor"
-  | "listMonitor";
+  | "listMonitor"
+  | "chainlist";
 
 export const CONFIG_KEYS = {
   tgAlertChatId: "tg.alertChatId",
@@ -56,6 +57,7 @@ export const ALERT_TYPES: AlertType[] = [
   "search",
   "monitor",
   "listMonitor",
+  "chainlist",
 ];
 
 export const alertEnabledKey = (t: AlertType) => `alert.enabled.${t}`;

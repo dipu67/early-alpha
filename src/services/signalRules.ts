@@ -143,6 +143,22 @@ export const DEFAULT_SIGNAL_RULES: SignalRuleSeed[] = [
   t("gamefi", "launch", "playtest"),
   t("gamefi", "launch", "alpha test"),
   t("gamefi", "launch", "play now"),
+
+  // ── New chain / L1–L2 (practical combo layer 1 — social) ──
+  g("chain", "mainnet live"),
+  g("chain", "mainnet is live"),
+  g("chain", "public mainnet"),
+  g("chain", "chain is live"),
+  g("chain", "sequencer live"),
+  g("chain", "genesis block"),
+  g("chain", "new L2"),
+  g("chain", "new rollup"),
+  g("chain", "appchain live"),
+  g("chain", "testnet to mainnet"),
+  t("l2", "chain", "mainnet live"),
+  t("l2", "chain", "sequencer live"),
+  t("l1", "chain", "mainnet live"),
+  t("l1", "chain", "genesis"),
 ];
 
 function escapeRegExp(s: string): string {
