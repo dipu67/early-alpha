@@ -157,7 +157,7 @@ npm run install:all
 ### Dev (hot reload)
 
 ```sh
-npm run dev:all        # API (tsx) + admin (next dev)
+npm run dev:all         # API (tsx) + admin (next dev)
 npm run dev:api
 npm run dev:admin
 
