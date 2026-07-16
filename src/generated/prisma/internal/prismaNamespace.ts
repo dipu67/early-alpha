@@ -402,6 +402,8 @@ export const ModelName = {
   AuthFollow: 'AuthFollow',
   SearchQuery: 'SearchQuery',
   SearchHit: 'SearchHit',
+  ListMonitor: 'ListMonitor',
+  ListMonitorHit: 'ListMonitorHit',
   WatchList: 'WatchList',
   FollowSnapshot: 'FollowSnapshot',
   AlertLog: 'AlertLog',
@@ -427,7 +429,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "projectTag" | "adminUser" | "setting" | "telegramBot" | "twitterAccount" | "projectList" | "listMember" | "postAlert" | "seedAccount" | "trackingRun" | "followEdge" | "alert" | "twitterAuthAccount" | "signalScan" | "signalRule" | "authFollow" | "searchQuery" | "searchHit" | "watchList" | "followSnapshot" | "alertLog" | "grokConversation" | "grokMessage" | "grokResearchPrompt" | "grokResearchRun" | "telegramGroup" | "telegramTopic" | "projectMonitor"
+    modelProps: "projectTag" | "adminUser" | "setting" | "telegramBot" | "twitterAccount" | "projectList" | "listMember" | "postAlert" | "seedAccount" | "trackingRun" | "followEdge" | "alert" | "twitterAuthAccount" | "signalScan" | "signalRule" | "authFollow" | "searchQuery" | "searchHit" | "listMonitor" | "listMonitorHit" | "watchList" | "followSnapshot" | "alertLog" | "grokConversation" | "grokMessage" | "grokResearchPrompt" | "grokResearchRun" | "telegramGroup" | "telegramTopic" | "projectMonitor"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1763,6 +1765,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ListMonitor: {
+      payload: Prisma.$ListMonitorPayload<ExtArgs>
+      fields: Prisma.ListMonitorFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ListMonitorFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ListMonitorFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorPayload>
+        }
+        findFirst: {
+          args: Prisma.ListMonitorFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ListMonitorFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorPayload>
+        }
+        findMany: {
+          args: Prisma.ListMonitorFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorPayload>[]
+        }
+        create: {
+          args: Prisma.ListMonitorCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorPayload>
+        }
+        createMany: {
+          args: Prisma.ListMonitorCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ListMonitorCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorPayload>[]
+        }
+        delete: {
+          args: Prisma.ListMonitorDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorPayload>
+        }
+        update: {
+          args: Prisma.ListMonitorUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorPayload>
+        }
+        deleteMany: {
+          args: Prisma.ListMonitorDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ListMonitorUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ListMonitorUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorPayload>[]
+        }
+        upsert: {
+          args: Prisma.ListMonitorUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorPayload>
+        }
+        aggregate: {
+          args: Prisma.ListMonitorAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateListMonitor>
+        }
+        groupBy: {
+          args: Prisma.ListMonitorGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ListMonitorGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ListMonitorCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ListMonitorCountAggregateOutputType> | number
+        }
+      }
+    }
+    ListMonitorHit: {
+      payload: Prisma.$ListMonitorHitPayload<ExtArgs>
+      fields: Prisma.ListMonitorHitFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ListMonitorHitFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorHitPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ListMonitorHitFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorHitPayload>
+        }
+        findFirst: {
+          args: Prisma.ListMonitorHitFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorHitPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ListMonitorHitFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorHitPayload>
+        }
+        findMany: {
+          args: Prisma.ListMonitorHitFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorHitPayload>[]
+        }
+        create: {
+          args: Prisma.ListMonitorHitCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorHitPayload>
+        }
+        createMany: {
+          args: Prisma.ListMonitorHitCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ListMonitorHitCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorHitPayload>[]
+        }
+        delete: {
+          args: Prisma.ListMonitorHitDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorHitPayload>
+        }
+        update: {
+          args: Prisma.ListMonitorHitUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorHitPayload>
+        }
+        deleteMany: {
+          args: Prisma.ListMonitorHitDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ListMonitorHitUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ListMonitorHitUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorHitPayload>[]
+        }
+        upsert: {
+          args: Prisma.ListMonitorHitUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ListMonitorHitPayload>
+        }
+        aggregate: {
+          args: Prisma.ListMonitorHitAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateListMonitorHit>
+        }
+        groupBy: {
+          args: Prisma.ListMonitorHitGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ListMonitorHitGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ListMonitorHitCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ListMonitorHitCountAggregateOutputType> | number
+        }
+      }
+    }
     WatchList: {
       payload: Prisma.$WatchListPayload<ExtArgs>
       fields: Prisma.WatchListFieldRefs
@@ -2811,6 +2961,42 @@ export const SearchHitScalarFieldEnum = {
 export type SearchHitScalarFieldEnum = (typeof SearchHitScalarFieldEnum)[keyof typeof SearchHitScalarFieldEnum]
 
 
+export const ListMonitorScalarFieldEnum = {
+  id: 'id',
+  twitterListId: 'twitterListId',
+  label: 'label',
+  listName: 'listName',
+  enabled: 'enabled',
+  authAccountId: 'authAccountId',
+  topicId: 'topicId',
+  alertEnabled: 'alertEnabled',
+  intervalSec: 'intervalSec',
+  lastPolledAt: 'lastPolledAt',
+  lastTweetId: 'lastTweetId',
+  lastError: 'lastError',
+  hitCount: 'hitCount',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ListMonitorScalarFieldEnum = (typeof ListMonitorScalarFieldEnum)[keyof typeof ListMonitorScalarFieldEnum]
+
+
+export const ListMonitorHitScalarFieldEnum = {
+  id: 'id',
+  monitorId: 'monitorId',
+  tweetId: 'tweetId',
+  username: 'username',
+  name: 'name',
+  text: 'text',
+  authorId: 'authorId',
+  postedAt: 'postedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type ListMonitorHitScalarFieldEnum = (typeof ListMonitorHitScalarFieldEnum)[keyof typeof ListMonitorHitScalarFieldEnum]
+
+
 export const WatchListScalarFieldEnum = {
   id: 'id',
   twitterUserId: 'twitterUserId',
@@ -3200,6 +3386,8 @@ export type GlobalOmitConfig = {
   authFollow?: Prisma.AuthFollowOmit
   searchQuery?: Prisma.SearchQueryOmit
   searchHit?: Prisma.SearchHitOmit
+  listMonitor?: Prisma.ListMonitorOmit
+  listMonitorHit?: Prisma.ListMonitorHitOmit
   watchList?: Prisma.WatchListOmit
   followSnapshot?: Prisma.FollowSnapshotOmit
   alertLog?: Prisma.AlertLogOmit

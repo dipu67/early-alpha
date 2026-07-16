@@ -22,6 +22,7 @@ export type BackupTableKey =
   | "watchList"
   | "projectList"
   | "searchQuery"
+  | "listMonitor"
   | "grokConversation"
   | "grokResearchPrompt"
   | "listMember"
@@ -121,6 +122,12 @@ export const BACKUP_TABLES: BackupTableDef[] = [
   {
     key: "searchQuery",
     table: "search_queries",
+    bigints: ["id", "authAccountId"],
+    dates: ["lastPolledAt", "createdAt", "updatedAt"],
+  },
+  {
+    key: "listMonitor",
+    table: "list_monitors",
     bigints: ["id", "authAccountId"],
     dates: ["lastPolledAt", "createdAt", "updatedAt"],
   },

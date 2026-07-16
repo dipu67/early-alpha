@@ -39,7 +39,8 @@ export type AlertType =
   | "earlyDigest"
   | "convergence"
   | "search"
-  | "monitor";
+  | "monitor"
+  | "listMonitor";
 
 /** All alert types, for iteration (API config listing, routing, etc.). */
 export const ALERT_TYPES: AlertType[] = [
@@ -50,6 +51,7 @@ export const ALERT_TYPES: AlertType[] = [
   "convergence",
   "search",
   "monitor",
+  "listMonitor",
 ];
 
 export function alertEnabledKey(type: AlertType): string {

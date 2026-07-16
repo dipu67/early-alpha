@@ -111,6 +111,17 @@ export type SearchQuery = Prisma.SearchQueryModel
  */
 export type SearchHit = Prisma.SearchHitModel
 /**
+ * Model ListMonitor
+ * Monitor any public Twitter list timeline (ListLatestTweetsTimeline).
+ * Same pattern as SearchQuery: pin auth, poll interval, TG topic, watermark.
+ */
+export type ListMonitor = Prisma.ListMonitorModel
+/**
+ * Model ListMonitorHit
+ * 
+ */
+export type ListMonitorHit = Prisma.ListMonitorHitModel
+/**
  * Model WatchList
  * 
  */

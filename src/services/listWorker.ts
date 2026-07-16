@@ -116,6 +116,9 @@ const worker = new Worker(
     } else if (job.name === "poll-searches") {
       const { pollAllSearchQueries } = await import("./searchPoller.js");
       await pollAllSearchQueries();
+    } else if (job.name === "poll-list-monitors") {
+      const { pollAllListMonitors } = await import("./listMonitorPoller.js");
+      await pollAllListMonitors();
     } else if (job.name === "poll-monitors") {
       // Manual monitors only — never auto-enroll from hunter heat
       const { pollAllMonitors } = await import("./projectMonitor.js");

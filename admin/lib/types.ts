@@ -60,6 +60,36 @@ export interface ProjectList {
   authUsername?: string | null;
 }
 
+/** One list from live client.getMyLists() for an auth account. */
+export interface AuthOwnedList {
+  id: string;
+  name: string;
+  description?: string;
+  memberCount?: number;
+  subscriberCount?: number;
+  isPrivate?: boolean;
+  projectSlug: string | null;
+  projectName: string | null;
+}
+
+/** GET /api/lists/owned — inventory per auth via getMyLists(). */
+export interface AuthListsScanResult {
+  scannedAt: string;
+  authCount: number;
+  listCount: number;
+  duplicateListIds: string[];
+  items: {
+    authAccountId: string;
+    username: string;
+    isActive: boolean;
+    rateLimited: boolean;
+    ok: boolean;
+    error?: string;
+    listCount: number;
+    lists: AuthOwnedList[];
+  }[];
+}
+
 export interface WatchEntry {
   id: string;
   username: string;
@@ -180,6 +210,39 @@ export interface SearchHitItem {
   createdAt: string;
 }
 
+export interface ListMonitorItem {
+  id: string;
+  twitterListId: string;
+  label: string | null;
+  listName: string | null;
+  enabled: boolean;
+  authAccountId: string | null;
+  authUsername: string | null;
+  topicId: number | null;
+  alertEnabled: boolean;
+  intervalSec: number;
+  lastPolledAt: string | null;
+  lastTweetId: string | null;
+  lastError: string | null;
+  hitCount: number;
+  recentHitCount?: number;
+  listUrl: string;
+  createdAt: string;
+}
+
+export interface ListMonitorHitItem {
+  id: string;
+  monitorId: string;
+  listId: string;
+  listLabel: string | null;
+  tweetId: string;
+  username: string;
+  name: string;
+  text: string;
+  postedAt: string | null;
+  createdAt: string;
+}
+
 export const ALERT_TYPES = [
   "newFollow",
   "signal",
@@ -188,6 +251,7 @@ export const ALERT_TYPES = [
   "convergence",
   "search",
   "monitor",
+  "listMonitor",
 ] as const;
 export type AlertTypeName = (typeof ALERT_TYPES)[number];
 

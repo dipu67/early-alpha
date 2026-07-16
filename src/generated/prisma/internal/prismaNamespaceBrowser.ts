@@ -69,6 +69,8 @@ export const ModelName = {
   AuthFollow: 'AuthFollow',
   SearchQuery: 'SearchQuery',
   SearchHit: 'SearchHit',
+  ListMonitor: 'ListMonitor',
+  ListMonitorHit: 'ListMonitorHit',
   WatchList: 'WatchList',
   FollowSnapshot: 'FollowSnapshot',
   AlertLog: 'AlertLog',
@@ -364,6 +366,42 @@ export const SearchHitScalarFieldEnum = {
 } as const
 
 export type SearchHitScalarFieldEnum = (typeof SearchHitScalarFieldEnum)[keyof typeof SearchHitScalarFieldEnum]
+
+
+export const ListMonitorScalarFieldEnum = {
+  id: 'id',
+  twitterListId: 'twitterListId',
+  label: 'label',
+  listName: 'listName',
+  enabled: 'enabled',
+  authAccountId: 'authAccountId',
+  topicId: 'topicId',
+  alertEnabled: 'alertEnabled',
+  intervalSec: 'intervalSec',
+  lastPolledAt: 'lastPolledAt',
+  lastTweetId: 'lastTweetId',
+  lastError: 'lastError',
+  hitCount: 'hitCount',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ListMonitorScalarFieldEnum = (typeof ListMonitorScalarFieldEnum)[keyof typeof ListMonitorScalarFieldEnum]
+
+
+export const ListMonitorHitScalarFieldEnum = {
+  id: 'id',
+  monitorId: 'monitorId',
+  tweetId: 'tweetId',
+  username: 'username',
+  name: 'name',
+  text: 'text',
+  authorId: 'authorId',
+  postedAt: 'postedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type ListMonitorHitScalarFieldEnum = (typeof ListMonitorHitScalarFieldEnum)[keyof typeof ListMonitorHitScalarFieldEnum]
 
 
 export const WatchListScalarFieldEnum = {

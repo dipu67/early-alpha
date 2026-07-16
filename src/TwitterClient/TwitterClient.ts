@@ -180,6 +180,8 @@ const FALLBACK_QUERY_IDS = {
   ListAddMember: "yhAkn9q5qaSCxPg_fpykDw",
   ListByRestId: "I1h1FzuuiD__nNvG466mKQ",
   ListLatestTweetsTimeline: "Iql5aRVyFxNZ-ORcDV_TwQ",
+  /** List members page (x.com/i/lists/:id/members). */
+  ListMembers: "_G-ikUlIqZSkW3Y9Qz8Htw",
   ListRemoveMember: "c2IzeyWiwaQBkFs2VV_vSA",
   ListsManagementPageTimeline: "wgVgVkLURZzQ6flLmOyprA",
   ListMemberships: "qeV9WF3eN5V9SNj8iP7Kkg",
@@ -1651,6 +1653,63 @@ export class TwitterClient {
       return this.withRateLimit({
         success: true,
         tweets: this.parseTweetsFromInstructions(instructions),
+      });
+    } catch (error) {
+      return this.withRateLimit({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Members of a public (or accessible) Twitter list.
+   * GraphQL `ListMembers` — path: list.members_timeline.timeline.instructions.
+   *
+   * @param listId Twitter list rest id
+   * @param count page size (default 20, matches web)
+   * @param opts.cursor bottom cursor from a previous page
+   */
+  async getListMembers(
+    listId: string,
+    count = 20,
+    opts: { cursor?: string } = {},
+  ): Promise<UsersResult> {
+    try {
+      const variables: Record<string, unknown> = {
+        listId,
+        count,
+      };
+      if (opts.cursor) variables.cursor = opts.cursor;
+
+      // biome-ignore lint/suspicious/noExplicitAny: Twitter GraphQL response
+      const json = await this.graphqlGet<any>(
+        "ListMembers",
+        variables,
+        TIMELINE_FEATURES,
+      );
+      const err = this.extractErrors(json.errors);
+      if (err) return this.withRateLimit({ success: false, error: err });
+
+      const instructions =
+        json.data?.list?.members_timeline?.timeline?.instructions;
+      if (!instructions) {
+        // Empty list or no access — still success with zero users when no GQL error.
+        if (json.data?.list == null) {
+          return this.withRateLimit({
+            success: false,
+            error: "List not found or inaccessible",
+          });
+        }
+        return this.withRateLimit({ success: true, users: [] });
+      }
+
+      const users = this.parseUsersFromInstructions(instructions);
+      const nextCursor = this.parseBottomCursor(instructions);
+      return this.withRateLimit({
+        success: true,
+        users,
+        ...(nextCursor ? { nextCursor } : {}),
       });
     } catch (error) {
       return this.withRateLimit({

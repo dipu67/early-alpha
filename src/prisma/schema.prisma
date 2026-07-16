@@ -221,6 +221,7 @@ model TwitterAuthAccount {
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   searchQueries SearchQuery[]
+  listMonitors  ListMonitor[]
   projectLists  ProjectList[]
   signalScans   SignalScan[]
   authFollows   AuthFollow[]
@@ -345,6 +346,58 @@ model SearchHit {
   @@index([createdAt(sort: Desc)])
   @@index([queryId, createdAt(sort: Desc)])
   @@map("search_hits")
+}
+
+/// Monitor any public Twitter list timeline (ListLatestTweetsTimeline).
+/// Same pattern as SearchQuery: pin auth, poll interval, TG topic, watermark.
+model ListMonitor {
+  id            BigInt    @id @default(autoincrement())
+  /// Twitter list rest id (from https://x.com/i/lists/<id>).
+  twitterListId String    @unique @map("twitter_list_id")
+  /// Optional display label (operator-chosen).
+  label         String?
+  /// Name resolved from Twitter when created/refreshed.
+  listName      String?   @map("list_name")
+  enabled       Boolean   @default(true)
+  /// Pinned auth account; null = rotate from the pool.
+  authAccountId BigInt?   @map("auth_account_id")
+  /// Telegram forum topic (message_thread_id) for alerts.
+  topicId       Int?      @map("topic_id")
+  alertEnabled  Boolean   @default(true) @map("alert_enabled")
+  /// Minimum seconds between polls for this list.
+  intervalSec   Int       @default(120) @map("interval_sec")
+  lastPolledAt  DateTime? @map("last_polled_at") @db.Timestamptz
+  /// Snowflake watermark: only tweets newer than this are alerted.
+  lastTweetId   String?   @map("last_tweet_id")
+  lastError     String?   @map("last_error")
+  hitCount      Int       @default(0) @map("hit_count")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  authAccount TwitterAuthAccount? @relation(fields: [authAccountId], references: [id], onDelete: SetNull)
+  hits        ListMonitorHit[]
+
+  @@index([enabled, lastPolledAt])
+  @@map("list_monitors")
+}
+
+model ListMonitorHit {
+  id        BigInt    @id @default(autoincrement())
+  monitorId BigInt    @map("monitor_id")
+  tweetId   String    @map("tweet_id")
+  username  String
+  name      String    @default("")
+  text      String
+  authorId  String?   @map("author_id")
+  postedAt  DateTime? @map("posted_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  monitor ListMonitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@unique([monitorId, tweetId])
+  @@index([createdAt(sort: Desc)])
+  @@index([monitorId, createdAt(sort: Desc)])
+  @@map("list_monitor_hits")
 }
 
 model WatchList {

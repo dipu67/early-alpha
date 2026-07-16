@@ -14,6 +14,7 @@ import {
   DatabaseBackup,
   Crosshair,
   Radar,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "./rbac";
@@ -32,6 +33,7 @@ export const NAV: NavItem[] = [
   { href: "/dashboard/monitors", label: "User Monitor", icon: Radar },
   { href: "/dashboard/signals", label: "Signals", icon: Radio },
   { href: "/dashboard/search", label: "Live Search", icon: Search },
+  { href: "/dashboard/list-monitors", label: "List Monitors", icon: ClipboardList },
   { href: "/dashboard/projects", label: "Projects & Tags", icon: Tag },
   { href: "/dashboard/keywords", label: "Keywords", icon: Hash },
   { href: "/dashboard/lists", label: "Lists", icon: List },
@@ -51,6 +53,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   monitors: "User Monitor",
   signals: "Signals",
   search: "Live Search",
+  "list-monitors": "List Monitors",
   projects: "Projects & Tags",
   keywords: "Keywords",
   lists: "Lists",

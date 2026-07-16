@@ -12,9 +12,12 @@
 //   POST   /projects/:id/fetch-profile -> same for one project
 //   DELETE /projects/:id        -> remove project account from DB (+ list mirror)
 //   GET    /lists               -> ProjectLists with member counts
+//   GET    /lists/owned         -> live getMyLists() across all auth accounts
 //   POST   /lists               -> create list (slug + auth owner)
 //   DELETE /lists/:slug         -> delete one list on Twitter + DB
 //   GET    /lists/:slug/members -> members of one list
+//   POST   /lists/:slug/members -> add member (username or accountId)
+//   DELETE /lists/:slug/members/:accountId -> remove member
 //   POST   /reclassify          -> enqueue reclassify (set tags + reconcile)
 //   POST   /reconcile           -> enqueue reconcile-lists
 //   POST   /lists/delete        -> enqueue bulk list-delete
@@ -27,9 +30,13 @@ import { paginationSchema, jsonSafe } from "../http.js";
 import { enqueueJob } from "../enqueue.js";
 import { invalidateLexiconCache } from "../services/projectTagger.js";
 import { fetchAndUpdateProjectProfiles } from "../services/projectProfile.js";
+import { scanAllAuthLists } from "../services/authListsScan.js";
 import {
+  addMemberToProjectList,
   createProjectList,
   deleteProjectList,
+  ListDailyAddLimitError,
+  removeMemberFromProjectList,
   setAccountTags,
 } from "../services/projectLists.js";
 
@@ -432,6 +439,31 @@ tagsListsRouter.get(
   }),
 );
 
+/**
+ * Live inventory: for every auth-pool account, call client.getMyLists().
+ * Static path must be registered before /lists/:slug…
+ */
+tagsListsRouter.get(
+  "/lists/owned",
+  asyncHandler(async (req, res) => {
+    const q = z
+      .object({
+        activeOnly: z
+          .enum(["true", "false", "1", "0"])
+          .optional()
+          .transform((v) => v !== "false" && v !== "0"),
+        count: z.coerce.number().int().min(10).max(1000).optional(),
+      })
+      .parse(req.query);
+
+    const result = await scanAllAuthLists({
+      activeOnly: q.activeOnly ?? true,
+      ...(q.count !== undefined ? { count: q.count } : {}),
+    });
+    res.json(jsonSafe(result));
+  }),
+);
+
 const createListBody = z.object({
   slug: z
     .string()
@@ -485,7 +517,10 @@ tagsListsRouter.get(
     const q = paginationSchema.parse(req.query);
     const slugRaw = req.params.slug;
     const slug = Array.isArray(slugRaw) ? slugRaw[0]! : slugRaw!;
-    const [items, total] = await Promise.all([
+    const list = await prisma.projectList.findUnique({ where: { slug } });
+    if (!list) throw new HttpError(404, "list_not_found");
+
+    const [rows, total] = await Promise.all([
       prisma.listMember.findMany({
         where: { listSlug: slug },
         orderBy: { addedAt: "desc" },
@@ -493,13 +528,95 @@ tagsListsRouter.get(
         skip: q.offset,
         include: {
           account: {
-            select: { id: true, username: true, name: true, tags: true, followersCount: true },
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              tags: true,
+              followersCount: true,
+            },
           },
         },
       }),
       prisma.listMember.count({ where: { listSlug: slug } }),
     ]);
-    res.json({ total, limit: q.limit, offset: q.offset, items: jsonSafe(items) });
+    res.json({
+      total,
+      limit: q.limit,
+      offset: q.offset,
+      slug,
+      items: jsonSafe(
+        rows.map((m) => ({
+          accountId: m.accountId,
+          username: m.account.username,
+          name: m.account.name,
+          tags: m.account.tags,
+          followersCount: m.account.followersCount,
+          addedAt: m.addedAt,
+        })),
+      ),
+    });
+  }),
+);
+
+const addMemberBody = z
+  .object({
+    username: z.string().min(1).max(40).optional(),
+    accountId: z.string().min(1).max(40).optional(),
+  })
+  .refine((b) => Boolean(b.username?.trim() || b.accountId?.trim()), {
+    message: "username_or_account_id_required",
+  });
+
+tagsListsRouter.post(
+  "/lists/:slug/members",
+  asyncHandler(async (req, res) => {
+    const slugRaw = req.params.slug;
+    const slug = Array.isArray(slugRaw) ? slugRaw[0]! : slugRaw!;
+    const body = addMemberBody.parse(req.body ?? {});
+    try {
+      const result = await addMemberToProjectList(slug, {
+        ...(body.username !== undefined ? { username: body.username } : {}),
+        ...(body.accountId !== undefined ? { accountId: body.accountId } : {}),
+      });
+      res.status(result.alreadyMember ? 200 : 201).json({ ok: true, ...result });
+    } catch (err) {
+      if (err instanceof ListDailyAddLimitError) {
+        throw new HttpError(429, "list_daily_add_limit");
+      }
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === "list_not_found") throw new HttpError(404, "list_not_found");
+      if (msg === "username_or_account_id_required") {
+        throw new HttpError(400, msg);
+      }
+      if (msg === "user_not_found" || msg.includes("not found")) {
+        throw new HttpError(404, "user_not_found");
+      }
+      if (msg.includes("not found or inactive")) throw new HttpError(400, msg);
+      throw new HttpError(502, msg);
+    }
+  }),
+);
+
+tagsListsRouter.delete(
+  "/lists/:slug/members/:accountId",
+  asyncHandler(async (req, res) => {
+    const slugRaw = req.params.slug;
+    const slug = Array.isArray(slugRaw) ? slugRaw[0]! : slugRaw!;
+    const accountIdRaw = req.params.accountId;
+    const accountId = Array.isArray(accountIdRaw)
+      ? accountIdRaw[0]!
+      : accountIdRaw!;
+    try {
+      const result = await removeMemberFromProjectList(slug, accountId);
+      res.json({ ok: true, ...result });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === "list_not_found") throw new HttpError(404, "list_not_found");
+      if (msg === "member_not_found") throw new HttpError(404, "member_not_found");
+      if (msg.includes("not found or inactive")) throw new HttpError(400, msg);
+      throw new HttpError(502, msg);
+    }
   }),
 );
 

@@ -249,6 +249,7 @@ export type TwitterAuthAccountWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"TwitterAuthAccount"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"TwitterAuthAccount"> | Date | string
   searchQueries?: Prisma.SearchQueryListRelationFilter
+  listMonitors?: Prisma.ListMonitorListRelationFilter
   projectLists?: Prisma.ProjectListListRelationFilter
   signalScans?: Prisma.SignalScanListRelationFilter
   authFollows?: Prisma.AuthFollowListRelationFilter
@@ -265,6 +266,7 @@ export type TwitterAuthAccountOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   searchQueries?: Prisma.SearchQueryOrderByRelationAggregateInput
+  listMonitors?: Prisma.ListMonitorOrderByRelationAggregateInput
   projectLists?: Prisma.ProjectListOrderByRelationAggregateInput
   signalScans?: Prisma.SignalScanOrderByRelationAggregateInput
   authFollows?: Prisma.AuthFollowOrderByRelationAggregateInput
@@ -284,6 +286,7 @@ export type TwitterAuthAccountWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"TwitterAuthAccount"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"TwitterAuthAccount"> | Date | string
   searchQueries?: Prisma.SearchQueryListRelationFilter
+  listMonitors?: Prisma.ListMonitorListRelationFilter
   projectLists?: Prisma.ProjectListListRelationFilter
   signalScans?: Prisma.SignalScanListRelationFilter
   authFollows?: Prisma.AuthFollowListRelationFilter
@@ -332,6 +335,7 @@ export type TwitterAuthAccountCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   searchQueries?: Prisma.SearchQueryCreateNestedManyWithoutAuthAccountInput
+  listMonitors?: Prisma.ListMonitorCreateNestedManyWithoutAuthAccountInput
   projectLists?: Prisma.ProjectListCreateNestedManyWithoutAuthAccountInput
   signalScans?: Prisma.SignalScanCreateNestedManyWithoutAuthAccountInput
   authFollows?: Prisma.AuthFollowCreateNestedManyWithoutAuthAccountInput
@@ -348,6 +352,7 @@ export type TwitterAuthAccountUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   searchQueries?: Prisma.SearchQueryUncheckedCreateNestedManyWithoutAuthAccountInput
+  listMonitors?: Prisma.ListMonitorUncheckedCreateNestedManyWithoutAuthAccountInput
   projectLists?: Prisma.ProjectListUncheckedCreateNestedManyWithoutAuthAccountInput
   signalScans?: Prisma.SignalScanUncheckedCreateNestedManyWithoutAuthAccountInput
   authFollows?: Prisma.AuthFollowUncheckedCreateNestedManyWithoutAuthAccountInput
@@ -364,6 +369,7 @@ export type TwitterAuthAccountUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   searchQueries?: Prisma.SearchQueryUpdateManyWithoutAuthAccountNestedInput
+  listMonitors?: Prisma.ListMonitorUpdateManyWithoutAuthAccountNestedInput
   projectLists?: Prisma.ProjectListUpdateManyWithoutAuthAccountNestedInput
   signalScans?: Prisma.SignalScanUpdateManyWithoutAuthAccountNestedInput
   authFollows?: Prisma.AuthFollowUpdateManyWithoutAuthAccountNestedInput
@@ -380,6 +386,7 @@ export type TwitterAuthAccountUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   searchQueries?: Prisma.SearchQueryUncheckedUpdateManyWithoutAuthAccountNestedInput
+  listMonitors?: Prisma.ListMonitorUncheckedUpdateManyWithoutAuthAccountNestedInput
   projectLists?: Prisma.ProjectListUncheckedUpdateManyWithoutAuthAccountNestedInput
   signalScans?: Prisma.SignalScanUncheckedUpdateManyWithoutAuthAccountNestedInput
   authFollows?: Prisma.AuthFollowUncheckedUpdateManyWithoutAuthAccountNestedInput
@@ -535,6 +542,22 @@ export type TwitterAuthAccountUpdateOneWithoutSearchQueriesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TwitterAuthAccountUpdateToOneWithWhereWithoutSearchQueriesInput, Prisma.TwitterAuthAccountUpdateWithoutSearchQueriesInput>, Prisma.TwitterAuthAccountUncheckedUpdateWithoutSearchQueriesInput>
 }
 
+export type TwitterAuthAccountCreateNestedOneWithoutListMonitorsInput = {
+  create?: Prisma.XOR<Prisma.TwitterAuthAccountCreateWithoutListMonitorsInput, Prisma.TwitterAuthAccountUncheckedCreateWithoutListMonitorsInput>
+  connectOrCreate?: Prisma.TwitterAuthAccountCreateOrConnectWithoutListMonitorsInput
+  connect?: Prisma.TwitterAuthAccountWhereUniqueInput
+}
+
+export type TwitterAuthAccountUpdateOneWithoutListMonitorsNestedInput = {
+  create?: Prisma.XOR<Prisma.TwitterAuthAccountCreateWithoutListMonitorsInput, Prisma.TwitterAuthAccountUncheckedCreateWithoutListMonitorsInput>
+  connectOrCreate?: Prisma.TwitterAuthAccountCreateOrConnectWithoutListMonitorsInput
+  upsert?: Prisma.TwitterAuthAccountUpsertWithoutListMonitorsInput
+  disconnect?: Prisma.TwitterAuthAccountWhereInput | boolean
+  delete?: Prisma.TwitterAuthAccountWhereInput | boolean
+  connect?: Prisma.TwitterAuthAccountWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TwitterAuthAccountUpdateToOneWithWhereWithoutListMonitorsInput, Prisma.TwitterAuthAccountUpdateWithoutListMonitorsInput>, Prisma.TwitterAuthAccountUncheckedUpdateWithoutListMonitorsInput>
+}
+
 export type TwitterAuthAccountCreateWithoutProjectListsInput = {
   id: bigint | number
   username: string
@@ -546,6 +569,7 @@ export type TwitterAuthAccountCreateWithoutProjectListsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   searchQueries?: Prisma.SearchQueryCreateNestedManyWithoutAuthAccountInput
+  listMonitors?: Prisma.ListMonitorCreateNestedManyWithoutAuthAccountInput
   signalScans?: Prisma.SignalScanCreateNestedManyWithoutAuthAccountInput
   authFollows?: Prisma.AuthFollowCreateNestedManyWithoutAuthAccountInput
 }
@@ -561,6 +585,7 @@ export type TwitterAuthAccountUncheckedCreateWithoutProjectListsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   searchQueries?: Prisma.SearchQueryUncheckedCreateNestedManyWithoutAuthAccountInput
+  listMonitors?: Prisma.ListMonitorUncheckedCreateNestedManyWithoutAuthAccountInput
   signalScans?: Prisma.SignalScanUncheckedCreateNestedManyWithoutAuthAccountInput
   authFollows?: Prisma.AuthFollowUncheckedCreateNestedManyWithoutAuthAccountInput
 }
@@ -592,6 +617,7 @@ export type TwitterAuthAccountUpdateWithoutProjectListsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   searchQueries?: Prisma.SearchQueryUpdateManyWithoutAuthAccountNestedInput
+  listMonitors?: Prisma.ListMonitorUpdateManyWithoutAuthAccountNestedInput
   signalScans?: Prisma.SignalScanUpdateManyWithoutAuthAccountNestedInput
   authFollows?: Prisma.AuthFollowUpdateManyWithoutAuthAccountNestedInput
 }
@@ -607,6 +633,7 @@ export type TwitterAuthAccountUncheckedUpdateWithoutProjectListsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   searchQueries?: Prisma.SearchQueryUncheckedUpdateManyWithoutAuthAccountNestedInput
+  listMonitors?: Prisma.ListMonitorUncheckedUpdateManyWithoutAuthAccountNestedInput
   signalScans?: Prisma.SignalScanUncheckedUpdateManyWithoutAuthAccountNestedInput
   authFollows?: Prisma.AuthFollowUncheckedUpdateManyWithoutAuthAccountNestedInput
 }
@@ -622,6 +649,7 @@ export type TwitterAuthAccountCreateWithoutSignalScansInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   searchQueries?: Prisma.SearchQueryCreateNestedManyWithoutAuthAccountInput
+  listMonitors?: Prisma.ListMonitorCreateNestedManyWithoutAuthAccountInput
   projectLists?: Prisma.ProjectListCreateNestedManyWithoutAuthAccountInput
   authFollows?: Prisma.AuthFollowCreateNestedManyWithoutAuthAccountInput
 }
@@ -637,6 +665,7 @@ export type TwitterAuthAccountUncheckedCreateWithoutSignalScansInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   searchQueries?: Prisma.SearchQueryUncheckedCreateNestedManyWithoutAuthAccountInput
+  listMonitors?: Prisma.ListMonitorUncheckedCreateNestedManyWithoutAuthAccountInput
   projectLists?: Prisma.ProjectListUncheckedCreateNestedManyWithoutAuthAccountInput
   authFollows?: Prisma.AuthFollowUncheckedCreateNestedManyWithoutAuthAccountInput
 }
@@ -668,6 +697,7 @@ export type TwitterAuthAccountUpdateWithoutSignalScansInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   searchQueries?: Prisma.SearchQueryUpdateManyWithoutAuthAccountNestedInput
+  listMonitors?: Prisma.ListMonitorUpdateManyWithoutAuthAccountNestedInput
   projectLists?: Prisma.ProjectListUpdateManyWithoutAuthAccountNestedInput
   authFollows?: Prisma.AuthFollowUpdateManyWithoutAuthAccountNestedInput
 }
@@ -683,6 +713,7 @@ export type TwitterAuthAccountUncheckedUpdateWithoutSignalScansInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   searchQueries?: Prisma.SearchQueryUncheckedUpdateManyWithoutAuthAccountNestedInput
+  listMonitors?: Prisma.ListMonitorUncheckedUpdateManyWithoutAuthAccountNestedInput
   projectLists?: Prisma.ProjectListUncheckedUpdateManyWithoutAuthAccountNestedInput
   authFollows?: Prisma.AuthFollowUncheckedUpdateManyWithoutAuthAccountNestedInput
 }
@@ -698,6 +729,7 @@ export type TwitterAuthAccountCreateWithoutAuthFollowsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   searchQueries?: Prisma.SearchQueryCreateNestedManyWithoutAuthAccountInput
+  listMonitors?: Prisma.ListMonitorCreateNestedManyWithoutAuthAccountInput
   projectLists?: Prisma.ProjectListCreateNestedManyWithoutAuthAccountInput
   signalScans?: Prisma.SignalScanCreateNestedManyWithoutAuthAccountInput
 }
@@ -713,6 +745,7 @@ export type TwitterAuthAccountUncheckedCreateWithoutAuthFollowsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   searchQueries?: Prisma.SearchQueryUncheckedCreateNestedManyWithoutAuthAccountInput
+  listMonitors?: Prisma.ListMonitorUncheckedCreateNestedManyWithoutAuthAccountInput
   projectLists?: Prisma.ProjectListUncheckedCreateNestedManyWithoutAuthAccountInput
   signalScans?: Prisma.SignalScanUncheckedCreateNestedManyWithoutAuthAccountInput
 }
@@ -744,6 +777,7 @@ export type TwitterAuthAccountUpdateWithoutAuthFollowsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   searchQueries?: Prisma.SearchQueryUpdateManyWithoutAuthAccountNestedInput
+  listMonitors?: Prisma.ListMonitorUpdateManyWithoutAuthAccountNestedInput
   projectLists?: Prisma.ProjectListUpdateManyWithoutAuthAccountNestedInput
   signalScans?: Prisma.SignalScanUpdateManyWithoutAuthAccountNestedInput
 }
@@ -759,6 +793,7 @@ export type TwitterAuthAccountUncheckedUpdateWithoutAuthFollowsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   searchQueries?: Prisma.SearchQueryUncheckedUpdateManyWithoutAuthAccountNestedInput
+  listMonitors?: Prisma.ListMonitorUncheckedUpdateManyWithoutAuthAccountNestedInput
   projectLists?: Prisma.ProjectListUncheckedUpdateManyWithoutAuthAccountNestedInput
   signalScans?: Prisma.SignalScanUncheckedUpdateManyWithoutAuthAccountNestedInput
 }
@@ -773,6 +808,7 @@ export type TwitterAuthAccountCreateWithoutSearchQueriesInput = {
   lastUsedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  listMonitors?: Prisma.ListMonitorCreateNestedManyWithoutAuthAccountInput
   projectLists?: Prisma.ProjectListCreateNestedManyWithoutAuthAccountInput
   signalScans?: Prisma.SignalScanCreateNestedManyWithoutAuthAccountInput
   authFollows?: Prisma.AuthFollowCreateNestedManyWithoutAuthAccountInput
@@ -788,6 +824,7 @@ export type TwitterAuthAccountUncheckedCreateWithoutSearchQueriesInput = {
   lastUsedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  listMonitors?: Prisma.ListMonitorUncheckedCreateNestedManyWithoutAuthAccountInput
   projectLists?: Prisma.ProjectListUncheckedCreateNestedManyWithoutAuthAccountInput
   signalScans?: Prisma.SignalScanUncheckedCreateNestedManyWithoutAuthAccountInput
   authFollows?: Prisma.AuthFollowUncheckedCreateNestedManyWithoutAuthAccountInput
@@ -819,6 +856,7 @@ export type TwitterAuthAccountUpdateWithoutSearchQueriesInput = {
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  listMonitors?: Prisma.ListMonitorUpdateManyWithoutAuthAccountNestedInput
   projectLists?: Prisma.ProjectListUpdateManyWithoutAuthAccountNestedInput
   signalScans?: Prisma.SignalScanUpdateManyWithoutAuthAccountNestedInput
   authFollows?: Prisma.AuthFollowUpdateManyWithoutAuthAccountNestedInput
@@ -834,6 +872,87 @@ export type TwitterAuthAccountUncheckedUpdateWithoutSearchQueriesInput = {
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  listMonitors?: Prisma.ListMonitorUncheckedUpdateManyWithoutAuthAccountNestedInput
+  projectLists?: Prisma.ProjectListUncheckedUpdateManyWithoutAuthAccountNestedInput
+  signalScans?: Prisma.SignalScanUncheckedUpdateManyWithoutAuthAccountNestedInput
+  authFollows?: Prisma.AuthFollowUncheckedUpdateManyWithoutAuthAccountNestedInput
+}
+
+export type TwitterAuthAccountCreateWithoutListMonitorsInput = {
+  id: bigint | number
+  username: string
+  authToken: string
+  ct0: string
+  isActive?: boolean
+  rateLimitedUntil?: Date | string | null
+  lastUsedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  searchQueries?: Prisma.SearchQueryCreateNestedManyWithoutAuthAccountInput
+  projectLists?: Prisma.ProjectListCreateNestedManyWithoutAuthAccountInput
+  signalScans?: Prisma.SignalScanCreateNestedManyWithoutAuthAccountInput
+  authFollows?: Prisma.AuthFollowCreateNestedManyWithoutAuthAccountInput
+}
+
+export type TwitterAuthAccountUncheckedCreateWithoutListMonitorsInput = {
+  id: bigint | number
+  username: string
+  authToken: string
+  ct0: string
+  isActive?: boolean
+  rateLimitedUntil?: Date | string | null
+  lastUsedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  searchQueries?: Prisma.SearchQueryUncheckedCreateNestedManyWithoutAuthAccountInput
+  projectLists?: Prisma.ProjectListUncheckedCreateNestedManyWithoutAuthAccountInput
+  signalScans?: Prisma.SignalScanUncheckedCreateNestedManyWithoutAuthAccountInput
+  authFollows?: Prisma.AuthFollowUncheckedCreateNestedManyWithoutAuthAccountInput
+}
+
+export type TwitterAuthAccountCreateOrConnectWithoutListMonitorsInput = {
+  where: Prisma.TwitterAuthAccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.TwitterAuthAccountCreateWithoutListMonitorsInput, Prisma.TwitterAuthAccountUncheckedCreateWithoutListMonitorsInput>
+}
+
+export type TwitterAuthAccountUpsertWithoutListMonitorsInput = {
+  update: Prisma.XOR<Prisma.TwitterAuthAccountUpdateWithoutListMonitorsInput, Prisma.TwitterAuthAccountUncheckedUpdateWithoutListMonitorsInput>
+  create: Prisma.XOR<Prisma.TwitterAuthAccountCreateWithoutListMonitorsInput, Prisma.TwitterAuthAccountUncheckedCreateWithoutListMonitorsInput>
+  where?: Prisma.TwitterAuthAccountWhereInput
+}
+
+export type TwitterAuthAccountUpdateToOneWithWhereWithoutListMonitorsInput = {
+  where?: Prisma.TwitterAuthAccountWhereInput
+  data: Prisma.XOR<Prisma.TwitterAuthAccountUpdateWithoutListMonitorsInput, Prisma.TwitterAuthAccountUncheckedUpdateWithoutListMonitorsInput>
+}
+
+export type TwitterAuthAccountUpdateWithoutListMonitorsInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  authToken?: Prisma.StringFieldUpdateOperationsInput | string
+  ct0?: Prisma.StringFieldUpdateOperationsInput | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  rateLimitedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  searchQueries?: Prisma.SearchQueryUpdateManyWithoutAuthAccountNestedInput
+  projectLists?: Prisma.ProjectListUpdateManyWithoutAuthAccountNestedInput
+  signalScans?: Prisma.SignalScanUpdateManyWithoutAuthAccountNestedInput
+  authFollows?: Prisma.AuthFollowUpdateManyWithoutAuthAccountNestedInput
+}
+
+export type TwitterAuthAccountUncheckedUpdateWithoutListMonitorsInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  authToken?: Prisma.StringFieldUpdateOperationsInput | string
+  ct0?: Prisma.StringFieldUpdateOperationsInput | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  rateLimitedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  searchQueries?: Prisma.SearchQueryUncheckedUpdateManyWithoutAuthAccountNestedInput
   projectLists?: Prisma.ProjectListUncheckedUpdateManyWithoutAuthAccountNestedInput
   signalScans?: Prisma.SignalScanUncheckedUpdateManyWithoutAuthAccountNestedInput
   authFollows?: Prisma.AuthFollowUncheckedUpdateManyWithoutAuthAccountNestedInput
@@ -846,6 +965,7 @@ export type TwitterAuthAccountUncheckedUpdateWithoutSearchQueriesInput = {
 
 export type TwitterAuthAccountCountOutputType = {
   searchQueries: number
+  listMonitors: number
   projectLists: number
   signalScans: number
   authFollows: number
@@ -853,6 +973,7 @@ export type TwitterAuthAccountCountOutputType = {
 
 export type TwitterAuthAccountCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   searchQueries?: boolean | TwitterAuthAccountCountOutputTypeCountSearchQueriesArgs
+  listMonitors?: boolean | TwitterAuthAccountCountOutputTypeCountListMonitorsArgs
   projectLists?: boolean | TwitterAuthAccountCountOutputTypeCountProjectListsArgs
   signalScans?: boolean | TwitterAuthAccountCountOutputTypeCountSignalScansArgs
   authFollows?: boolean | TwitterAuthAccountCountOutputTypeCountAuthFollowsArgs
@@ -873,6 +994,13 @@ export type TwitterAuthAccountCountOutputTypeDefaultArgs<ExtArgs extends runtime
  */
 export type TwitterAuthAccountCountOutputTypeCountSearchQueriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.SearchQueryWhereInput
+}
+
+/**
+ * TwitterAuthAccountCountOutputType without action
+ */
+export type TwitterAuthAccountCountOutputTypeCountListMonitorsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ListMonitorWhereInput
 }
 
 /**
@@ -908,6 +1036,7 @@ export type TwitterAuthAccountSelect<ExtArgs extends runtime.Types.Extensions.In
   createdAt?: boolean
   updatedAt?: boolean
   searchQueries?: boolean | Prisma.TwitterAuthAccount$searchQueriesArgs<ExtArgs>
+  listMonitors?: boolean | Prisma.TwitterAuthAccount$listMonitorsArgs<ExtArgs>
   projectLists?: boolean | Prisma.TwitterAuthAccount$projectListsArgs<ExtArgs>
   signalScans?: boolean | Prisma.TwitterAuthAccount$signalScansArgs<ExtArgs>
   authFollows?: boolean | Prisma.TwitterAuthAccount$authFollowsArgs<ExtArgs>
@@ -953,6 +1082,7 @@ export type TwitterAuthAccountSelectScalar = {
 export type TwitterAuthAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "authToken" | "ct0" | "isActive" | "rateLimitedUntil" | "lastUsedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["twitterAuthAccount"]>
 export type TwitterAuthAccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   searchQueries?: boolean | Prisma.TwitterAuthAccount$searchQueriesArgs<ExtArgs>
+  listMonitors?: boolean | Prisma.TwitterAuthAccount$listMonitorsArgs<ExtArgs>
   projectLists?: boolean | Prisma.TwitterAuthAccount$projectListsArgs<ExtArgs>
   signalScans?: boolean | Prisma.TwitterAuthAccount$signalScansArgs<ExtArgs>
   authFollows?: boolean | Prisma.TwitterAuthAccount$authFollowsArgs<ExtArgs>
@@ -965,6 +1095,7 @@ export type $TwitterAuthAccountPayload<ExtArgs extends runtime.Types.Extensions.
   name: "TwitterAuthAccount"
   objects: {
     searchQueries: Prisma.$SearchQueryPayload<ExtArgs>[]
+    listMonitors: Prisma.$ListMonitorPayload<ExtArgs>[]
     projectLists: Prisma.$ProjectListPayload<ExtArgs>[]
     signalScans: Prisma.$SignalScanPayload<ExtArgs>[]
     authFollows: Prisma.$AuthFollowPayload<ExtArgs>[]
@@ -1374,6 +1505,7 @@ readonly fields: TwitterAuthAccountFieldRefs;
 export interface Prisma__TwitterAuthAccountClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   searchQueries<T extends Prisma.TwitterAuthAccount$searchQueriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TwitterAuthAccount$searchQueriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SearchQueryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  listMonitors<T extends Prisma.TwitterAuthAccount$listMonitorsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TwitterAuthAccount$listMonitorsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListMonitorPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   projectLists<T extends Prisma.TwitterAuthAccount$projectListsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TwitterAuthAccount$projectListsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectListPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   signalScans<T extends Prisma.TwitterAuthAccount$signalScansArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TwitterAuthAccount$signalScansArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SignalScanPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   authFollows<T extends Prisma.TwitterAuthAccount$authFollowsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TwitterAuthAccount$authFollowsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AuthFollowPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -1829,6 +1961,30 @@ export type TwitterAuthAccount$searchQueriesArgs<ExtArgs extends runtime.Types.E
   take?: number
   skip?: number
   distinct?: Prisma.SearchQueryScalarFieldEnum | Prisma.SearchQueryScalarFieldEnum[]
+}
+
+/**
+ * TwitterAuthAccount.listMonitors
+ */
+export type TwitterAuthAccount$listMonitorsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ListMonitor
+   */
+  select?: Prisma.ListMonitorSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ListMonitor
+   */
+  omit?: Prisma.ListMonitorOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ListMonitorInclude<ExtArgs> | null
+  where?: Prisma.ListMonitorWhereInput
+  orderBy?: Prisma.ListMonitorOrderByWithRelationInput | Prisma.ListMonitorOrderByWithRelationInput[]
+  cursor?: Prisma.ListMonitorWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ListMonitorScalarFieldEnum | Prisma.ListMonitorScalarFieldEnum[]
 }
 
 /**

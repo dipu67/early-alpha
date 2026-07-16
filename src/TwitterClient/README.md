@@ -74,6 +74,7 @@ To extract these, open x.com in your browser, go to DevTools > Application > Coo
 | `createList(name, description?, isPrivate?)` | Create a new list |
 | `getList(listId)` | Get list details |
 | `getListTweets(listId, count?)` | Get tweets from a list |
+| `getListMembers(listId, count?, opts?)` | Get list members (paginated; `opts.cursor`) |
 | `getMyLists(count?)` | Get the authenticated user's lists |
 | `addListMember(listId, userId)` | Add a user to a list |
 | `removeListMember(listId, userId)` | Remove a user from a list |

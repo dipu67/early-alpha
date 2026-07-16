@@ -201,6 +201,190 @@ export async function deleteProjectList(slug: string): Promise<{
 }
 
 /**
+ * Admin: add a member to an owned list (Twitter + local ListMember).
+ * Accepts Twitter username (preferred) or rest id. Upserts TwitterAccount.
+ */
+export async function addMemberToProjectList(
+  slug: string,
+  input: { username?: string; accountId?: string },
+): Promise<{
+  slug: string;
+  accountId: string;
+  username: string;
+  name: string;
+  alreadyMember: boolean;
+}> {
+  const row = await prisma.projectList.findUnique({ where: { slug } });
+  if (!row) throw new Error("list_not_found");
+
+  const usernameRaw = input.username?.trim().replace(/^@/, "");
+  const idRaw = input.accountId?.trim();
+  if (!usernameRaw && !idRaw) throw new Error("username_or_account_id_required");
+
+  const { getListClient } = await import("../twitter/getClient.js");
+  const { client, accountId: authId } = await getListClient(row.authAccountId);
+
+  let twitterUserId = idRaw ?? "";
+  let username = usernameRaw ?? "";
+  let name = username;
+  let description: string | null = null;
+  let followersCount: number | null = null;
+  let followingCount: number | null = null;
+  let tweetCount: number | null = null;
+  let profileImageUrl: string | null = null;
+  let isBlueVerified: boolean | null = null;
+  let createdAt: Date | null = null;
+
+  if (usernameRaw) {
+    const res = await client.getUserByScreenName(usernameRaw);
+    if (res.rateLimit && res.rateLimit.remaining === 0) {
+      await markRateLimited(authId, res.rateLimit.reset);
+    }
+    if (!res.success || !res.user) {
+      throw new Error(res.error ?? "user_not_found");
+    }
+    const u = res.user;
+    twitterUserId = u.id;
+    username = u.username;
+    name = u.name ?? u.username;
+    description = u.description ?? null;
+    followersCount = u.followersCount ?? null;
+    followingCount = u.followingCount ?? null;
+    tweetCount = u.tweetCount ?? null;
+    profileImageUrl = u.profileImageUrl ?? null;
+    isBlueVerified = u.isBlueVerified ?? null;
+    createdAt = u.createdAt ? new Date(u.createdAt) : null;
+  } else if (idRaw) {
+    // Resolve profile if we only have id (best-effort).
+    const existing = await prisma.twitterAccount.findUnique({
+      where: { id: idRaw },
+    });
+    if (existing) {
+      twitterUserId = existing.id;
+      username = existing.username;
+      name = existing.name;
+    } else {
+      twitterUserId = idRaw;
+      username = idRaw;
+      name = idRaw;
+    }
+  }
+
+  if (!twitterUserId) throw new Error("user_not_found");
+
+  await prisma.twitterAccount.upsert({
+    where: { id: twitterUserId },
+    create: {
+      id: twitterUserId,
+      username,
+      name,
+      description,
+      followersCount,
+      followingCount,
+      tweetCount,
+      profileImageUrl,
+      isBlueVerified,
+      createdAt,
+      tags: [],
+    },
+    update: {
+      username,
+      name,
+      ...(description != null ? { description } : {}),
+      ...(followersCount != null ? { followersCount } : {}),
+      ...(followingCount != null ? { followingCount } : {}),
+      ...(tweetCount != null ? { tweetCount } : {}),
+      ...(profileImageUrl != null ? { profileImageUrl } : {}),
+      ...(isBlueVerified != null ? { isBlueVerified } : {}),
+    },
+  });
+
+  const already = await prisma.listMember.findUnique({
+    where: {
+      listSlug_accountId: { listSlug: slug, accountId: twitterUserId },
+    },
+  });
+  if (already) {
+    return {
+      slug,
+      accountId: twitterUserId,
+      username,
+      name,
+      alreadyMember: true,
+    };
+  }
+
+  const res = await client.addListMember(row.twitterListId, twitterUserId);
+  if (res.rateLimit && res.rateLimit.remaining === 0) {
+    await markRateLimited(authId, res.rateLimit.reset);
+  }
+  if (!res.success) {
+    if (isListDailyAddLimitError(res.error)) {
+      const until = nextUtcDayReset();
+      await markRateLimitedUntil(authId, until);
+      throw new ListDailyAddLimitError(authId, res.error ?? "daily list add limit");
+    }
+    throw new Error(res.error ?? "addListMember_failed");
+  }
+
+  await prisma.listMember.create({
+    data: { listSlug: slug, accountId: twitterUserId },
+  });
+
+  return {
+    slug,
+    accountId: twitterUserId,
+    username,
+    name,
+    alreadyMember: false,
+  };
+}
+
+/**
+ * Admin: remove a member from an owned list (Twitter + local ListMember).
+ * Keeps the TwitterAccount row (project may still exist elsewhere).
+ */
+export async function removeMemberFromProjectList(
+  slug: string,
+  accountId: string,
+): Promise<{ slug: string; accountId: string; twitterRemoved: boolean }> {
+  const row = await prisma.projectList.findUnique({ where: { slug } });
+  if (!row) throw new Error("list_not_found");
+
+  const member = await prisma.listMember.findUnique({
+    where: { listSlug_accountId: { listSlug: slug, accountId } },
+  });
+  if (!member) throw new Error("member_not_found");
+
+  const { getListClient } = await import("../twitter/getClient.js");
+  const { client, accountId: authId } = await getListClient(row.authAccountId);
+
+  let twitterRemoved = false;
+  const res = await client.removeListMember(row.twitterListId, accountId);
+  if (res.rateLimit && res.rateLimit.remaining === 0) {
+    await markRateLimited(authId, res.rateLimit.reset);
+  }
+  if (res.success) {
+    twitterRemoved = true;
+  } else {
+    const err = (res.error ?? "").toLowerCase();
+    const gone =
+      err.includes("not found") ||
+      err.includes("not a member") ||
+      err.includes("does not exist");
+    if (!gone) {
+      throw new Error(res.error ?? "removeListMember_failed");
+    }
+  }
+
+  await prisma.listMember.delete({
+    where: { listSlug_accountId: { listSlug: slug, accountId } },
+  });
+
+  return { slug, accountId, twitterRemoved };
+}
+
+/**
  * Resolve an existing ProjectList for a slug. NEVER creates a Twitter list —
  * creation is admin-only via `createProjectList`. Worker/reconcile only attach
  * members to lists that already exist in the DB.

@@ -108,6 +108,12 @@ export const JOBS = {
     schema: z.object({}).strict(),
     existing: true,
   }),
+  "poll-list-monitors": def({
+    queue: "list-tracker",
+    jobName: "poll-list-monitors",
+    schema: z.object({}).strict(),
+    existing: true,
+  }),
   "poll-monitors": def({
     queue: "list-tracker",
     jobName: "poll-monitors",

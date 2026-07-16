@@ -18,6 +18,8 @@ import { searchRouter } from "./routes/search.js";
 import { queuesRouter } from "./routes/queues.js";
 import { tgRouter } from "./routes/tg.js";
 import { searchQueriesRouter } from "./routes/search-queries.js";
+import { listMonitorsRouter } from "./routes/list-monitors.js";
+import { twitterListsRouter } from "./routes/twitter-lists.js";
 import { grokRouter } from "./routes/grok.js";
 import { backupRouter } from "./routes/backup.js";
 import { hunterRouter } from "./routes/hunter.js";
@@ -42,6 +44,8 @@ export function createApp(): Express {
   app.use("/api/settings", settingsRouter);
   app.use("/api/search", searchRouter);
   app.use("/api/search-queries", searchQueriesRouter);
+  app.use("/api/list-monitors", listMonitorsRouter);
+  app.use("/api/twitter-lists", twitterListsRouter);
   app.use("/api/queues", queuesRouter);
   app.use("/api/tg", tgRouter);
   app.use("/api/grok", grokRouter);

@@ -7,9 +7,13 @@ import {
 import { isTwitterAuthError } from "../TwitterClient/TwitterClient.js";
 import type { UserData } from "../TwitterClient/types.js";
 import { classifyAccount } from "./projectTagger.js";
+import { isEarlyProjectCandidate } from "./earlyProjectFilter.js";
 
 export interface DiffResult {
+  /** Every newly followed account (alert on all of these). */
   newFollows: UserData[];
+  /** Subset of newFollows that look early — only these were written to TwitterAccount. */
+  storedFollows: UserData[];
   watchListId: bigint;
   username: string;
 }
@@ -23,7 +27,6 @@ export async function checkFollowingDiff(
 
   const { client, accountId } = await getTwitterClient();
   const result = await client.getFollowing(entry.twitterUserId, 20);
-
   if (result.rateLimit && result.rateLimit.remaining === 0) {
     await markRateLimited(accountId, result.rateLimit.reset);
   }
@@ -54,17 +57,32 @@ export async function checkFollowingDiff(
   });
 
   if (!latestSnapshot) {
-    return { newFollows: [], watchListId, username: entry.username };
+    return {
+      newFollows: [],
+      storedFollows: [],
+      watchListId,
+      username: entry.username,
+    };
   }
 
   const previousIds = new Set(latestSnapshot.userIds);
   const newFollows = result.users.filter((u) => !previousIds.has(u.id));
 
   if (newFollows.length === 0) {
-    return { newFollows: [], watchListId, username: entry.username };
+    return {
+      newFollows: [],
+      storedFollows: [],
+      watchListId,
+      username: entry.username,
+    };
   }
 
+  // Always return every new follow for alerting. Only upsert early-looking
+  // accounts into TwitterAccount (age ≤ 1y, followers/following < 50k).
+  const storedFollows: UserData[] = [];
   for (const user of newFollows) {
+    if (!isEarlyProjectCandidate(user)) continue;
+
     const tags = await classifyAccount(user);
     await prisma.twitterAccount.upsert({
       where: { id: user.id },
@@ -100,7 +118,8 @@ export async function checkFollowingDiff(
         createdAt: user.createdAt ? new Date(user.createdAt) : null,
       },
     });
+    storedFollows.push(user);
   }
 
-  return { newFollows, watchListId, username: entry.username };
+  return { newFollows, storedFollows, watchListId, username: entry.username };
 }

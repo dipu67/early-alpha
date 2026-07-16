@@ -4,6 +4,7 @@ import { connection } from "./queue.js";
 import { checkFollowingDiff } from "./followDiff.js";
 import { prisma } from "../db/prisma.js";
 import { formatNewFollowAlert } from "./formatAlert.js";
+import { isEarlyProjectCandidate } from "./earlyProjectFilter.js";
 import { sendTelegramAlert, isAlertEnabled, sendTelegramPlaintext } from "../tg/sendAlert.js";
 
 // Keep the process alive if Twitter homepage/ondemand parsing throws outside
@@ -49,9 +50,20 @@ const worker = new Worker(
       return;
     }
 
-
+    // Alert on every new follow. Persist AlertLog only for early candidates
+    // (non-early: age > 1y or followers/following ≥ 50k — already skipped in
+    // followDiff for TwitterAccount).
     for (const user of newFollows) {
       await sendAlert(username, user);
+
+      if (!isEarlyProjectCandidate(user)) {
+        console.log(
+          `[worker] alert-only (not early): @${user.username} ` +
+            `followers=${user.followersCount ?? "?"} following=${user.followingCount ?? "?"} ` +
+            `age=${user.createdAt ?? "?"}`,
+        );
+        continue;
+      }
 
       await prisma.alertLog.create({
         data: {

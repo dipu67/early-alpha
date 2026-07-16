@@ -153,6 +153,43 @@ export function formatSearchAlert(
   };
 }
 
+export interface ListMonitorAlertInput {
+  listId: string;
+  label?: string | null;
+  username: string;
+  name: string;
+  text: string;
+  tweetId: string;
+}
+
+/** New post on a watched public Twitter list. */
+export function formatListMonitorAlert(
+  input: ListMonitorAlertInput,
+): { text: string; user: UserData } {
+  const postUrl = `https://x.com/${input.username}/status/${input.tweetId}`;
+  const listUrl = `https://x.com/i/lists/${input.listId}`;
+  const title = input.label?.trim()
+    ? `📋 *List · ${escapeMarkdown(input.label.trim())}*`
+    : `📋 *List post*`;
+
+  const text =
+    `${title}\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `👤 *${escapeMarkdown(input.name)}*  [@${escapeMarkdown(input.username)}](https://x.com/${input.username})\n\n` +
+    `${escapeMarkdown(excerpt(input.text))}\n\n` +
+    `🔗 [View post](${postUrl}) · [List](${listUrl})\n` +
+    `━━━━━━━━━━━━━━━━━━\n`;
+
+  return {
+    text,
+    user: {
+      id: input.tweetId,
+      username: input.username,
+      name: input.name,
+    } as UserData,
+  };
+}
+
 export interface MonitorAlertInput {
   accountId: string;
   username: string;

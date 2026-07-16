@@ -134,6 +134,15 @@ export const SCHEDULERS: SchedulerDef[] = [
     label: "Twitter search poll",
   },
   {
+    key: "list-monitor-poll",
+    queue: "list-tracker",
+    schedulerId: "list-monitor-poll",
+    jobName: "poll-list-monitors",
+    data: {},
+    defaultEvery: 60 * 1000,
+    label: "Public Twitter list monitors",
+  },
+  {
     key: "monitor-poll",
     queue: "list-tracker",
     schedulerId: "monitor-poll",

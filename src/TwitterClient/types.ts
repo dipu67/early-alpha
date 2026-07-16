@@ -86,6 +86,8 @@ export interface UserResult {
 export interface UsersResult {
   success: boolean;
   users?: UserData[];
+  /** Bottom cursor for paginated user timelines (e.g. list members). */
+  nextCursor?: string;
   error?: string;
   rateLimit?: RateLimit;
 }
