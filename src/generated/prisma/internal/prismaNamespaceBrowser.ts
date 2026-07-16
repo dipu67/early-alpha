@@ -81,7 +81,8 @@ export const ModelName = {
   TelegramGroup: 'TelegramGroup',
   TelegramTopic: 'TelegramTopic',
   ProjectMonitor: 'ProjectMonitor',
-  KnownChain: 'KnownChain'
+  GithubRepoMonitor: 'GithubRepoMonitor',
+  GithubRepoCommit: 'GithubRepoCommit'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -560,23 +561,47 @@ export const ProjectMonitorScalarFieldEnum = {
 export type ProjectMonitorScalarFieldEnum = (typeof ProjectMonitorScalarFieldEnum)[keyof typeof ProjectMonitorScalarFieldEnum]
 
 
-export const KnownChainScalarFieldEnum = {
-  chainId: 'chainId',
-  name: 'name',
-  shortName: 'shortName',
-  nativeSymbol: 'nativeSymbol',
-  rpcUrl: 'rpcUrl',
-  explorerUrl: 'explorerUrl',
-  infoUrl: 'infoUrl',
-  isTestnet: 'isTestnet',
-  source: 'source',
-  rpcLive: 'rpcLive',
-  firstSeenAt: 'firstSeenAt',
-  lastSeenAt: 'lastSeenAt',
-  alertedAt: 'alertedAt'
+export const GithubRepoMonitorScalarFieldEnum = {
+  id: 'id',
+  owner: 'owner',
+  repo: 'repo',
+  fullName: 'fullName',
+  label: 'label',
+  description: 'description',
+  enabled: 'enabled',
+  alertEnabled: 'alertEnabled',
+  topicId: 'topicId',
+  branch: 'branch',
+  pathFilter: 'pathFilter',
+  intervalSec: 'intervalSec',
+  lastPolledAt: 'lastPolledAt',
+  lastCommitSha: 'lastCommitSha',
+  lastError: 'lastError',
+  hitCount: 'hitCount',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
-export type KnownChainScalarFieldEnum = (typeof KnownChainScalarFieldEnum)[keyof typeof KnownChainScalarFieldEnum]
+export type GithubRepoMonitorScalarFieldEnum = (typeof GithubRepoMonitorScalarFieldEnum)[keyof typeof GithubRepoMonitorScalarFieldEnum]
+
+
+export const GithubRepoCommitScalarFieldEnum = {
+  id: 'id',
+  monitorId: 'monitorId',
+  sha: 'sha',
+  message: 'message',
+  authorName: 'authorName',
+  authorLogin: 'authorLogin',
+  htmlUrl: 'htmlUrl',
+  committedAt: 'committedAt',
+  filesAdded: 'filesAdded',
+  filesModified: 'filesModified',
+  filesRemoved: 'filesRemoved',
+  alerted: 'alerted',
+  createdAt: 'createdAt'
+} as const
+
+export type GithubRepoCommitScalarFieldEnum = (typeof GithubRepoCommitScalarFieldEnum)[keyof typeof GithubRepoCommitScalarFieldEnum]
 
 
 export const SortOrder = {

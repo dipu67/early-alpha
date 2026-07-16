@@ -1,22 +1,22 @@
-// Chainlist JSON-snapshot new-chain API.
+// Chainlist dual-source new-chain API (no DB table).
 //
-//   GET  /chainlist              status + discoveries + optional DB recent
-//   POST /chainlist/poll         fetch rpcs.json → compare file → alert
-//   PATCH /chainlist/topic       set Telegram topic for chainlist alerts
-//   POST /chainlist/seed-search  ensure Live Search starter queries
+//   GET   /chainlist              snapshot status + discoveries + source toggles
+//   POST  /chainlist/poll         run enabled sources → compare → alert
+//   PATCH /chainlist/topic        set Telegram topic for chainlist alerts
+//   PATCH /chainlist/sources      enable/disable rpcs + github approaches
+//   POST  /chainlist/seed-search  ensure Live Search starter queries
 
 import { Router } from "express";
 import { z } from "zod";
-import { prisma } from "../db/prisma.js";
 import { asyncHandler } from "../middleware/error.js";
 import { jsonSafe } from "../http.js";
 import { enqueueJob } from "../enqueue.js";
-import { setConfig } from "../services/appConfig.js";
-import { alertTopicKey } from "../services/appConfig.js";
+import { setConfig, alertTopicKey } from "../services/appConfig.js";
 import {
   ensureChainSearchQueries,
   getChainlistStatus,
   pollChainlist,
+  setChainlistSources,
 } from "../services/chainlistPoller.js";
 
 export const chainlistRouter: Router = Router();
@@ -41,57 +41,30 @@ chainlistRouter.get(
     }
     discoveries = discoveries.slice(0, q.limit);
 
-    // Fallback: DB recent if no file discoveries yet
-    let dbItems: unknown[] = [];
-    if (discoveries.length === 0) {
-      const where = q.includeTestnet ? {} : { isTestnet: false };
-      const recent = await prisma.knownChain.findMany({
-        where,
-        orderBy: { firstSeenAt: "desc" },
-        take: q.limit,
-      });
-      dbItems = recent.map((c) => ({
-        chainId: c.chainId,
-        name: c.name,
-        shortName: c.shortName,
-        nativeSymbol: c.nativeSymbol,
-        rpcUrl: c.rpcUrl,
-        explorerUrl: c.explorerUrl,
-        infoUrl: c.infoUrl,
-        isTestnet: c.isTestnet,
-        source: c.source,
-        rpcLive: c.rpcLive,
-        firstSeenAt: c.firstSeenAt,
-        alerted: c.alertedAt != null,
-        chainlistUrl: `https://chainlist.org/chain/${c.chainId}`,
-      }));
-    }
-
-    const items =
-      discoveries.length > 0
-        ? discoveries.map((c) => ({
-            chainId: c.chainId,
-            name: c.name,
-            shortName: c.shortName,
-            nativeSymbol: c.nativeSymbol,
-            rpcUrl: c.rpcUrl,
-            explorerUrl: c.explorerUrl,
-            infoUrl: c.infoUrl,
-            isTestnet: c.isTestnet,
-            source: c.source,
-            rpcLive: c.rpcLive,
-            firstSeenAt: c.firstSeenAt,
-            alerted: c.alerted,
-            chainlistUrl: `https://chainlist.org/chain/${c.chainId}`,
-          }))
-        : dbItems;
-
     res.json(
       jsonSafe({
         total: status.snapshotCount,
-        alerted: discoveries.filter((d) => d.alerted).length,
+        alerted: status.discoveries.filter((d) => d.alerted).length,
         limit: q.limit,
-        items,
+        items: discoveries.map((c) => ({
+          chainId: c.chainId,
+          name: c.name,
+          shortName: c.shortName,
+          nativeSymbol: c.nativeSymbol,
+          rpcUrl: c.rpcUrl,
+          explorerUrl: c.explorerUrl,
+          infoUrl: c.infoUrl,
+          isTestnet: c.isTestnet,
+          source: c.source,
+          rpcLive: c.rpcLive,
+          firstSeenAt: c.firstSeenAt,
+          alerted: c.alerted,
+          commitSha: c.commitSha ?? null,
+          commitUrl: c.commitUrl ?? null,
+          githubFile: c.githubFile ?? null,
+          chainlistUrl: `https://chainlist.org/chain/${c.chainId}`,
+        })),
+        sources: status.sources,
         snapshot: {
           path: status.snapshotPath,
           exists: status.snapshotExists,
@@ -99,6 +72,7 @@ chainlistRouter.get(
           count: status.snapshotCount,
           source: status.source,
         },
+        github: status.github,
         topicId: status.topicId,
       }),
     );
@@ -132,6 +106,27 @@ chainlistRouter.patch(
       .parse(req.body ?? {});
     await setConfig(alertTopicKey("chainlist"), body.topicId);
     res.json({ ok: true, topicId: body.topicId });
+  }),
+);
+
+/** Enable / disable each detection approach independently. */
+chainlistRouter.patch(
+  "/sources",
+  asyncHandler(async (req, res) => {
+    const body = z
+      .object({
+        rpcs: z.boolean().optional(),
+        github: z.boolean().optional(),
+      })
+      .refine((b) => b.rpcs !== undefined || b.github !== undefined, {
+        message: "Provide rpcs and/or github",
+      })
+      .parse(req.body ?? {});
+    const patch: { rpcs?: boolean; github?: boolean } = {};
+    if (body.rpcs !== undefined) patch.rpcs = body.rpcs;
+    if (body.github !== undefined) patch.github = body.github;
+    const sources = await setChainlistSources(patch);
+    res.json({ ok: true, sources });
   }),
 );
 

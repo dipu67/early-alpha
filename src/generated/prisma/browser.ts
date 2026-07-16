@@ -173,8 +173,12 @@ export type TelegramTopic = Prisma.TelegramTopicModel
  */
 export type ProjectMonitor = Prisma.ProjectMonitorModel
 /**
- * Model KnownChain
- * EVM chains seen via chainlist.org / chainid.network snapshot.
- * Diff = new chainId since last poll → "catalog confirmed" new chain.
+ * Model GithubRepoMonitor
+ * Watch a public GitHub repo for new commits (and optional path filter).
  */
-export type KnownChain = Prisma.KnownChainModel
+export type GithubRepoMonitor = Prisma.GithubRepoMonitorModel
+/**
+ * Model GithubRepoCommit
+ * 
+ */
+export type GithubRepoCommit = Prisma.GithubRepoCommitModel

@@ -258,7 +258,28 @@ export interface KnownChainItem {
   lastSeenAt?: string;
   alertedAt?: string | null;
   alerted?: boolean;
+  commitSha?: string | null;
+  commitUrl?: string | null;
+  githubFile?: string | null;
   chainlistUrl: string;
+}
+
+export interface ChainlistSourcesConfig {
+  rpcs: boolean;
+  github: boolean;
+}
+
+export interface ChainlistGithubStatus {
+  snapshotPath: string;
+  snapshotExists: boolean;
+  snapshotUpdatedAt: string | null;
+  snapshotCount: number;
+  repo: string;
+  registryPath: string;
+  lastCommitSha: string | null;
+  lastCommitUrl: string | null;
+  lastCommitMessage: string | null;
+  lastCommitAt: string | null;
 }
 
 export const ALERT_TYPES = [
@@ -271,8 +292,51 @@ export const ALERT_TYPES = [
   "monitor",
   "listMonitor",
   "chainlist",
+  "githubRepo",
 ] as const;
 export type AlertTypeName = (typeof ALERT_TYPES)[number];
+
+export interface GithubRepoMonitorItem {
+  id: string;
+  owner: string;
+  repo: string;
+  fullName: string;
+  label: string | null;
+  description: string | null;
+  enabled: boolean;
+  alertEnabled: boolean;
+  topicId: number | null;
+  branch: string;
+  pathFilter: string | null;
+  intervalSec: number;
+  lastPolledAt: string | null;
+  lastCommitSha: string | null;
+  lastError: string | null;
+  hitCount: number;
+  recentCommitCount?: number;
+  repoUrl: string;
+  createdAt: string;
+}
+
+export interface GithubRepoCommitItem {
+  id: string;
+  monitorId: string;
+  fullName: string;
+  label: string | null;
+  pathFilter: string | null;
+  sha: string;
+  shortSha: string;
+  message: string;
+  authorName: string | null;
+  authorLogin: string | null;
+  htmlUrl: string;
+  committedAt: string | null;
+  filesAdded: string[];
+  filesModified: string[];
+  filesRemoved: string[];
+  alerted: boolean;
+  createdAt: string;
+}
 
 /** Live project tweet monitor. */
 export interface ProjectMonitorItem {

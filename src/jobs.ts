@@ -120,6 +120,12 @@ export const JOBS = {
     schema: z.object({}).strict(),
     existing: true,
   }),
+  "poll-github-repos": def({
+    queue: "list-tracker",
+    jobName: "poll-github-repos",
+    schema: z.object({}).strict(),
+    existing: true,
+  }),
   "poll-monitors": def({
     queue: "list-tracker",
     jobName: "poll-monitors",

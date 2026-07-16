@@ -173,9 +173,11 @@ export interface ChainlistAlertInput {
   isTestnet: boolean;
   rpcLive: boolean | null;
   source: string;
+  /** Optional GitHub commit that added the chain (DefiLlama/chainlist). */
+  commitUrl?: string | null;
 }
 
-/** New EVM chain appeared on chainlist / chainid.network catalog. */
+/** New EVM chain appeared on chainlist / GitHub additionalChainRegistry. */
 export function formatChainlistAlert(input: ChainlistAlertInput): {
   text: string;
   user: UserData;
@@ -200,6 +202,9 @@ export function formatChainlistAlert(input: ChainlistAlertInput): {
     links.push(`[Info](${input.infoUrl.replace(/\)/g, "%29")})`);
   }
   links.push(`[Chainlist](https://chainlist.org/chain/${input.chainId})`);
+  if (input.commitUrl) {
+    links.push(`[GitHub](${input.commitUrl.replace(/\)/g, "%29")})`);
+  }
 
   const text =
     `⛓ *New chain · ${escapeMarkdown(kind)}*\n` +
@@ -220,6 +225,76 @@ export function formatChainlistAlert(input: ChainlistAlertInput): {
       id: input.chainId,
       username: input.shortName || input.name,
       name: input.name,
+    } as UserData,
+  };
+}
+
+export interface GithubCommitAlertInput {
+  fullName: string;
+  label?: string | null;
+  pathFilter?: string | null;
+  sha: string;
+  message: string;
+  authorName?: string | null;
+  authorLogin?: string | null;
+  htmlUrl: string;
+  filesAdded?: string[];
+  filesModified?: string[];
+  filesRemoved?: string[];
+}
+
+/** New commit on a watched GitHub repo. */
+export function formatGithubCommitAlert(
+  input: GithubCommitAlertInput,
+): { text: string; user: UserData } {
+  const shortSha = input.sha.slice(0, 7);
+  const title = input.label?.trim()
+    ? escapeMarkdown(input.label.trim())
+    : escapeMarkdown(input.fullName);
+  const author =
+    input.authorLogin || input.authorName
+      ? escapeMarkdown(input.authorLogin || input.authorName || "")
+      : "unknown";
+  const msg = escapeMarkdown(excerpt(input.message || "(no message)", 160));
+
+  const added = input.filesAdded ?? [];
+  const modified = input.filesModified ?? [];
+  const removed = input.filesRemoved ?? [];
+  const fileLines: string[] = [];
+  if (added.length) {
+    fileLines.push(
+      `➕ ${escapeMarkdown(String(added.length))} added` +
+        (added[0] ? `: \`${escapeMarkdown(added.slice(0, 3).join(", "))}${added.length > 3 ? "…" : ""}\`` : ""),
+    );
+  }
+  if (modified.length) {
+    fileLines.push(`✏️ ${escapeMarkdown(String(modified.length))} modified`);
+  }
+  if (removed.length) {
+    fileLines.push(`🗑 ${escapeMarkdown(String(removed.length))} removed`);
+  }
+
+  const repoUrl = `https://github.com/${input.fullName}`.replace(/\)/g, "%29");
+  const commitUrl = input.htmlUrl.replace(/\)/g, "%29");
+
+  const text =
+    `📦 *GitHub · ${title}*\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `\`${escapeMarkdown(shortSha)}\` by ${author}\n` +
+    `${msg}\n` +
+    (input.pathFilter
+      ? `📁 path: \`${escapeMarkdown(input.pathFilter)}\`\n`
+      : "") +
+    (fileLines.length ? `${fileLines.join("\n")}\n` : "") +
+    `\n[Commit](${commitUrl}) · [Repo](${repoUrl})\n` +
+    `━━━━━━━━━━━━━━━━━━\n`;
+
+  return {
+    text,
+    user: {
+      id: input.sha,
+      username: input.fullName,
+      name: input.label || input.fullName,
     } as UserData,
   };
 }

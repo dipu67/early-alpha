@@ -57,6 +57,18 @@ const ALERT_META: Record<string, { label: string; hint: string }> = {
     label: "User monitor",
     hint: "New posts from per-user timeline monitors (@username)",
   },
+  listMonitor: {
+    label: "List monitors",
+    hint: "New posts on watched public Twitter lists",
+  },
+  chainlist: {
+    label: "New chains",
+    hint: "New EVM chains (rpcs.json / registry detectors)",
+  },
+  githubRepo: {
+    label: "GitHub commits",
+    hint: "New commits on watched GitHub repos",
+  },
 };
 
 function numOrNull(s: string): number | null {

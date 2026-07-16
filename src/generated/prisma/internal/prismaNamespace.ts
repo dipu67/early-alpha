@@ -414,7 +414,8 @@ export const ModelName = {
   TelegramGroup: 'TelegramGroup',
   TelegramTopic: 'TelegramTopic',
   ProjectMonitor: 'ProjectMonitor',
-  KnownChain: 'KnownChain'
+  GithubRepoMonitor: 'GithubRepoMonitor',
+  GithubRepoCommit: 'GithubRepoCommit'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -430,7 +431,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "projectTag" | "adminUser" | "setting" | "telegramBot" | "twitterAccount" | "projectList" | "listMember" | "postAlert" | "seedAccount" | "trackingRun" | "followEdge" | "alert" | "twitterAuthAccount" | "signalScan" | "signalRule" | "authFollow" | "searchQuery" | "searchHit" | "listMonitor" | "listMonitorHit" | "watchList" | "followSnapshot" | "alertLog" | "grokConversation" | "grokMessage" | "grokResearchPrompt" | "grokResearchRun" | "telegramGroup" | "telegramTopic" | "projectMonitor" | "knownChain"
+    modelProps: "projectTag" | "adminUser" | "setting" | "telegramBot" | "twitterAccount" | "projectList" | "listMember" | "postAlert" | "seedAccount" | "trackingRun" | "followEdge" | "alert" | "twitterAuthAccount" | "signalScan" | "signalRule" | "authFollow" | "searchQuery" | "searchHit" | "listMonitor" | "listMonitorHit" | "watchList" | "followSnapshot" | "alertLog" | "grokConversation" | "grokMessage" | "grokResearchPrompt" | "grokResearchRun" | "telegramGroup" | "telegramTopic" | "projectMonitor" | "githubRepoMonitor" | "githubRepoCommit"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2654,77 +2655,151 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    KnownChain: {
-      payload: Prisma.$KnownChainPayload<ExtArgs>
-      fields: Prisma.KnownChainFieldRefs
+    GithubRepoMonitor: {
+      payload: Prisma.$GithubRepoMonitorPayload<ExtArgs>
+      fields: Prisma.GithubRepoMonitorFieldRefs
       operations: {
         findUnique: {
-          args: Prisma.KnownChainFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload> | null
+          args: Prisma.GithubRepoMonitorFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoMonitorPayload> | null
         }
         findUniqueOrThrow: {
-          args: Prisma.KnownChainFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>
+          args: Prisma.GithubRepoMonitorFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoMonitorPayload>
         }
         findFirst: {
-          args: Prisma.KnownChainFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload> | null
+          args: Prisma.GithubRepoMonitorFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoMonitorPayload> | null
         }
         findFirstOrThrow: {
-          args: Prisma.KnownChainFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>
+          args: Prisma.GithubRepoMonitorFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoMonitorPayload>
         }
         findMany: {
-          args: Prisma.KnownChainFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>[]
+          args: Prisma.GithubRepoMonitorFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoMonitorPayload>[]
         }
         create: {
-          args: Prisma.KnownChainCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>
+          args: Prisma.GithubRepoMonitorCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoMonitorPayload>
         }
         createMany: {
-          args: Prisma.KnownChainCreateManyArgs<ExtArgs>
+          args: Prisma.GithubRepoMonitorCreateManyArgs<ExtArgs>
           result: BatchPayload
         }
         createManyAndReturn: {
-          args: Prisma.KnownChainCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>[]
+          args: Prisma.GithubRepoMonitorCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoMonitorPayload>[]
         }
         delete: {
-          args: Prisma.KnownChainDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>
+          args: Prisma.GithubRepoMonitorDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoMonitorPayload>
         }
         update: {
-          args: Prisma.KnownChainUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>
+          args: Prisma.GithubRepoMonitorUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoMonitorPayload>
         }
         deleteMany: {
-          args: Prisma.KnownChainDeleteManyArgs<ExtArgs>
+          args: Prisma.GithubRepoMonitorDeleteManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateMany: {
-          args: Prisma.KnownChainUpdateManyArgs<ExtArgs>
+          args: Prisma.GithubRepoMonitorUpdateManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateManyAndReturn: {
-          args: Prisma.KnownChainUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>[]
+          args: Prisma.GithubRepoMonitorUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoMonitorPayload>[]
         }
         upsert: {
-          args: Prisma.KnownChainUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$KnownChainPayload>
+          args: Prisma.GithubRepoMonitorUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoMonitorPayload>
         }
         aggregate: {
-          args: Prisma.KnownChainAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateKnownChain>
+          args: Prisma.GithubRepoMonitorAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGithubRepoMonitor>
         }
         groupBy: {
-          args: Prisma.KnownChainGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.KnownChainGroupByOutputType>[]
+          args: Prisma.GithubRepoMonitorGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GithubRepoMonitorGroupByOutputType>[]
         }
         count: {
-          args: Prisma.KnownChainCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.KnownChainCountAggregateOutputType> | number
+          args: Prisma.GithubRepoMonitorCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GithubRepoMonitorCountAggregateOutputType> | number
+        }
+      }
+    }
+    GithubRepoCommit: {
+      payload: Prisma.$GithubRepoCommitPayload<ExtArgs>
+      fields: Prisma.GithubRepoCommitFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.GithubRepoCommitFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoCommitPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.GithubRepoCommitFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoCommitPayload>
+        }
+        findFirst: {
+          args: Prisma.GithubRepoCommitFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoCommitPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.GithubRepoCommitFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoCommitPayload>
+        }
+        findMany: {
+          args: Prisma.GithubRepoCommitFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoCommitPayload>[]
+        }
+        create: {
+          args: Prisma.GithubRepoCommitCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoCommitPayload>
+        }
+        createMany: {
+          args: Prisma.GithubRepoCommitCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.GithubRepoCommitCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoCommitPayload>[]
+        }
+        delete: {
+          args: Prisma.GithubRepoCommitDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoCommitPayload>
+        }
+        update: {
+          args: Prisma.GithubRepoCommitUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoCommitPayload>
+        }
+        deleteMany: {
+          args: Prisma.GithubRepoCommitDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.GithubRepoCommitUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.GithubRepoCommitUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoCommitPayload>[]
+        }
+        upsert: {
+          args: Prisma.GithubRepoCommitUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GithubRepoCommitPayload>
+        }
+        aggregate: {
+          args: Prisma.GithubRepoCommitAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGithubRepoCommit>
+        }
+        groupBy: {
+          args: Prisma.GithubRepoCommitGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GithubRepoCommitGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.GithubRepoCommitCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GithubRepoCommitCountAggregateOutputType> | number
         }
       }
     }
@@ -3227,23 +3302,47 @@ export const ProjectMonitorScalarFieldEnum = {
 export type ProjectMonitorScalarFieldEnum = (typeof ProjectMonitorScalarFieldEnum)[keyof typeof ProjectMonitorScalarFieldEnum]
 
 
-export const KnownChainScalarFieldEnum = {
-  chainId: 'chainId',
-  name: 'name',
-  shortName: 'shortName',
-  nativeSymbol: 'nativeSymbol',
-  rpcUrl: 'rpcUrl',
-  explorerUrl: 'explorerUrl',
-  infoUrl: 'infoUrl',
-  isTestnet: 'isTestnet',
-  source: 'source',
-  rpcLive: 'rpcLive',
-  firstSeenAt: 'firstSeenAt',
-  lastSeenAt: 'lastSeenAt',
-  alertedAt: 'alertedAt'
+export const GithubRepoMonitorScalarFieldEnum = {
+  id: 'id',
+  owner: 'owner',
+  repo: 'repo',
+  fullName: 'fullName',
+  label: 'label',
+  description: 'description',
+  enabled: 'enabled',
+  alertEnabled: 'alertEnabled',
+  topicId: 'topicId',
+  branch: 'branch',
+  pathFilter: 'pathFilter',
+  intervalSec: 'intervalSec',
+  lastPolledAt: 'lastPolledAt',
+  lastCommitSha: 'lastCommitSha',
+  lastError: 'lastError',
+  hitCount: 'hitCount',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
-export type KnownChainScalarFieldEnum = (typeof KnownChainScalarFieldEnum)[keyof typeof KnownChainScalarFieldEnum]
+export type GithubRepoMonitorScalarFieldEnum = (typeof GithubRepoMonitorScalarFieldEnum)[keyof typeof GithubRepoMonitorScalarFieldEnum]
+
+
+export const GithubRepoCommitScalarFieldEnum = {
+  id: 'id',
+  monitorId: 'monitorId',
+  sha: 'sha',
+  message: 'message',
+  authorName: 'authorName',
+  authorLogin: 'authorLogin',
+  htmlUrl: 'htmlUrl',
+  committedAt: 'committedAt',
+  filesAdded: 'filesAdded',
+  filesModified: 'filesModified',
+  filesRemoved: 'filesRemoved',
+  alerted: 'alerted',
+  createdAt: 'createdAt'
+} as const
+
+export type GithubRepoCommitScalarFieldEnum = (typeof GithubRepoCommitScalarFieldEnum)[keyof typeof GithubRepoCommitScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -3492,7 +3591,8 @@ export type GlobalOmitConfig = {
   telegramGroup?: Prisma.TelegramGroupOmit
   telegramTopic?: Prisma.TelegramTopicOmit
   projectMonitor?: Prisma.ProjectMonitorOmit
-  knownChain?: Prisma.KnownChainOmit
+  githubRepoMonitor?: Prisma.GithubRepoMonitorOmit
+  githubRepoCommit?: Prisma.GithubRepoCommitOmit
 }
 
 /* Types for Logging */

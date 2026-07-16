@@ -1,35 +1,90 @@
-// New-chain detection via JSON snapshot (user approach):
+// New-chain detection — two independent sources (each can be on/off):
 //
-//   1. GET https://chainlist.org/rpcs.json  (all chains)
-//   2. If no snapshot file → write full JSON (seed, no Telegram flood)
-//   3. If snapshot exists → compare chainIds → alert NEW ones on TG
-//   4. Overwrite snapshot with latest full list
+//   A) rpcs.json snapshot (chainlist.org / chainid.network)
+//      GET rpcs.json → compare data/chainlist-snapshot.json → alert new chainIds
 //
-// Snapshot path: data/chainlist-snapshot.json (or CHAINLIST_SNAPSHOT_PATH).
-// Telegram topic: settings key alert.topic.chainlist (selectable in admin).
+//   B) GitHub DefiLlama/chainlist additionalChainRegistry
+//      List constants/additionalChainRegistry/*.js (as added via commits like
+//      https://github.com/DefiLlama/chainlist/commit/81864e1…) → compare
+//      data/chainlist-github-snapshot.json → fetch + parse new files → alert
+//
+// Telegram topic: settings key alert.topic.chainlist
+// Source toggles: chainlist.source.rpcs / chainlist.source.github (default on)
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { prisma } from "../db/prisma.js";
-import { getConfig } from "./appConfig.js";
-import { alertTopicKey } from "./appConfig.js";
+import { getConfig, setConfig, alertTopicKey } from "./appConfig.js";
 import { sendTelegramAlert, isAlertEnabled } from "../tg/sendAlert.js";
 import { formatChainlistAlert } from "./formatAlert.js";
+import { prisma } from "../db/prisma.js";
+
+// ── Sources ──────────────────────────────────────────────────────────────────
+
+export type ChainlistSourceId = "rpcs" | "github";
+
+export const CHAINLIST_SOURCE_KEYS = {
+  rpcs: "chainlist.source.rpcs",
+  github: "chainlist.source.github",
+} as const;
+
+export interface ChainlistSourcesConfig {
+  rpcs: boolean;
+  github: boolean;
+}
+
+export async function getChainlistSources(): Promise<ChainlistSourcesConfig> {
+  const [rpcs, github] = await Promise.all([
+    getConfig<boolean>(CHAINLIST_SOURCE_KEYS.rpcs, true),
+    getConfig<boolean>(CHAINLIST_SOURCE_KEYS.github, true),
+  ]);
+  return {
+    rpcs: rpcs !== false,
+    github: github !== false,
+  };
+}
+
+export async function setChainlistSources(
+  partial: Partial<ChainlistSourcesConfig>,
+): Promise<ChainlistSourcesConfig> {
+  if (partial.rpcs !== undefined) {
+    await setConfig(CHAINLIST_SOURCE_KEYS.rpcs, Boolean(partial.rpcs));
+  }
+  if (partial.github !== undefined) {
+    await setConfig(CHAINLIST_SOURCE_KEYS.github, Boolean(partial.github));
+  }
+  return getChainlistSources();
+}
+
+// ── URLs / paths ─────────────────────────────────────────────────────────────
 
 const CHAINLIST_RPCS_URL =
   process.env.CHAINLIST_RPCS_URL ?? "https://chainlist.org/rpcs.json";
 const CHAINID_NETWORK_URL =
   process.env.CHAINID_NETWORK_URL ?? "https://chainid.network/chains.json";
 
+const GITHUB_REPO =
+  process.env.CHAINLIST_GITHUB_REPO ?? "DefiLlama/chainlist";
+const GITHUB_REGISTRY_PATH =
+  process.env.CHAINLIST_GITHUB_PATH ??
+  "constants/additionalChainRegistry";
+const GITHUB_API = "https://api.github.com";
+const GITHUB_RAW = "https://raw.githubusercontent.com";
+
 /** Skip Telegram for testnets unless true. */
 const ALERT_TESTNETS = process.env.CHAINLIST_ALERT_TESTNETS === "1";
 /** Probe first RPC with eth_blockNumber (default on). */
 const CHECK_RPC = process.env.CHAINLIST_CHECK_RPC !== "0";
 const RPC_TIMEOUT_MS = Number(process.env.CHAINLIST_RPC_TIMEOUT_MS ?? 4_000);
+
 const DEFAULT_SNAPSHOT = path.join(
   process.cwd(),
   "data",
   "chainlist-snapshot.json",
+);
+const DEFAULT_GITHUB_SNAPSHOT = path.join(
+  process.cwd(),
+  "data",
+  "chainlist-github-snapshot.json",
 );
 const DEFAULT_DISCOVERIES = path.join(
   process.cwd(),
@@ -41,9 +96,15 @@ function snapshotPath(): string {
   return process.env.CHAINLIST_SNAPSHOT_PATH ?? DEFAULT_SNAPSHOT;
 }
 
+function githubSnapshotPath(): string {
+  return process.env.CHAINLIST_GITHUB_SNAPSHOT_PATH ?? DEFAULT_GITHUB_SNAPSHOT;
+}
+
 function discoveriesPath(): string {
   return process.env.CHAINLIST_DISCOVERIES_PATH ?? DEFAULT_DISCOVERIES;
 }
+
+// ── Types ────────────────────────────────────────────────────────────────────
 
 export interface ChainSnapshot {
   chainId: string;
@@ -65,22 +126,63 @@ export interface ChainlistFileSnapshot {
   chains: ChainSnapshot[];
 }
 
+export interface GithubRegistryFile {
+  name: string;
+  chainId: string;
+  sha: string;
+  path: string;
+}
+
+export interface GithubFileSnapshot {
+  updatedAt: string;
+  source: string;
+  repo: string;
+  registryPath: string;
+  count: number;
+  lastCommitSha: string | null;
+  lastCommitUrl: string | null;
+  lastCommitMessage: string | null;
+  lastCommitAt: string | null;
+  /** Known registry filenames / chainIds from last poll. */
+  files: GithubRegistryFile[];
+}
+
 export interface ChainDiscovery extends ChainSnapshot {
   firstSeenAt: string;
   rpcLive: boolean | null;
   alerted: boolean;
+  commitSha?: string | null;
+  commitUrl?: string | null;
+  githubFile?: string | null;
 }
 
-export interface ChainlistPollResult {
+export interface SourcePollResult {
   source: string;
+  enabled: boolean;
+  skipped?: boolean;
   fetched: number;
   newChains: number;
   alerted: number;
   seeded?: boolean;
   snapshotPath?: string;
-  topicId?: number | null;
+  lastCommitSha?: string | null;
+  lastCommitUrl?: string | null;
   error?: string;
 }
+
+export interface ChainlistPollResult {
+  sources: ChainlistSourcesConfig;
+  topicId: number | null;
+  rpcs: SourcePollResult;
+  github: SourcePollResult;
+  /** Aggregate */
+  fetched: number;
+  newChains: number;
+  alerted: number;
+  error?: string;
+}
+
+// ── Shared helpers ───────────────────────────────────────────────────────────
 
 function looksTestnet(name: string): boolean {
   return /\b(test|testnet|sepolia|holesky|hoodi|goerli|devnet|sandbox|staging)\b/i.test(
@@ -110,28 +212,78 @@ function firstExplorer(explorers: unknown): string | null {
   return typeof e?.url === "string" ? e.url : null;
 }
 
+function githubHeaders(): Record<string, string> {
+  const h: Record<string, string> = {
+    accept: "application/vnd.github+json",
+    "user-agent": "early-alpha-chainlist/1.0",
+    "x-github-api-version": "2022-11-28",
+  };
+  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+  if (token) h.authorization = `Bearer ${token}`;
+  return h;
+}
+
+async function fetchJson(
+  url: string,
+  headers?: Record<string, string>,
+): Promise<unknown> {
+  const res = await fetch(url, {
+    headers: {
+      accept: "application/json",
+      "user-agent": "early-alpha-chainlist/1.0",
+      ...headers,
+    },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok) throw new Error(`fetch ${url} → ${res.status}`);
+  return res.json();
+}
+
+async function fetchText(url: string, headers?: Record<string, string>): Promise<string> {
+  const res = await fetch(url, {
+    headers: {
+      "user-agent": "early-alpha-chainlist/1.0",
+      ...headers,
+    },
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!res.ok) throw new Error(`fetch ${url} → ${res.status}`);
+  return res.text();
+}
+
+function chainFromRecord(
+  c: Record<string, unknown>,
+  source: string,
+): ChainSnapshot | null {
+  const id = c.chainId ?? c.networkId;
+  if (id == null) return null;
+  const chainId = String(id);
+  const name = String(c.name ?? c.chain ?? `Chain ${chainId}`);
+  const native = c.nativeCurrency as { symbol?: string } | undefined;
+  const isTestnet =
+    c.testnet === true ||
+    looksTestnet(name) ||
+    (typeof c.network === "string" && /test/i.test(c.network));
+  return {
+    chainId,
+    name,
+    shortName: typeof c.shortName === "string" ? c.shortName : null,
+    nativeSymbol: native?.symbol ?? null,
+    rpcUrl: firstHttpRpc(c.rpc),
+    explorerUrl: firstExplorer(c.explorers),
+    infoUrl: typeof c.infoURL === "string" ? c.infoURL : null,
+    isTestnet,
+    source,
+  };
+}
+
 function parseChainlistRpcs(data: unknown): ChainSnapshot[] {
   if (!Array.isArray(data)) return [];
   const out: ChainSnapshot[] = [];
   for (const raw of data) {
     if (!raw || typeof raw !== "object") continue;
-    const c = raw as Record<string, unknown>;
-    const id = c.chainId ?? c.networkId;
-    if (id == null) continue;
-    const chainId = String(id);
-    const name = String(c.name ?? c.chain ?? `Chain ${chainId}`);
-    const native = c.nativeCurrency as { symbol?: string } | undefined;
-    out.push({
-      chainId,
-      name,
-      shortName: typeof c.shortName === "string" ? c.shortName : null,
-      nativeSymbol: native?.symbol ?? null,
-      rpcUrl: firstHttpRpc(c.rpc),
-      explorerUrl: firstExplorer(c.explorers),
-      infoUrl: typeof c.infoURL === "string" ? c.infoURL : null,
-      isTestnet: looksTestnet(name),
-      source: "chainlist",
-    });
+    const row = chainFromRecord(raw as Record<string, unknown>, "chainlist");
+    if (row) out.push(row);
   }
   return out;
 }
@@ -141,40 +293,47 @@ function parseChainidNetwork(data: unknown): ChainSnapshot[] {
   const out: ChainSnapshot[] = [];
   for (const raw of data) {
     if (!raw || typeof raw !== "object") continue;
-    const c = raw as Record<string, unknown>;
-    if (c.chainId == null) continue;
-    const chainId = String(c.chainId);
-    const name = String(c.name ?? `Chain ${chainId}`);
-    const native = c.nativeCurrency as { symbol?: string } | undefined;
-    const isTestnet =
-      c.testnet === true ||
-      looksTestnet(name) ||
-      (typeof c.network === "string" && /test/i.test(c.network));
-    out.push({
-      chainId,
-      name,
-      shortName: typeof c.shortName === "string" ? c.shortName : null,
-      nativeSymbol: native?.symbol ?? null,
-      rpcUrl: firstHttpRpc(c.rpc),
-      explorerUrl: firstExplorer(c.explorers),
-      infoUrl: typeof c.infoURL === "string" ? c.infoURL : null,
-      isTestnet,
-      source: "chainid.network",
-    });
+    const row = chainFromRecord(
+      raw as Record<string, unknown>,
+      "chainid.network",
+    );
+    if (row) out.push(row);
   }
   return out;
 }
 
-async function fetchJson(url: string): Promise<unknown> {
-  const res = await fetch(url, {
-    headers: {
-      accept: "application/json",
-      "user-agent": "early-alpha-chainlist/1.0",
-    },
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!res.ok) throw new Error(`fetch ${url} → ${res.status}`);
-  return res.json();
+/**
+ * Parse DefiLlama additionalChainRegistry JS modules:
+ *   export const data = { "name": "...", "chainId": 4111, ... };
+ */
+export function parseChainRegistryJs(
+  text: string,
+  source = "github:defillama/chainlist",
+): ChainSnapshot | null {
+  const cleaned = text.replace(/^\uFEFF/, "").trim();
+  const eq = cleaned.indexOf("=");
+  if (eq < 0) return null;
+  let body = cleaned.slice(eq + 1).trim();
+  if (body.endsWith(";")) body = body.slice(0, -1).trim();
+  // Strip trailing export noise; object should be first `{` … last `}`
+  const start = body.indexOf("{");
+  const end = body.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  const jsonLike = body.slice(start, end + 1);
+  try {
+    const data = JSON.parse(jsonLike) as Record<string, unknown>;
+    return chainFromRecord(data, source);
+  } catch {
+    // Rare: unquoted keys — try a minimal fix is out of scope; skip
+    return null;
+  }
+}
+
+/** chainid-4111.js → 4111 ; 127001.js → 127001 */
+export function chainIdFromRegistryFilename(name: string): string | null {
+  const base = name.replace(/\.js$/i, "");
+  const m = base.match(/^(?:chainid-)?(\d+)$/i);
+  return m ? m[1]! : null;
 }
 
 export async function fetchChainSnapshots(): Promise<{
@@ -221,6 +380,8 @@ export async function probeRpcLive(
   }
 }
 
+// ── File I/O ─────────────────────────────────────────────────────────────────
+
 async function readSnapshotFile(): Promise<ChainlistFileSnapshot | null> {
   try {
     const raw = await readFile(snapshotPath(), "utf8");
@@ -247,6 +408,27 @@ async function writeSnapshotFile(
   await writeFile(file, JSON.stringify(body, null, 0), "utf8");
 }
 
+async function readGithubSnapshot(): Promise<GithubFileSnapshot | null> {
+  try {
+    const raw = await readFile(githubSnapshotPath(), "utf8");
+    const parsed = JSON.parse(raw) as GithubFileSnapshot;
+    if (!parsed || !Array.isArray(parsed.files)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+async function writeGithubSnapshot(snap: Omit<GithubFileSnapshot, "updatedAt">): Promise<void> {
+  const file = githubSnapshotPath();
+  await mkdir(path.dirname(file), { recursive: true });
+  const body: GithubFileSnapshot = {
+    ...snap,
+    updatedAt: new Date().toISOString(),
+  };
+  await writeFile(file, JSON.stringify(body, null, 0), "utf8");
+}
+
 async function readDiscoveries(): Promise<ChainDiscovery[]> {
   try {
     const raw = await readFile(discoveriesPath(), "utf8");
@@ -260,7 +442,16 @@ async function readDiscoveries(): Promise<ChainDiscovery[]> {
 async function prependDiscoveries(newOnes: ChainDiscovery[]): Promise<void> {
   if (newOnes.length === 0) return;
   const prev = await readDiscoveries();
-  const merged = [...newOnes, ...prev].slice(0, 200);
+  // Dedupe by chainId+source keeping newest first
+  const seen = new Set<string>();
+  const merged: ChainDiscovery[] = [];
+  for (const d of [...newOnes, ...prev]) {
+    const key = `${d.chainId}::${d.source}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(d);
+    if (merged.length >= 200) break;
+  }
   const file = discoveriesPath();
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(
@@ -285,6 +476,7 @@ async function sendNewChainAlert(
   chain: ChainSnapshot,
   rpcLive: boolean | null,
   topicId: number | null,
+  extra?: { commitUrl?: string | null },
 ): Promise<void> {
   if (!(await isAlertEnabled("chainlist"))) return;
   if (chain.isTestnet && !ALERT_TESTNETS) return;
@@ -300,8 +492,8 @@ async function sendNewChainAlert(
     isTestnet: chain.isTestnet,
     rpcLive,
     source: chain.source,
+    commitUrl: extra?.commitUrl ?? null,
   });
-  // Explicit topic wins; sendTelegramAlert also falls back to alert.topic.chainlist
   await sendTelegramAlert(
     msg,
     "MarkdownV2",
@@ -310,62 +502,13 @@ async function sendNewChainAlert(
   );
 }
 
-/**
- * Poll: fetch all chains → compare JSON file → alert new → rewrite file.
- */
-export async function pollChainlist(): Promise<ChainlistPollResult> {
-  let source: string;
-  let chains: ChainSnapshot[];
-  try {
-    const fetched = await fetchChainSnapshots();
-    source = fetched.source;
-    chains = fetched.chains;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[chainlist] fetch failed:", msg);
-    return { source: "none", fetched: 0, newChains: 0, alerted: 0, error: msg };
-  }
-
-  if (chains.length === 0) {
-    return {
-      source,
-      fetched: 0,
-      newChains: 0,
-      alerted: 0,
-      error: "empty_catalog",
-    };
-  }
-
-  const prev = await readSnapshotFile();
-  const isSeed = !prev || prev.chains.length === 0;
-  const known = new Set((prev?.chains ?? []).map((c) => c.chainId));
-  const newcomers = isSeed
-    ? []
-    : chains.filter((c) => !known.has(c.chainId));
-
-  const topicId = await getChainlistTopicId();
+async function processNewChains(
+  allNew: ChainSnapshot[],
+  topicId: number | null,
+  meta?: { commitSha?: string | null; commitUrl?: string | null; githubFile?: string | null },
+): Promise<{ alerted: number; discoveries: ChainDiscovery[] }> {
   let alerted = 0;
   const discoveries: ChainDiscovery[] = [];
-
-  // Seed path: no compare alerts unless SEED_ALERTS
-  if (isSeed) {
-    await writeSnapshotFile(source, chains);
-
-    console.log(
-      `[chainlist] seeded snapshot ${snapshotPath()} with ${chains.length} chains (no alerts)`,
-    );
-    return {
-      source,
-      fetched: chains.length,
-      newChains: 0,
-      alerted: 0,
-      seeded: true,
-      snapshotPath: snapshotPath(),
-      topicId,
-    };
-  }
-
-  const allNew = chains.filter((c) => !known.has(c.chainId));
 
   for (const c of allNew) {
     const skipAlert = c.isTestnet && !ALERT_TESTNETS;
@@ -373,7 +516,12 @@ export async function pollChainlist(): Promise<ChainlistPollResult> {
     let didAlert = false;
     if (!skipAlert) {
       try {
-        await sendNewChainAlert(c, rpcLive, topicId);
+        await sendNewChainAlert(
+          c,
+          rpcLive,
+          topicId,
+          meta?.commitUrl != null ? { commitUrl: meta.commitUrl } : undefined,
+        );
         didAlert = true;
         alerted += 1;
       } catch (err) {
@@ -388,81 +536,433 @@ export async function pollChainlist(): Promise<ChainlistPollResult> {
       firstSeenAt: new Date().toISOString(),
       rpcLive,
       alerted: didAlert,
+      commitSha: meta?.commitSha ?? null,
+      commitUrl: meta?.commitUrl ?? null,
+      githubFile: meta?.githubFile ?? null,
     });
   }
 
-  // Always rewrite full catalog file after compare
+  return { alerted, discoveries };
+}
+
+// ── Source A: rpcs.json ──────────────────────────────────────────────────────
+
+export async function pollRpcsSource(
+  topicId: number | null,
+): Promise<SourcePollResult> {
+  let source: string;
+  let chains: ChainSnapshot[];
+  try {
+    const fetched = await fetchChainSnapshots();
+    source = fetched.source;
+    chains = fetched.chains;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[chainlist:rpcs] fetch failed:", msg);
+    return {
+      source: "none",
+      enabled: true,
+      fetched: 0,
+      newChains: 0,
+      alerted: 0,
+      error: msg,
+    };
+  }
+
+  if (chains.length === 0) {
+    return {
+      source,
+      enabled: true,
+      fetched: 0,
+      newChains: 0,
+      alerted: 0,
+      error: "empty_catalog",
+    };
+  }
+
+  const prev = await readSnapshotFile();
+  const isSeed = !prev || prev.chains.length === 0;
+  const known = new Set((prev?.chains ?? []).map((c) => c.chainId));
+
+  if (isSeed) {
+    await writeSnapshotFile(source, chains);
+    console.log(
+      `[chainlist:rpcs] seeded snapshot ${snapshotPath()} with ${chains.length} chains (no alerts)`,
+    );
+    return {
+      source,
+      enabled: true,
+      fetched: chains.length,
+      newChains: 0,
+      alerted: 0,
+      seeded: true,
+      snapshotPath: snapshotPath(),
+    };
+  }
+
+  const allNew = chains.filter((c) => !known.has(c.chainId));
+  const { alerted, discoveries } = await processNewChains(allNew, topicId);
+
   await writeSnapshotFile(source, chains);
   await prependDiscoveries(discoveries);
-  // Light DB mirror for newcomers only (not full catalog)
-  await mirrorToDb(allNew, { seed: false }).catch(() => undefined);
 
   console.log(
-    `[chainlist] source=${source} fetched=${chains.length} new=${allNew.length} ` +
-      `alerted=${alerted} topic=${topicId ?? "default"} file=${snapshotPath()}`,
+    `[chainlist:rpcs] source=${source} fetched=${chains.length} new=${allNew.length} ` +
+      `alerted=${alerted} file=${snapshotPath()}`,
   );
 
   return {
     source,
+    enabled: true,
     fetched: chains.length,
     newChains: allNew.length,
     alerted,
     snapshotPath: snapshotPath(),
-    topicId,
   };
 }
 
-/** Optional DB mirror so admin / backup still work. */
-async function mirrorToDb(
-  chains: ChainSnapshot[],
-  opts: { seed: boolean },
-): Promise<void> {
-  const now = new Date();
-  for (const c of chains) {
-    await prisma.knownChain.upsert({
-      where: { chainId: c.chainId },
-      create: {
-        chainId: c.chainId,
-        name: c.name,
-        shortName: c.shortName,
-        nativeSymbol: c.nativeSymbol,
-        rpcUrl: c.rpcUrl,
-        explorerUrl: c.explorerUrl,
-        infoUrl: c.infoUrl,
-        isTestnet: c.isTestnet,
-        source: c.source,
-        firstSeenAt: now,
-        lastSeenAt: now,
-        alertedAt: opts.seed ? null : now,
-      },
-      update: {
-        name: c.name,
-        lastSeenAt: now,
-        ...(c.rpcUrl ? { rpcUrl: c.rpcUrl } : {}),
-      },
+// ── Source B: GitHub DefiLlama/chainlist additionalChainRegistry ─────────────
+
+interface GhContentItem {
+  name: string;
+  path: string;
+  sha: string;
+  type: string;
+  download_url?: string | null;
+}
+
+interface GhCommit {
+  sha: string;
+  html_url: string;
+  commit: {
+    message: string;
+    author?: { date?: string } | null;
+    committer?: { date?: string } | null;
+  };
+}
+
+async function listGithubRegistryFiles(): Promise<GithubRegistryFile[]> {
+  const url = `${GITHUB_API}/repos/${GITHUB_REPO}/contents/${GITHUB_REGISTRY_PATH}`;
+  const data = await fetchJson(url, githubHeaders());
+  if (!Array.isArray(data)) {
+    throw new Error("github contents: expected directory listing array");
+  }
+  const out: GithubRegistryFile[] = [];
+  for (const raw of data as GhContentItem[]) {
+    if (!raw || raw.type !== "file" || !raw.name?.endsWith(".js")) continue;
+    // skip index / non-chain modules
+    if (/^index\./i.test(raw.name)) continue;
+    const chainId = chainIdFromRegistryFilename(raw.name);
+    if (!chainId) continue;
+    out.push({
+      name: raw.name,
+      chainId,
+      sha: raw.sha,
+      path: raw.path,
     });
   }
+  return out;
+}
+
+async function fetchLatestRegistryCommit(): Promise<{
+  sha: string;
+  url: string;
+  message: string;
+  at: string | null;
+} | null> {
+  const url =
+    `${GITHUB_API}/repos/${GITHUB_REPO}/commits` +
+    `?path=${encodeURIComponent(GITHUB_REGISTRY_PATH)}&per_page=1`;
+  const data = await fetchJson(url, githubHeaders());
+  if (!Array.isArray(data) || data.length === 0) return null;
+  const c = data[0] as GhCommit;
+  return {
+    sha: c.sha,
+    url: c.html_url,
+    message: (c.commit?.message ?? "").split("\n")[0] ?? "",
+    at:
+      c.commit?.committer?.date ??
+      c.commit?.author?.date ??
+      null,
+  };
+}
+
+async function fetchRegistryFileContent(fileName: string): Promise<string> {
+  const rawUrl =
+    `${GITHUB_RAW}/${GITHUB_REPO}/main/${GITHUB_REGISTRY_PATH}/${fileName}`;
+  return fetchText(rawUrl, githubHeaders());
+}
+
+export async function pollGithubSource(
+  topicId: number | null,
+): Promise<SourcePollResult> {
+  const sourceLabel = `github:${GITHUB_REPO}`;
+  try {
+    const [files, latestCommit] = await Promise.all([
+      listGithubRegistryFiles(),
+      fetchLatestRegistryCommit().catch(() => null),
+    ]);
+
+    if (files.length === 0) {
+      return {
+        source: sourceLabel,
+        enabled: true,
+        fetched: 0,
+        newChains: 0,
+        alerted: 0,
+        error: "empty_registry",
+        lastCommitSha: latestCommit?.sha ?? null,
+        lastCommitUrl: latestCommit?.url ?? null,
+      };
+    }
+
+    const prev = await readGithubSnapshot();
+    const isSeed = !prev || prev.files.length === 0;
+    const known = new Set((prev?.files ?? []).map((f) => f.chainId));
+    // Also key by filename in case chainId parse changes
+    const knownNames = new Set((prev?.files ?? []).map((f) => f.name));
+
+    const snapBase = {
+      source: sourceLabel,
+      repo: GITHUB_REPO,
+      registryPath: GITHUB_REGISTRY_PATH,
+      count: files.length,
+      lastCommitSha: latestCommit?.sha ?? prev?.lastCommitSha ?? null,
+      lastCommitUrl: latestCommit?.url ?? prev?.lastCommitUrl ?? null,
+      lastCommitMessage:
+        latestCommit?.message ?? prev?.lastCommitMessage ?? null,
+      lastCommitAt: latestCommit?.at ?? prev?.lastCommitAt ?? null,
+      files,
+    };
+
+    if (isSeed) {
+      await writeGithubSnapshot(snapBase);
+      console.log(
+        `[chainlist:github] seeded ${githubSnapshotPath()} with ${files.length} registry files (no alerts)`,
+      );
+      return {
+        source: sourceLabel,
+        enabled: true,
+        fetched: files.length,
+        newChains: 0,
+        alerted: 0,
+        seeded: true,
+        snapshotPath: githubSnapshotPath(),
+        lastCommitSha: snapBase.lastCommitSha,
+        lastCommitUrl: snapBase.lastCommitUrl,
+      };
+    }
+
+    const newFiles = files.filter(
+      (f) => !known.has(f.chainId) && !knownNames.has(f.name),
+    );
+
+    const discoveries: ChainDiscovery[] = [];
+    let alerted = 0;
+    const chainsNew: ChainSnapshot[] = [];
+
+    // Cap concurrent downloads
+    const CONCURRENCY = 5;
+    for (let i = 0; i < newFiles.length; i += CONCURRENCY) {
+      const batch = newFiles.slice(i, i + CONCURRENCY);
+      const parsed = await Promise.all(
+        batch.map(async (f) => {
+          try {
+            const text = await fetchRegistryFileContent(f.name);
+            const chain = parseChainRegistryJs(text, sourceLabel);
+            if (chain) {
+              // Prefer filename chainId if file parse disagrees
+              if (chain.chainId !== f.chainId) {
+                chain.chainId = f.chainId;
+              }
+              return { file: f, chain };
+            }
+            // Minimal fallback from filename only
+            return {
+              file: f,
+              chain: {
+                chainId: f.chainId,
+                name: `Chain ${f.chainId}`,
+                shortName: null,
+                nativeSymbol: null,
+                rpcUrl: null,
+                explorerUrl: null,
+                infoUrl: null,
+                isTestnet: false,
+                source: sourceLabel,
+              } satisfies ChainSnapshot,
+            };
+          } catch (err) {
+            console.warn(
+              `[chainlist:github] failed to load ${f.name}:`,
+              err instanceof Error ? err.message : err,
+            );
+            return null;
+          }
+        }),
+      );
+      for (const row of parsed) {
+        if (row) chainsNew.push(row.chain);
+      }
+    }
+
+    // Process alerts — attach latest registry commit as evidence link
+    const meta = {
+      commitSha: snapBase.lastCommitSha,
+      commitUrl: snapBase.lastCommitUrl,
+      githubFile: null as string | null,
+    };
+
+    for (const c of chainsNew) {
+      const file = newFiles.find((f) => f.chainId === c.chainId);
+      const fileMeta = {
+        ...meta,
+        githubFile: file
+          ? `https://github.com/${GITHUB_REPO}/blob/main/${file.path}`
+          : null,
+      };
+      const result = await processNewChains([c], topicId, fileMeta);
+      alerted += result.alerted;
+      discoveries.push(...result.discoveries.map((d) => ({
+        ...d,
+        githubFile: fileMeta.githubFile,
+      })));
+    }
+
+    await writeGithubSnapshot(snapBase);
+    await prependDiscoveries(discoveries);
+
+    console.log(
+      `[chainlist:github] repo=${GITHUB_REPO} files=${files.length} new=${chainsNew.length} ` +
+        `alerted=${alerted} commit=${snapBase.lastCommitSha?.slice(0, 7) ?? "?"} ` +
+        `file=${githubSnapshotPath()}`,
+    );
+
+    return {
+      source: sourceLabel,
+      enabled: true,
+      fetched: files.length,
+      newChains: chainsNew.length,
+      alerted,
+      snapshotPath: githubSnapshotPath(),
+      lastCommitSha: snapBase.lastCommitSha,
+      lastCommitUrl: snapBase.lastCommitUrl,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[chainlist:github] poll failed:", msg);
+    return {
+      source: sourceLabel,
+      enabled: true,
+      fetched: 0,
+      newChains: 0,
+      alerted: 0,
+      error: msg,
+    };
+  }
+}
+
+// ── Combined poll ────────────────────────────────────────────────────────────
+
+/**
+ * Poll all enabled sources: rpcs.json snapshot + GitHub additionalChainRegistry.
+ * Each source is independent; toggles live in settings.
+ */
+export async function pollChainlist(): Promise<ChainlistPollResult> {
+  const sources = await getChainlistSources();
+  const topicId = await getChainlistTopicId();
+
+  const skipped = (id: ChainlistSourceId): SourcePollResult => ({
+    source: id,
+    enabled: false,
+    skipped: true,
+    fetched: 0,
+    newChains: 0,
+    alerted: 0,
+  });
+
+  const [rpcs, github] = await Promise.all([
+    sources.rpcs
+      ? pollRpcsSource(topicId)
+      : Promise.resolve(skipped("rpcs")),
+    sources.github
+      ? pollGithubSource(topicId)
+      : Promise.resolve(skipped("github")),
+  ]);
+
+  const result: ChainlistPollResult = {
+    sources,
+    topicId,
+    rpcs,
+    github,
+    fetched: (rpcs.fetched || 0) + (github.fetched || 0),
+    newChains: (rpcs.newChains || 0) + (github.newChains || 0),
+    alerted: (rpcs.alerted || 0) + (github.alerted || 0),
+  };
+
+  const errors = [rpcs.error, github.error].filter(Boolean);
+  if (errors.length && result.newChains === 0 && result.fetched === 0) {
+    result.error = errors.join("; ");
+  }
+
+  console.log(
+    `[chainlist] done rpcs=${sources.rpcs ? `on new=${rpcs.newChains}` : "off"} ` +
+      `github=${sources.github ? `on new=${github.newChains}` : "off"} ` +
+      `alerted=${result.alerted} topic=${topicId ?? "default"}`,
+  );
+
+  return result;
 }
 
 /** Status for admin UI. */
 export async function getChainlistStatus(): Promise<{
+  sources: ChainlistSourcesConfig;
   snapshotPath: string;
   snapshotExists: boolean;
   snapshotUpdatedAt: string | null;
   snapshotCount: number;
   source: string | null;
+  github: {
+    snapshotPath: string;
+    snapshotExists: boolean;
+    snapshotUpdatedAt: string | null;
+    snapshotCount: number;
+    repo: string;
+    registryPath: string;
+    lastCommitSha: string | null;
+    lastCommitUrl: string | null;
+    lastCommitMessage: string | null;
+    lastCommitAt: string | null;
+  };
   topicId: number | null;
   discoveries: ChainDiscovery[];
 }> {
-  const snap = await readSnapshotFile();
-  const discoveries = await readDiscoveries();
-  const topicId = await getChainlistTopicId();
+  const [snap, ghSnap, discoveries, topicId, sources] = await Promise.all([
+    readSnapshotFile(),
+    readGithubSnapshot(),
+    readDiscoveries(),
+    getChainlistTopicId(),
+    getChainlistSources(),
+  ]);
   return {
+    sources,
     snapshotPath: snapshotPath(),
     snapshotExists: snap != null,
     snapshotUpdatedAt: snap?.updatedAt ?? null,
     snapshotCount: snap?.count ?? 0,
     source: snap?.source ?? null,
+    github: {
+      snapshotPath: githubSnapshotPath(),
+      snapshotExists: ghSnap != null,
+      snapshotUpdatedAt: ghSnap?.updatedAt ?? null,
+      snapshotCount: ghSnap?.count ?? 0,
+      repo: ghSnap?.repo ?? GITHUB_REPO,
+      registryPath: ghSnap?.registryPath ?? GITHUB_REGISTRY_PATH,
+      lastCommitSha: ghSnap?.lastCommitSha ?? null,
+      lastCommitUrl: ghSnap?.lastCommitUrl ?? null,
+      lastCommitMessage: ghSnap?.lastCommitMessage ?? null,
+      lastCommitAt: ghSnap?.lastCommitAt ?? null,
+    },
     topicId,
     discoveries,
   };

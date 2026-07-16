@@ -149,7 +149,16 @@ export const SCHEDULERS: SchedulerDef[] = [
     jobName: "poll-chainlist",
     data: {},
     defaultEvery: 60 * 60 * 1000,
-    label: "Chainlist catalog (new chainId)",
+    label: "New chains (rpcs.json + GitHub registry)",
+  },
+  {
+    key: "github-repo-poll",
+    queue: "list-tracker",
+    schedulerId: "github-repo-poll",
+    jobName: "poll-github-repos",
+    data: {},
+    defaultEvery: 5 * 60 * 1000,
+    label: "GitHub repo commit monitors",
   },
   {
     key: "monitor-poll",

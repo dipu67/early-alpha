@@ -122,6 +122,11 @@ const worker = new Worker(
     } else if (job.name === "poll-chainlist") {
       const { pollChainlist } = await import("./chainlistPoller.js");
       await pollChainlist();
+    } else if (job.name === "poll-github-repos") {
+      const { pollAllGithubRepoMonitors } = await import(
+        "./githubRepoPoller.js"
+      );
+      await pollAllGithubRepoMonitors();
     } else if (job.name === "poll-monitors") {
       // Manual monitors only — never auto-enroll from hunter heat
       const { pollAllMonitors } = await import("./projectMonitor.js");

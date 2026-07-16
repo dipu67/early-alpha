@@ -33,7 +33,8 @@ export type AlertType =
   | "search"
   | "monitor"
   | "listMonitor"
-  | "chainlist";
+  | "chainlist"
+  | "githubRepo";
 
 export const CONFIG_KEYS = {
   tgAlertChatId: "tg.alertChatId",
@@ -58,6 +59,7 @@ export const ALERT_TYPES: AlertType[] = [
   "monitor",
   "listMonitor",
   "chainlist",
+  "githubRepo",
 ];
 
 export const alertEnabledKey = (t: AlertType) => `alert.enabled.${t}`;

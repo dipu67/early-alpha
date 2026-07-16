@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ExternalLink, Loader2, Play, RefreshCw, Search, Save } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,12 @@ import { TopicPicker } from "@/components/topic-picker";
 import { proxy } from "@/lib/client";
 import { toast } from "@/components/ui/sonner";
 import { useCan } from "@/components/role-context";
-import { fmtDate, type KnownChainItem } from "@/lib/types";
+import {
+  fmtDate,
+  type ChainlistGithubStatus,
+  type ChainlistSourcesConfig,
+  type KnownChainItem,
+} from "@/lib/types";
 import Link from "next/link";
 
 export function ChainsPanel({
@@ -27,6 +32,8 @@ export function ChainsPanel({
   initialAlerted,
   initialTopicId,
   initialSnapshot,
+  initialGithub,
+  initialSources,
 }: {
   initialItems: KnownChainItem[];
   initialTotal: number;
@@ -39,6 +46,8 @@ export function ChainsPanel({
     count: number;
     source: string | null;
   };
+  initialGithub?: ChainlistGithubStatus;
+  initialSources: ChainlistSourcesConfig;
 }) {
   const canWrite = useCan("editor");
   const [items, setItems] = useState(initialItems);
@@ -50,6 +59,8 @@ export function ChainsPanel({
     initialTopicId != null ? String(initialTopicId) : "",
   );
   const [snapshot, setSnapshot] = useState(initialSnapshot);
+  const [github, setGithub] = useState(initialGithub);
+  const [sources, setSources] = useState(initialSources);
 
   async function refresh() {
     setBusy(true);
@@ -64,6 +75,8 @@ export function ChainsPanel({
         alerted: number;
         topicId?: number | null;
         snapshot?: typeof initialSnapshot;
+        github?: ChainlistGithubStatus;
+        sources?: ChainlistSourcesConfig;
       };
       setItems(b.items ?? []);
       setTotal(b.total ?? 0);
@@ -72,12 +85,10 @@ export function ChainsPanel({
         setTopicId(b.topicId != null ? String(b.topicId) : "");
       }
       if (b.snapshot) setSnapshot(b.snapshot);
+      if (b.github) setGithub(b.github);
+      if (b.sources) setSources(b.sources);
     } else toast.error("Refresh failed");
   }
-
-  useEffect(() => {
-    // re-fetch when filter toggles via Apply
-  }, []);
 
   async function pollNow() {
     if (!canWrite) return;
@@ -86,25 +97,51 @@ export function ChainsPanel({
     setBusy(false);
     if (res.ok) {
       const b = res.body as {
-        fetched?: number;
         newChains?: number;
         alerted?: number;
-        seeded?: boolean;
-        source?: string;
-        snapshotPath?: string;
         topicId?: number | null;
         error?: string;
+        rpcs?: {
+          skipped?: boolean;
+          seeded?: boolean;
+          fetched?: number;
+          newChains?: number;
+          alerted?: number;
+          error?: string;
+        };
+        github?: {
+          skipped?: boolean;
+          seeded?: boolean;
+          fetched?: number;
+          newChains?: number;
+          alerted?: number;
+          error?: string;
+          lastCommitSha?: string | null;
+        };
       };
-      if (b.error) toast.error(b.error);
-      else if (b.seeded)
+      if (b.error && !(b.newChains || b.rpcs?.fetched || b.github?.fetched)) {
+        toast.error(b.error);
+      } else {
+        const parts: string[] = [];
+        if (b.rpcs?.skipped) parts.push("rpcs off");
+        else if (b.rpcs?.seeded)
+          parts.push(`rpcs seeded ${b.rpcs.fetched ?? 0}`);
+        else if (b.rpcs)
+          parts.push(
+            `rpcs +${b.rpcs.newChains ?? 0} (TG ${b.rpcs.alerted ?? 0})`,
+          );
+        if (b.github?.skipped) parts.push("github off");
+        else if (b.github?.seeded)
+          parts.push(`github seeded ${b.github.fetched ?? 0}`);
+        else if (b.github)
+          parts.push(
+            `github +${b.github.newChains ?? 0} (TG ${b.github.alerted ?? 0})`,
+          );
         toast.success(
-          `Saved full catalog (${b.fetched ?? 0} chains) to JSON snapshot — no alerts on first run`,
+          parts.join(" · ") ||
+            `Compared: new ${b.newChains ?? 0} · TG ${b.alerted ?? 0}`,
         );
-      else
-        toast.success(
-          `Compared snapshot: new ${b.newChains ?? 0} · TG ${b.alerted ?? 0}` +
-            (b.topicId != null ? ` · topic ${b.topicId}` : " · default topic"),
-        );
+      }
       await refresh();
     } else {
       const b = res.body as { error?: string } | null;
@@ -134,6 +171,29 @@ export function ChainsPanel({
     } else toast.error("Failed to save topic");
   }
 
+  async function toggleSource(key: keyof ChainlistSourcesConfig, value: boolean) {
+    if (!canWrite) return;
+    const next = { ...sources, [key]: value };
+    // Optimistic
+    setSources(next);
+    setBusy(true);
+    const res = await proxy("/api/chainlist/sources", {
+      method: "PATCH",
+      body: { [key]: value },
+    });
+    setBusy(false);
+    if (res.ok) {
+      const b = res.body as { sources?: ChainlistSourcesConfig };
+      if (b.sources) setSources(b.sources);
+      toast.success(
+        `${key === "rpcs" ? "rpcs.json" : "GitHub"} source ${value ? "enabled" : "disabled"}`,
+      );
+    } else {
+      setSources(sources);
+      toast.error("Failed to update source");
+    }
+  }
+
   async function seedSearch() {
     if (!canWrite) return;
     setBusy(true);
@@ -153,23 +213,141 @@ export function ChainsPanel({
     <div className="space-y-4">
       <Card>
         <CardHeader className="border-b border-border/60 py-3">
-          <CardTitle className="text-base">How it works (JSON snapshot)</CardTitle>
-          <CardDescription className="space-y-2 text-sm">
-            <span className="block">
-              <strong>1.</strong> Fetch{" "}
-              <code className="text-[11px]">https://chainlist.org/rpcs.json</code> (all chains).
-            </span>
-            <span className="block">
-              <strong>2.</strong> First poll writes{" "}
-              <code className="text-[11px]">data/chainlist-snapshot.json</code> (seed, no TG).
-            </span>
-            <span className="block">
-              <strong>3.</strong> Next polls compare chainIds to that file → new ones alert on
-              Telegram (topic below) → file is rewritten with full list.
-            </span>
+          <CardTitle className="text-base">Detection sources</CardTitle>
+          <CardDescription>
+            Both approaches can run together on each poll. Turn either on/off
+            anytime — the other keeps working.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label
+              className={`flex cursor-pointer flex-col gap-2 rounded-lg border p-3 transition-colors ${
+                sources.rpcs
+                  ? "border-primary/40 bg-primary/5"
+                  : "border-border/60 bg-muted/20 opacity-80"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">A · rpcs.json snapshot</span>
+                <input
+                  type="checkbox"
+                  className="size-4 accent-primary"
+                  checked={sources.rpcs}
+                  disabled={!canWrite || busy}
+                  onChange={(e) => void toggleSource("rpcs", e.target.checked)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Fetch{" "}
+                <code className="text-[10px]">chainlist.org/rpcs.json</code> →
+                compare{" "}
+                <code className="text-[10px]">data/chainlist-snapshot.json</code>{" "}
+                → Telegram on new chainId.
+              </p>
+              {snapshot ? (
+                <p className="text-[11px] text-muted-foreground">
+                  {snapshot.exists ? (
+                    <>
+                      <strong className="text-foreground">{snapshot.count}</strong>{" "}
+                      chains
+                      {snapshot.source ? ` · ${snapshot.source}` : ""}
+                      {snapshot.updatedAt
+                        ? ` · ${new Date(snapshot.updatedAt).toLocaleString()}`
+                        : ""}
+                    </>
+                  ) : (
+                    <span className="text-amber-700 dark:text-amber-400">
+                      not seeded yet
+                    </span>
+                  )}
+                </p>
+              ) : null}
+            </label>
+
+            <label
+              className={`flex cursor-pointer flex-col gap-2 rounded-lg border p-3 transition-colors ${
+                sources.github
+                  ? "border-primary/40 bg-primary/5"
+                  : "border-border/60 bg-muted/20 opacity-80"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">
+                  B · GitHub additionalChainRegistry
+                </span>
+                <input
+                  type="checkbox"
+                  className="size-4 accent-primary"
+                  checked={sources.github}
+                  disabled={!canWrite || busy}
+                  onChange={(e) => void toggleSource("github", e.target.checked)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Watch{" "}
+                <a
+                  href="https://github.com/DefiLlama/chainlist"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  DefiLlama/chainlist
+                </a>{" "}
+                for new{" "}
+                <code className="text-[10px]">
+                  constants/additionalChainRegistry/chainid-*.js
+                </code>{" "}
+                (same path as PR commits).
+              </p>
+              {github ? (
+                <div className="space-y-0.5 text-[11px] text-muted-foreground">
+                  <p>
+                    {github.snapshotExists ? (
+                      <>
+                        <strong className="text-foreground">
+                          {github.snapshotCount}
+                        </strong>{" "}
+                        registry files
+                        {github.snapshotUpdatedAt
+                          ? ` · ${new Date(github.snapshotUpdatedAt).toLocaleString()}`
+                          : ""}
+                      </>
+                    ) : (
+                      <span className="text-amber-700 dark:text-amber-400">
+                        not seeded yet
+                      </span>
+                    )}
+                  </p>
+                  {github.lastCommitSha ? (
+                    <p className="truncate">
+                      last commit{" "}
+                      {github.lastCommitUrl ? (
+                        <a
+                          href={github.lastCommitUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {github.lastCommitSha.slice(0, 7)}
+                        </a>
+                      ) : (
+                        <span className="font-mono">
+                          {github.lastCommitSha.slice(0, 7)}
+                        </span>
+                      )}
+                      {github.lastCommitMessage
+                        ? ` · ${github.lastCommitMessage}`
+                        : ""}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </label>
+          </div>
+
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[12rem] space-y-1">
               <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -197,36 +375,21 @@ export function ChainsPanel({
             ) : null}
           </div>
 
-          {snapshot ? (
-            <p className="text-xs text-muted-foreground">
-              Snapshot:{" "}
-              {snapshot.exists ? (
-                <>
-                  <strong className="text-foreground">{snapshot.count}</strong> chains
-                  {snapshot.source ? ` · ${snapshot.source}` : ""}
-                  {snapshot.updatedAt
-                    ? ` · updated ${new Date(snapshot.updatedAt).toLocaleString()}`
-                    : ""}
-                </>
-              ) : (
-                <span className="text-amber-700 dark:text-amber-400">
-                  not created yet — run Poll once
-                </span>
-              )}
-              <span className="ml-1 font-mono text-[10px]">({snapshot.path})</span>
-            </p>
-          ) : null}
-
           <div className="flex flex-wrap gap-2">
             {canWrite ? (
               <>
-                <Button type="button" size="sm" disabled={busy} onClick={() => void pollNow()}>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={busy || (!sources.rpcs && !sources.github)}
+                  onClick={() => void pollNow()}
+                >
                   {busy ? (
                     <Loader2 className="size-3.5 animate-spin" />
                   ) : (
                     <Play className="size-3.5" />
                   )}
-                  Poll Chainlist now
+                  Poll enabled sources
                 </Button>
                 <Button
                   type="button"
@@ -286,7 +449,16 @@ export function ChainsPanel({
       </Card>
 
       <div className="flex flex-wrap gap-2">
-        <Badge variant="secondary">{total} in snapshot</Badge>
+        <Badge variant={sources.rpcs ? "success" : "muted"}>
+          rpcs {sources.rpcs ? "on" : "off"}
+        </Badge>
+        <Badge variant={sources.github ? "success" : "muted"}>
+          github {sources.github ? "on" : "off"}
+        </Badge>
+        <Badge variant="secondary">{total} in rpcs snapshot</Badge>
+        {github?.snapshotExists ? (
+          <Badge variant="secondary">{github.snapshotCount} registry files</Badge>
+        ) : null}
         <Badge variant="muted">{alerted} recent alerts</Badge>
         <Badge variant="muted">{items.length} shown</Badge>
       </div>
@@ -295,7 +467,8 @@ export function ChainsPanel({
         <CardHeader className="border-b border-border/60 py-3">
           <CardTitle className="text-base">New chains detected</CardTitle>
           <CardDescription>
-            Chains that appeared after the JSON snapshot was created (file compare).
+            From either detector after its snapshot was seeded. Source column
+            shows rpcs/catalog vs github:DefiLlama/chainlist.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -303,7 +476,7 @@ export function ChainsPanel({
             <div className="p-6">
               <EmptyState
                 title="No discoveries yet"
-                description='Run "Poll Chainlist now" twice: first seeds the JSON file, second compares and alerts on new chainIds.'
+                description='Enable at least one source, run "Poll enabled sources" twice: first seeds snapshots (no flood), later polls alert on new chainIds / registry files.'
               />
             </div>
           ) : (
@@ -320,7 +493,7 @@ export function ChainsPanel({
               </TableHeader>
               <TableBody>
                 {items.map((c) => (
-                  <TableRow key={c.chainId}>
+                  <TableRow key={`${c.source}-${c.chainId}-${c.firstSeenAt}`}>
                     <TableCell>
                       <div className="font-medium">{c.name}</div>
                       <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
@@ -355,19 +528,43 @@ export function ChainsPanel({
                     <TableCell className="max-w-[10rem] truncate font-mono text-[10px] text-muted-foreground">
                       {c.rpcUrl ?? "—"}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{c.source}</TableCell>
+                    <TableCell className="max-w-[9rem] truncate text-xs text-muted-foreground">
+                      {c.source}
+                    </TableCell>
                     <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                       {fmtDate(c.firstSeenAt)}
                     </TableCell>
                     <TableCell>
-                      <a
-                        href={c.chainlistUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-0.5 text-xs text-primary hover:underline"
-                      >
-                        Open <ExternalLink className="size-3" />
-                      </a>
+                      <div className="flex flex-col items-end gap-1">
+                        <a
+                          href={c.chainlistUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-0.5 text-xs text-primary hover:underline"
+                        >
+                          Open <ExternalLink className="size-3" />
+                        </a>
+                        {c.commitUrl ? (
+                          <a
+                            href={c.commitUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-primary hover:underline"
+                          >
+                            Commit <ExternalLink className="size-2.5" />
+                          </a>
+                        ) : null}
+                        {c.githubFile ? (
+                          <a
+                            href={c.githubFile}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-primary hover:underline"
+                          >
+                            File <ExternalLink className="size-2.5" />
+                          </a>
+                        ) : null}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

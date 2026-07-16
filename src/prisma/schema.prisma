@@ -601,28 +601,63 @@ model ProjectMonitor {
   @@map("project_monitors")
 }
 
-/// EVM chains seen via chainlist.org / chainid.network snapshot.
-/// Diff = new chainId since last poll → "catalog confirmed" new chain.
-model KnownChain {
-  /// EIP-155 chain id (decimal string for bigint-safe uniqueness)
-  chainId       String    @id @map("chain_id")
-  name          String
-  shortName     String?   @map("short_name")
-  nativeSymbol  String?   @map("native_symbol")
-  rpcUrl        String?   @map("rpc_url")
-  explorerUrl   String?   @map("explorer_url")
-  infoUrl       String?   @map("info_url")
-  isTestnet     Boolean   @default(false) @map("is_testnet")
-  /// chainlist | chainid.network | manual
-  source        String    @default("chainlist")
-  /// null = not checked; true = eth_blockNumber ok; false = failed
-  rpcLive       Boolean?  @map("rpc_live")
-  firstSeenAt   DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz
-  lastSeenAt    DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz
-  /// First discovery fired Telegram
-  alertedAt     DateTime? @map("alerted_at") @db.Timestamptz
+/// Watch a public GitHub repo for new commits (and optional path filter).
+model GithubRepoMonitor {
+  id           BigInt    @id @default(autoincrement())
+  /// e.g. DefiLlama
+  owner        String
+  /// e.g. chainlist
+  repo         String
+  /// owner/repo unique key
+  fullName     String    @unique @map("full_name")
+  /// Operator label (e.g. "Chainlist new chains")
+  label        String?
+  /// Description from GitHub (optional cache)
+  description  String?
+  enabled      Boolean   @default(true)
+  alertEnabled Boolean   @default(true) @map("alert_enabled")
+  /// Telegram forum topic override
+  topicId      Int?      @map("topic_id")
+  /// Branch to watch (default main)
+  branch       String    @default("main")
+  /// Optional commits?path= filter (e.g. constants/additionalChainRegistry)
+  pathFilter   String?   @map("path_filter")
+  /// Min seconds between polls for this repo
+  intervalSec  Int       @default(300) @map("interval_sec")
+  lastPolledAt DateTime? @map("last_polled_at") @db.Timestamptz
+  /// Newest commit SHA already processed (watermark)
+  lastCommitSha String?  @map("last_commit_sha")
+  lastError    String?   @map("last_error")
+  hitCount     Int       @default(0) @map("hit_count")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  @@index([firstSeenAt(sort: Desc)])
-  @@index([isTestnet, firstSeenAt(sort: Desc)])
-  @@map("known_chains")
+  commits GithubRepoCommit[]
+
+  @@index([enabled, lastPolledAt])
+  @@map("github_repo_monitors")
+}
+
+model GithubRepoCommit {
+  id            BigInt    @id @default(autoincrement())
+  monitorId     BigInt    @map("monitor_id")
+  sha           String
+  message       String    @default("")
+  authorName    String?   @map("author_name")
+  authorLogin   String?   @map("author_login")
+  htmlUrl       String    @map("html_url")
+  committedAt   DateTime? @map("committed_at") @db.Timestamptz
+  /// Changed paths (capped)
+  filesAdded    String[]  @default([]) @map("files_added")
+  filesModified String[]  @default([]) @map("files_modified")
+  filesRemoved  String[]  @default([]) @map("files_removed")
+  alerted       Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  monitor GithubRepoMonitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@unique([monitorId, sha])
+  @@index([createdAt(sort: Desc)])
+  @@index([monitorId, createdAt(sort: Desc)])
+  @@map("github_repo_commits")
 }
