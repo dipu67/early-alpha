@@ -17,6 +17,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { CommandMenu } from "@/components/command-menu";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { MobileNav } from "@/components/mobile-nav";
+import { LocalTimeZoneBadge } from "@/components/local-time";
 
 export function TopBar({ email, role }: { email: string; role: string }) {
   const router = useRouter();
@@ -60,6 +61,7 @@ export function TopBar({ email, role }: { email: string; role: string }) {
         <kbd className="ml-2 rounded bg-border px-1.5 text-xs">⌘K</kbd>
       </button>
 
+      <LocalTimeZoneBadge />
       <ThemeToggle />
 
       <DropdownMenu>

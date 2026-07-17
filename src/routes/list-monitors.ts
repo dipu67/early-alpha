@@ -271,6 +271,20 @@ listMonitorsRouter.post(
   }),
 );
 
+/**
+ * Clear every lastTweetId so next poll re-seeds without alerting backlog.
+ */
+listMonitorsRouter.post(
+  "/skip-all-backlogs",
+  asyncHandler(async (_req, res) => {
+    const result = await prisma.listMonitor.updateMany({
+      data: { lastTweetId: null, lastError: null },
+    });
+    const job = await enqueueJob("poll-list-monitors", {});
+    res.json({ ok: true, cleared: result.count, enqueued: true, ...job });
+  }),
+);
+
 listMonitorsRouter.post(
   "/:id/run",
   asyncHandler(async (req, res) => {
@@ -281,5 +295,30 @@ listMonitorsRouter.post(
 
     const result = await pollListMonitor(id, { force: true });
     res.json({ ok: true, ...result });
+  }),
+);
+
+/**
+ * Skip backlog: clear watermark, force-poll to re-seed current head.
+ */
+listMonitorsRouter.post(
+  "/:id/skip-backlog",
+  asyncHandler(async (req, res) => {
+    const id = parseId(req.params.id);
+    const existing = await prisma.listMonitor.findUnique({ where: { id } });
+    if (!existing) throw new HttpError(404, "monitor_not_found");
+
+    await prisma.listMonitor.update({
+      where: { id },
+      data: { lastTweetId: null, lastError: null },
+    });
+
+    if (!existing.enabled) {
+      res.json({ ok: true, cleared: true, seeded: false, skippedPoll: true });
+      return;
+    }
+
+    const result = await pollListMonitor(id, { force: true });
+    res.json({ ok: true, cleared: true, ...result });
   }),
 );

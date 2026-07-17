@@ -456,18 +456,12 @@ export function fmtEvery(ms: number | null): string {
   return `${h / 24}d`;
 }
 
-/** Format an ISO date as a short relative-ish label. */
-export function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+/**
+ * Format an ISO date in the **local** timezone with short zone label
+ * (e.g. "Jul 17, 03:42 PM GMT+6"). Prefer `<LocalTime>` in server
+ * components so SSR never shows server-UTC times.
+ */
+export { fmtLocalDate as fmtDate } from "./time";
 
 /** Compact follower counts: 4400 -> 4.4K. */
 export function fmtNum(n: number | null): string {

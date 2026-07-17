@@ -84,6 +84,26 @@ monitorsRouter.post(
   }),
 );
 
+/**
+ * Clear every lastTweetId so the next poll re-seeds to current head
+ * without alerting backlog posts (use after long downtime).
+ */
+monitorsRouter.post(
+  "/skip-all-backlogs",
+  asyncHandler(async (_req, res) => {
+    const result = await prisma.projectMonitor.updateMany({
+      data: { lastTweetId: null, lastError: null },
+    });
+    const job = await enqueueJob("poll-monitors", {});
+    res.json({
+      ok: true,
+      cleared: result.count,
+      enqueued: true,
+      ...job,
+    });
+  }),
+);
+
 /** Wipe entire user monitor list (default empty state). */
 monitorsRouter.delete(
   "/",
@@ -170,5 +190,32 @@ monitorsRouter.post(
     if (!existing) throw new HttpError(404, "not_found");
     const result = await pollMonitor(id);
     res.json(result);
+  }),
+);
+
+/**
+ * Skip backlog for one monitor: clear lastTweetId, then poll once to
+ * re-seed watermark at current newest tweet (no history flood).
+ */
+monitorsRouter.post(
+  "/:id/skip-backlog",
+  asyncHandler(async (req, res) => {
+    const id = parseId(req.params.id);
+    const existing = await prisma.projectMonitor.findUnique({ where: { id } });
+    if (!existing) throw new HttpError(404, "not_found");
+
+    await prisma.projectMonitor.update({
+      where: { id },
+      data: { lastTweetId: null, lastError: null },
+    });
+
+    // Inactive monitors only clear; active ones re-seed immediately.
+    if (!existing.isActive) {
+      res.json({ ok: true, cleared: true, seeded: false, skippedPoll: true });
+      return;
+    }
+
+    const result = await pollMonitor(id);
+    res.json({ ok: true, cleared: true, ...result });
   }),
 );

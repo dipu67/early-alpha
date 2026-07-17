@@ -234,6 +234,21 @@ searchQueriesRouter.post(
   }),
 );
 
+/**
+ * Clear every lastTweetId so next poll re-seeds without alerting backlog.
+ * Enqueues poll-searches to re-seed promptly.
+ */
+searchQueriesRouter.post(
+  "/skip-all-backlogs",
+  asyncHandler(async (_req, res) => {
+    const result = await prisma.searchQuery.updateMany({
+      data: { lastTweetId: null, lastError: null },
+    });
+    const job = await enqueueJob("poll-searches", {});
+    res.json({ ok: true, cleared: result.count, enqueued: true, ...job });
+  }),
+);
+
 // Force-run one query now (ignores per-query interval).
 searchQueriesRouter.post(
   "/:id/run",
@@ -245,5 +260,31 @@ searchQueriesRouter.post(
 
     const result = await pollSearchQuery(id, { force: true });
     res.json({ ok: true, ...result });
+  }),
+);
+
+/**
+ * Skip backlog for one query: clear watermark, then force-poll to re-seed
+ * at current newest match (no history flood).
+ */
+searchQueriesRouter.post(
+  "/:id/skip-backlog",
+  asyncHandler(async (req, res) => {
+    const id = parseId(req.params.id);
+    const existing = await prisma.searchQuery.findUnique({ where: { id } });
+    if (!existing) throw new HttpError(404, "query_not_found");
+
+    await prisma.searchQuery.update({
+      where: { id },
+      data: { lastTweetId: null, lastError: null },
+    });
+
+    if (!existing.enabled) {
+      res.json({ ok: true, cleared: true, seeded: false, skippedPoll: true });
+      return;
+    }
+
+    const result = await pollSearchQuery(id, { force: true });
+    res.json({ ok: true, cleared: true, ...result });
   }),
 );

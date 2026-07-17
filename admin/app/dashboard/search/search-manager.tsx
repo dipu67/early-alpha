@@ -13,6 +13,7 @@ import {
   X,
   Save,
   Loader2,
+  SkipForward,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -278,6 +279,43 @@ export function SearchManager({
     } else toast.error("Failed to enqueue");
   }
 
+  async function skipBacklog(id: string) {
+    if (!canWrite) return;
+    setBusy(true);
+    const res = await proxy(`/api/search-queries/${id}/skip-backlog`, {
+      method: "POST",
+      body: {},
+    });
+    setBusy(false);
+    if (res.ok) {
+      const b = res.body as { seeded?: boolean; skippedPoll?: boolean; error?: string };
+      if (b.error) toast.error(b.error);
+      else if (b.skippedPoll)
+        toast.success("Last record cleared (paused — enable + Run to re-seed)");
+      else if (b.seeded)
+        toast.success("Last record set to now — backlog skipped");
+      else toast.success("Last record updated");
+      await refresh();
+    } else toast.error("Skip backlog failed");
+  }
+
+  async function skipAllBacklogs() {
+    if (!canWrite) return;
+    setBusy(true);
+    const res = await proxy("/api/search-queries/skip-all-backlogs", {
+      method: "POST",
+      body: {},
+    });
+    setBusy(false);
+    if (res.ok) {
+      const b = res.body as { cleared?: number };
+      toast.success(
+        `Cleared last record on ${b.cleared ?? queries.length} queries — re-seeding`,
+      );
+      setTimeout(() => void refresh(), 2000);
+    } else toast.error("Skip all failed");
+  }
+
   const activeAuths = authAccounts.filter((a) => a.isActive && !a.rateLimited);
   const enabledCount = queries.filter((q) => q.enabled).length;
 
@@ -302,6 +340,19 @@ export function SearchManager({
             <RefreshCw className={cn("size-3.5", busy && "animate-spin")} />
             Refresh
           </Button>
+          {canWrite && queries.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              title="After long downtime: set every last record to current head so old posts are not alerted"
+              onClick={() => void skipAllBacklogs()}
+            >
+              <SkipForward className="size-3.5" />
+              Skip all backlogs
+            </Button>
+          ) : null}
           {canWrite ? (
             <Button type="button" size="sm" disabled={busy} onClick={() => void runAll()}>
               <Play className="size-3.5" />
@@ -325,8 +376,9 @@ export function SearchManager({
             Search queries
           </CardTitle>
           <CardDescription>
-            Realtime Twitter search → Telegram. First Run seeds watermark only; later Runs alert
-            on newer posts. Stores latest 20 hits per query.
+            Realtime Twitter search → Telegram. First Run seeds last record only; later Runs alert
+            on newer posts. After downtime use <strong>Skip backlog</strong> to set last record to
+            now (no flood).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
@@ -507,6 +559,18 @@ export function SearchManager({
                             >
                               <Play className="size-3.5" />
                               Run
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-8"
+                              disabled={busy}
+                              title="Set last record to current newest match — skip backlog after downtime"
+                              onClick={() => void skipBacklog(q.id)}
+                            >
+                              <SkipForward className="size-3.5" />
+                              Skip backlog
                             </Button>
                             <Button
                               type="button"

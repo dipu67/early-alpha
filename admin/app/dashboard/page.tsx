@@ -3,7 +3,8 @@ import { Card, CardHeader, CardTitle, CardContent, PageHeader } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { LineChartCard, BarChartCard, PieChartCard } from "@/components/charts";
-import { fmtDate, fmtNum, type Overview, type TimePoint, type ActivityItem } from "@/lib/types";
+import { fmtNum, type Overview, type TimePoint, type ActivityItem } from "@/lib/types";
+import { LocalTime } from "@/components/local-time";
 import { Radio } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -89,7 +90,10 @@ export default async function OverviewPage() {
                       <span className="truncate">@{a.username ?? "unknown"}</span>
                       {a.slug ? <span className="text-muted-foreground">· {a.slug}</span> : null}
                     </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{fmtDate(a.at)}</span>
+                    <LocalTime
+                      iso={a.at}
+                      className="shrink-0 text-xs text-muted-foreground"
+                    />
                   </li>
                 ))}
               </ul>

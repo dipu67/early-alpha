@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { proxy } from "@/lib/client";
 import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/cn";
-import type { AuthListsScanResult } from "@/lib/types";
+import { fmtDate, type AuthListsScanResult } from "@/lib/types";
 
 export function AuthOwnedListsPanel() {
   const [data, setData] = useState<AuthListsScanResult | null>(null);
@@ -93,7 +93,7 @@ export function AuthOwnedListsPanel() {
                 </Badge>
               ) : null}
               <span className="text-muted-foreground">
-                scanned {new Date(data.scannedAt).toLocaleString()}
+                scanned {fmtDate(data.scannedAt)}
               </span>
             </div>
 

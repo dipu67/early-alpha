@@ -174,12 +174,54 @@ signalScansRouter.post(
   }),
 );
 
+/**
+ * Clear every scan lastTweetId so next HomeLatest poll re-seeds without
+ * flooding Telegram with backlog posts (use after long downtime).
+ */
+signalScansRouter.post(
+  "/scans/skip-all-backlogs",
+  asyncHandler(async (_req, res) => {
+    const result = await prisma.signalScan.updateMany({
+      // Clear lastPolledAt so the next poll is not blocked by intervalSec.
+      data: { lastTweetId: null, lastError: null, lastPolledAt: null },
+    });
+    const jobId = await enqueueJob("poll-home-signals", {});
+    res.json({ ok: true, cleared: result.count, enqueued: true, jobId });
+  }),
+);
+
 signalScansRouter.post(
   "/scans/:id/poll",
   asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     const result = await pollSignalScan(id);
     res.json(result);
+  }),
+);
+
+/**
+ * Skip backlog for one scan: clear watermark, poll once to re-seed head.
+ */
+signalScansRouter.post(
+  "/scans/:id/skip-backlog",
+  asyncHandler(async (req, res) => {
+    const id = parseId(req.params.id);
+    const existing = await prisma.signalScan.findUnique({ where: { id } });
+    if (!existing) throw new HttpError(404, "not_found");
+
+    await prisma.signalScan.update({
+      where: { id },
+      // Clear lastPolledAt so pollSignalScan is not blocked by intervalSec.
+      data: { lastTweetId: null, lastError: null, lastPolledAt: null },
+    });
+
+    if (!existing.enabled) {
+      res.json({ ok: true, cleared: true, seeded: false, skippedPoll: true });
+      return;
+    }
+
+    const result = await pollSignalScan(id);
+    res.json({ ok: true, cleared: true, ...result });
   }),
 );
 

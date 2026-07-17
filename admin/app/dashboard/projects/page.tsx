@@ -11,12 +11,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import {
-  fmtDate,
   fmtNum,
   type Paged,
   type Project,
   type ProjectSort,
 } from "@/lib/types";
+import { LocalTime } from "@/components/local-time";
 import { ProjectActions } from "./project-actions";
 import { ProjectsFilters } from "./projects-filters";
 import { FetchMissingBiosButton } from "./fetch-bios-button";
@@ -173,11 +173,13 @@ export default async function ProjectsPage({
                       {fmtNum(p.followersCount)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                      {fmtDate(
-                        sort === "updated"
-                          ? (p.updatedAt ?? p.firstSeenAt)
-                          : p.firstSeenAt,
-                      )}
+                      <LocalTime
+                        iso={
+                          sort === "updated"
+                            ? (p.updatedAt ?? p.firstSeenAt)
+                            : p.firstSeenAt
+                        }
+                      />
                     </TableCell>
                     <TableCell className="align-top">
                       <ProjectActions

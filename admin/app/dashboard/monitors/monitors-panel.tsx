@@ -10,6 +10,7 @@ import {
   Power,
   ExternalLink,
   Loader2,
+  SkipForward,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -127,6 +128,48 @@ export function MonitorsPanel({ initialItems }: { initialItems: ProjectMonitorIt
     }
   }
 
+  /** After downtime: set last record to current head — no backlog alerts. */
+  async function skipBacklog(id: string, handle: string) {
+    setBusy(true);
+    try {
+      const res = await proxy(`/api/monitors/${id}/skip-backlog`, {
+        method: "POST",
+        body: {},
+      });
+      if (res.ok) {
+        const r = res.body as { seeded?: boolean; skippedPoll?: boolean; error?: string };
+        if (r.error) toast.error(r.error);
+        else if (r.skippedPoll)
+          toast.success(`@${handle}: last record cleared (paused — resume to re-seed)`);
+        else if (r.seeded)
+          toast.success(`@${handle}: last record set to now (backlog skipped)`);
+        else toast.success(`@${handle}: last record updated`);
+        await refresh();
+      } else toast.error("Skip backlog failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function skipAllBacklogs() {
+    setBusy(true);
+    try {
+      const res = await proxy("/api/monitors/skip-all-backlogs", {
+        method: "POST",
+        body: {},
+      });
+      if (res.ok) {
+        const r = res.body as { cleared?: number };
+        toast.success(
+          `Cleared last record on ${r.cleared ?? items.length} monitors — re-seeding now`,
+        );
+        await refresh();
+      } else toast.error("Skip all failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function confirmDelete() {
     if (!pendingDelete) return;
     setBusy(true);
@@ -182,6 +225,19 @@ export function MonitorsPanel({ initialItems }: { initialItems: ProjectMonitorIt
             </Button>
           ) : null}
           {canWrite && items.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              title="After long downtime: set every last record to current head so old posts are not alerted"
+              onClick={() => void skipAllBacklogs()}
+            >
+              <SkipForward className="size-3.5" />
+              Skip all backlogs
+            </Button>
+          ) : null}
+          {canWrite && items.length > 0 ? (
             <Button type="button" size="sm" disabled={busy} onClick={() => void pollAll()}>
               <Play className="size-3.5" />
               Poll all now
@@ -233,8 +289,9 @@ export function MonitorsPanel({ initialItems }: { initialItems: ProjectMonitorIt
         <CardHeader className="border-b border-border/60 py-3">
           <CardTitle className="text-base">Monitored users</CardTitle>
           <CardDescription>
-            Each row is one @username timeline. Polled ~every 2 min. First poll seeds watermark only
-            (no history flood). Separate from Project Lists.
+            Each row is one @username timeline. Polled ~every 2 min. First poll seeds last record
+            only (no history flood). After downtime use <strong>Skip backlog</strong> to set last
+            record to now so old posts are not alerted.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -306,6 +363,9 @@ export function MonitorsPanel({ initialItems }: { initialItems: ProjectMonitorIt
                         <span className="text-[11px] text-muted-foreground">
                           alerts {m.alertCount}
                           {m.lastPolledAt ? ` · polled ${fmtDate(m.lastPolledAt)}` : " · never polled"}
+                          {m.lastTweetId
+                            ? ` · last ${m.lastTweetId.slice(0, 10)}…`
+                            : " · no last record"}
                         </span>
                       </div>
                       {m.lastError ? (
@@ -337,6 +397,18 @@ export function MonitorsPanel({ initialItems }: { initialItems: ProjectMonitorIt
                           >
                             <Play className="size-3.5" />
                             Poll
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            className="h-8"
+                            disabled={busy}
+                            title="Set last record to current newest post — skip backlog after downtime"
+                            onClick={() => void skipBacklog(m.id, m.username)}
+                          >
+                            <SkipForward className="size-3.5" />
+                            Skip backlog
                           </Button>
                           <Button
                             type="button"

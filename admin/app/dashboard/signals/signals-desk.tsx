@@ -12,6 +12,7 @@ import {
   ListFilter,
   Loader2,
   ExternalLink,
+  SkipForward,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -437,6 +438,51 @@ export function SignalsDesk({
     }
   }
 
+  async function skipBacklog(id: string, tag: string) {
+    setBusy(true);
+    try {
+      const res = await proxy(`/api/signals/scans/${id}/skip-backlog`, {
+        method: "POST",
+        body: {},
+      });
+      if (res.ok) {
+        const r = res.body as {
+          seeded?: boolean;
+          skippedPoll?: boolean;
+          error?: string;
+        };
+        if (r.error) toast.error(r.error);
+        else if (r.skippedPoll)
+          toast.success(`${tag}: last record cleared (paused)`);
+        else if (r.seeded)
+          toast.success(`${tag}: last record set to now — backlog skipped`);
+        else toast.success(`${tag}: last record updated`);
+        await refreshScans();
+      } else toast.error("Skip backlog failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function skipAllBacklogs() {
+    setBusy(true);
+    try {
+      const res = await proxy("/api/signals/scans/skip-all-backlogs", {
+        method: "POST",
+        body: {},
+      });
+      if (res.ok) {
+        const r = res.body as { cleared?: number };
+        toast.success(
+          `Cleared last record on ${r.cleared ?? scans.length} scanners — re-seeding`,
+        );
+        await refreshScans();
+      } else toast.error("Skip all failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function onFollowTagChange(tag: string) {
     setFollowTag(tag);
     setProjectSearch("");
@@ -697,6 +743,16 @@ export function SignalsDesk({
                   <Plus className="size-3.5" />
                   Save binding
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy || scans.length === 0}
+                  title="After long downtime: set every last record to current head so old posts are not alerted"
+                  onClick={() => void skipAllBacklogs()}
+                >
+                  <SkipForward className="size-3.5" />
+                  Skip all backlogs
+                </Button>
                 <Button type="button" variant="outline" disabled={busy} onClick={() => void pollAll()}>
                   <Play className="size-3.5" />
                   Poll all
@@ -842,14 +898,14 @@ export function SignalsDesk({
                           <Button
                             type="button"
                             size="sm"
-                            variant="ghost"
+                            variant="secondary"
                             className="h-8"
                             disabled={busy}
-                            onClick={() =>
-                              void patchScan(s.id, { resetWatermark: true }, "Watermark reset")
-                            }
+                            title="Set last record to current newest HomeLatest tweet — skip backlog after downtime"
+                            onClick={() => void skipBacklog(s.id, s.tagSlug)}
                           >
-                            Reset WM
+                            <SkipForward className="size-3.5" />
+                            Skip backlog
                           </Button>
                           <Button
                             type="button"

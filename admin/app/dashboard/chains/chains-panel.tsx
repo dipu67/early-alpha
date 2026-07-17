@@ -253,7 +253,7 @@ export function ChainsPanel({
                       chains
                       {snapshot.source ? ` · ${snapshot.source}` : ""}
                       {snapshot.updatedAt
-                        ? ` · ${new Date(snapshot.updatedAt).toLocaleString()}`
+                        ? ` · ${fmtDate(snapshot.updatedAt)}`
                         : ""}
                     </>
                   ) : (
@@ -311,7 +311,7 @@ export function ChainsPanel({
                         </strong>{" "}
                         registry files
                         {github.snapshotUpdatedAt
-                          ? ` · ${new Date(github.snapshotUpdatedAt).toLocaleString()}`
+                          ? ` · ${fmtDate(github.snapshotUpdatedAt)}`
                           : ""}
                       </>
                     ) : (

@@ -13,6 +13,7 @@ import {
   Save,
   Loader2,
   Github,
+  SkipForward,
 } from "lucide-react";
 import {
   Card,
@@ -275,6 +276,47 @@ export function GithubRepoManager({
     } else toast.error("Enqueue failed");
   }
 
+  async function skipBacklog(id: string) {
+    if (!canWrite) return;
+    setBusy(true);
+    const res = await proxy(`/api/github-repos/${id}/skip-backlog`, {
+      method: "POST",
+      body: {},
+    });
+    setBusy(false);
+    if (res.ok) {
+      const b = res.body as {
+        seeded?: boolean;
+        skippedPoll?: boolean;
+        error?: string;
+      };
+      if (b.error) toast.error(b.error);
+      else if (b.skippedPoll)
+        toast.success("Last record cleared (paused — enable + Run to re-seed)");
+      else if (b.seeded)
+        toast.success("Last record set to now — backlog skipped");
+      else toast.success("Last record updated");
+      await refresh();
+    } else toast.error("Skip backlog failed");
+  }
+
+  async function skipAllBacklogs() {
+    if (!canWrite) return;
+    setBusy(true);
+    const res = await proxy("/api/github-repos/skip-all-backlogs", {
+      method: "POST",
+      body: {},
+    });
+    setBusy(false);
+    if (res.ok) {
+      const b = res.body as { cleared?: number };
+      toast.success(
+        `Cleared last record on ${b.cleared ?? monitors.length} repos — re-seeding`,
+      );
+      setTimeout(() => void refresh(), 2000);
+    } else toast.error("Skip all failed");
+  }
+
   async function remove(id: string) {
     if (!canWrite) return;
     setBusy(true);
@@ -410,20 +452,47 @@ export function GithubRepoManager({
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary">{monitors.length} monitors</Badge>
         <Badge variant="muted">
           {monitors.filter((m) => m.enabled).length} enabled
         </Badge>
         <Badge variant="muted">{commits.length} recent commits</Badge>
+        <div className="ml-auto flex flex-wrap gap-2">
+          {canWrite && monitors.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              title="After long downtime: set every last commit to current HEAD so old commits are not alerted"
+              onClick={() => void skipAllBacklogs()}
+            >
+              <SkipForward className="size-3.5" />
+              Skip all backlogs
+            </Button>
+          ) : null}
+          {canWrite && monitors.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              disabled={busy}
+              onClick={() => void runAll()}
+            >
+              <Play className="size-3.5" />
+              Poll all
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-border/60 py-3">
           <CardTitle className="text-base">Monitored repos</CardTitle>
           <CardDescription>
-            DefiLlama/chainlist is seeded automatically with path filter for
-            new chain registry files.
+            DefiLlama/chainlist is seeded automatically. After downtime use{" "}
+            <strong>Skip backlog</strong> to set last record to current HEAD
+            without flooding Telegram.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 p-4">
@@ -521,6 +590,17 @@ export function GithubRepoManager({
                         >
                           <Play className="size-3.5" />
                           Run
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={busy}
+                          title="Set last record to current HEAD — skip backlog after downtime"
+                          onClick={() => void skipBacklog(m.id)}
+                        >
+                          <SkipForward className="size-3.5" />
+                          Skip backlog
                         </Button>
                         <Button
                           type="button"

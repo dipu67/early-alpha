@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
-import { fmtDate, type Paged, type WatchEntry } from "@/lib/types";
+import { type Paged, type WatchEntry } from "@/lib/types";
+import { LocalTime } from "@/components/local-time";
 import { ActionButton } from "@/components/action-button";
 import { AddWatchForm } from "./add-watch-form";
 
@@ -64,7 +65,7 @@ export default async function WatchlistPage() {
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{w.alertCount}</TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">
-                    {fmtDate(w.lastSnapshotAt)}
+                    <LocalTime iso={w.lastSnapshotAt} />
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-2">
