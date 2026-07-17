@@ -193,9 +193,15 @@ export type TelegramTopic = Prisma.TelegramTopicModel
 /**
  * Model ProjectMonitor
  * Live tweet monitor for high-potential project accounts.
- * Polls getUserTweets, watermarks lastTweetId, Telegram alert on new posts.
+ * Cheap path: getUsersByIds → compare tweetCount; only then getUserTweets.
+ * Watermark lastTweetId; Telegram alert on new posts.
  */
 export type ProjectMonitor = Prisma.ProjectMonitorModel
+/**
+ * Model ProjectMonitorTagRule
+ * Tag-based monitor enrollment: e.g. all `nft` projects → poll every 1h → TG topic.
+ */
+export type ProjectMonitorTagRule = Prisma.ProjectMonitorTagRuleModel
 /**
  * Model GithubRepoMonitor
  * Watch a public GitHub repo for new commits (and optional path filter).

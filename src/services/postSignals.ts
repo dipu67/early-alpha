@@ -31,6 +31,16 @@ const SLUG_SIGNALS: Record<string, (string | RegExp)[]> = {
     "mint", "minting", "minting soon", "mint date", "mint is live",
     "public mint", "free mint", "whitelist mint", "wl mint", "reveal",
     "reveal soon", "collection drop", "drop date",
+    "official mint date", "confirmed mint date", "mint date announced",
+    "mint date is", "mint date set", "mint schedule", "minting schedule",
+    "mint window", "mint starts on", "mint opens on", "minting on",
+    "we mint on", "mint goes live on", "public mint date", "wl mint date",
+    "save the date", "mark your calendars", "mark your calendar",
+    // Structured mint-date patterns (month / numeric / weekday)
+    /mint(?:ing)?\s*dates?\s*[:\-–—]?\s*(?:is\s+|set\s+(?:for\s+|to\s+)?|announced\s+)?(?:on\s+)?(?:(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s*\d{1,2}(?:st|nd|rd|th)?|\d{1,2}(?:st|nd|rd|th)?\s*(?:of\s+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)|\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)|tomorrow|tonight|today)/i,
+    /mint(?:ing)?\s+(?:goes\s+live\s+|opens?\s+|starts?\s+|begins?\s+|live\s+)?(?:on\s+|this\s+)?(?:(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s*\d{1,2}(?:st|nd|rd|th)?|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)|tomorrow|tonight)/i,
+    /(?:public|free|wl|whitelist)?\s*mint(?:ing)?\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s*\d{1,2}(?:st|nd|rd|th)?/i,
+    /mint(?:ing)?\s*(?:@|at)\s*\d{1,2}(?::\d{2})?\s*(?:am|pm|utc|est|et|gmt)?/i,
   ],
   "nft-fi": ["mint", "minting", "floor", "collection drop"],
   gamefi: [

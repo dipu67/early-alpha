@@ -22,25 +22,71 @@ import { TopicPicker } from "@/components/topic-picker";
 import { proxy } from "@/lib/client";
 import { toast } from "@/components/ui/sonner";
 import { useCan } from "@/components/role-context";
-import { fmtDate, type ProjectMonitorItem } from "@/lib/types";
+import {
+  fmtDate,
+  type ProjectMonitorItem,
+  type ProjectMonitorTagRule,
+  type ProjectTag,
+} from "@/lib/types";
 import { cn } from "@/lib/cn";
 
-export function MonitorsPanel({ initialItems }: { initialItems: ProjectMonitorItem[] }) {
+const INTERVAL_PRESETS = [
+  { sec: 300, label: "5 min" },
+  { sec: 900, label: "15 min" },
+  { sec: 1800, label: "30 min" },
+  { sec: 3600, label: "1 hour" },
+  { sec: 7200, label: "2 hours" },
+  { sec: 21_600, label: "6 hours" },
+];
+
+function formatInterval(sec: number): string {
+  if (sec < 60) return `${sec}s`;
+  if (sec % 3600 === 0) return `${sec / 3600}h`;
+  if (sec % 60 === 0) return `${sec / 60}m`;
+  return `${sec}s`;
+}
+
+export function MonitorsPanel({
+  initialItems,
+  initialRules = [],
+  tags = [],
+}: {
+  initialItems: ProjectMonitorItem[];
+  initialRules?: ProjectMonitorTagRule[];
+  tags?: ProjectTag[];
+}) {
   const canWrite = useCan("editor");
   const [items, setItems] = useState(initialItems);
+  const [rules, setRules] = useState(initialRules);
   const [busy, setBusy] = useState(false);
   const [username, setUsername] = useState("");
   const [alertMode, setAlertMode] = useState<"all" | "signals">("all");
+  const [manualTopic, setManualTopic] = useState("");
+  const [manualInterval, setManualInterval] = useState("300");
   const [pendingDelete, setPendingDelete] = useState<ProjectMonitorItem | null>(null);
   const [deleteAllOpen, setDeleteAllOpen] = useState(false);
+
+  // Tag enroll form
+  const [tagSlug, setTagSlug] = useState(tags[0]?.slug ?? "nft");
+  const [tagInterval, setTagInterval] = useState("3600");
+  const [tagTopic, setTagTopic] = useState("");
+  const [tagAlertMode, setTagAlertMode] = useState<"all" | "signals">("all");
+  const [tagMax, setTagMax] = useState("1000");
 
   const refresh = useCallback(async () => {
     setBusy(true);
     try {
-      const res = await proxy("/api/monitors");
-      if (res.ok) {
-        const body = res.body as { items: ProjectMonitorItem[] };
+      const [mRes, rRes] = await Promise.all([
+        proxy("/api/monitors"),
+        proxy("/api/monitors/tag-rules"),
+      ]);
+      if (mRes.ok) {
+        const body = mRes.body as { items: ProjectMonitorItem[] };
         setItems(body.items ?? []);
+      }
+      if (rRes.ok) {
+        const body = rRes.body as { items: ProjectMonitorTagRule[] };
+        setRules(body.items ?? []);
       }
     } finally {
       setBusy(false);
@@ -62,7 +108,13 @@ export function MonitorsPanel({ initialItems }: { initialItems: ProjectMonitorIt
     try {
       const res = await proxy("/api/monitors", {
         method: "POST",
-        body: { username: raw, alertMode, source: "manual" },
+        body: {
+          username: raw,
+          alertMode,
+          source: "manual",
+          intervalSec: Math.max(60, Number(manualInterval) || 300),
+          topicId: manualTopic === "" ? null : Number(manualTopic),
+        },
       });
       if (res.ok) {
         toast.success(`Monitoring @${(res.body as ProjectMonitorItem).username ?? raw}`);
@@ -74,6 +126,75 @@ export function MonitorsPanel({ initialItems }: { initialItems: ProjectMonitorIt
         if (err.startsWith("user_not_found")) toast.error(`Could not find @${raw}`);
         else toast.error(err);
       }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function enrollByTag(e: React.FormEvent) {
+    e.preventDefault();
+    if (!tagSlug.trim()) {
+      toast.error("Pick a tag");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await proxy("/api/monitors/enroll-by-tag", {
+        method: "POST",
+        body: {
+          tagSlug: tagSlug.trim().toLowerCase(),
+          createRule: true,
+          enabled: true,
+          intervalSec: Math.max(60, Number(tagInterval) || 3600),
+          topicId: tagTopic === "" ? null : Number(tagTopic),
+          alertMode: tagAlertMode,
+          maxProjects: Math.max(1, Number(tagMax) || 1000),
+        },
+      });
+      if (res.ok) {
+        const b = res.body as {
+          scanned?: number;
+          enrolled?: number;
+          updated?: number;
+          tagSlug?: string;
+        };
+        toast.success(
+          `Tag “${b.tagSlug}”: scanned ${b.scanned ?? 0} · +${b.enrolled ?? 0} new · ${b.updated ?? 0} updated`,
+        );
+        await refresh();
+      } else {
+        const b = res.body as { error?: string } | null;
+        toast.error(b?.error ?? `Error ${res.status}`);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleRule(rule: ProjectMonitorTagRule) {
+    setBusy(true);
+    try {
+      const res = await proxy("/api/monitors/tag-rules", {
+        method: "POST",
+        body: { tagSlug: rule.tagSlug, enabled: !rule.enabled },
+      });
+      if (res.ok) {
+        toast.success(rule.enabled ? "Rule paused" : "Rule enabled");
+        await refresh();
+      } else toast.error("Update failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteRule(id: string) {
+    setBusy(true);
+    try {
+      const res = await proxy(`/api/monitors/tag-rules/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Rule deleted (monitors kept)");
+        await refresh();
+      } else toast.error("Delete failed");
     } finally {
       setBusy(false);
     }
@@ -247,51 +368,197 @@ export function MonitorsPanel({ initialItems }: { initialItems: ProjectMonitorIt
       </div>
 
       {canWrite ? (
-        <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Radar className="size-4 text-primary" />
-              Monitor a user
-            </CardTitle>
-            <CardDescription>
-              List is empty until you add someone. Polls{" "}
-              <code className="text-[11px]">getUserTweets</code> → Telegram{" "}
-              <strong>monitor</strong>. Nothing is added automatically.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={add} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-              <Input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="@username"
-                className="w-full font-mono sm:w-48"
-                autoComplete="off"
-              />
-              <select
-                value={alertMode}
-                onChange={(e) => setAlertMode(e.target.value as "all" | "signals")}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Radar className="size-4 text-primary" />
+                Monitor one user
+              </CardTitle>
+              <CardDescription>
+                Cheap path: <code className="text-[11px]">usersByIds</code> tweetCount check →
+                only then <code className="text-[11px]">getUserTweets</code>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={add}
+                className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
               >
-                <option value="all">Every post</option>
-                <option value="signals">Signals only (mint/TGE/…)</option>
-              </select>
-              <Button type="submit" disabled={busy || !username.trim()}>
-                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-                Monitor
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                <Input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="@username"
+                  className="w-full font-mono sm:w-40"
+                  autoComplete="off"
+                />
+                <select
+                  value={alertMode}
+                  onChange={(e) => setAlertMode(e.target.value as "all" | "signals")}
+                  className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  <option value="all">Every post</option>
+                  <option value="signals">Signals only</option>
+                </select>
+                <select
+                  value={manualInterval}
+                  onChange={(e) => setManualInterval(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                  title="Check interval"
+                >
+                  {INTERVAL_PRESETS.map((o) => (
+                    <option key={o.sec} value={String(o.sec)}>
+                      every {o.label}
+                    </option>
+                  ))}
+                </select>
+                <TopicPicker
+                  value={manualTopic}
+                  compact
+                  showMeta={false}
+                  emptyLabel="Default topic"
+                  className="min-w-[8rem]"
+                  onChange={setManualTopic}
+                />
+                <Button type="submit" disabled={busy || !username.trim()}>
+                  {busy ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="size-3.5" />
+                  )}
+                  Monitor
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="text-base">Enroll by tag</CardTitle>
+              <CardDescription>
+                e.g. all <strong>nft</strong> projects (up to max). Sets shared interval + TG
+                topic. Scales to ~1k via tweetCount prefilter.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={enrollByTag}
+                className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
+              >
+                <select
+                  value={tagSlug}
+                  onChange={(e) => setTagSlug(e.target.value)}
+                  className="h-9 min-w-[7rem] rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  {tags.length === 0 ? (
+                    <option value={tagSlug}>{tagSlug}</option>
+                  ) : (
+                    tags.map((t) => (
+                      <option key={t.slug} value={t.slug}>
+                        {t.label || t.slug}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <select
+                  value={tagInterval}
+                  onChange={(e) => setTagInterval(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  {INTERVAL_PRESETS.map((o) => (
+                    <option key={o.sec} value={String(o.sec)}>
+                      every {o.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={tagAlertMode}
+                  onChange={(e) => setTagAlertMode(e.target.value as "all" | "signals")}
+                  className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  <option value="all">Every post</option>
+                  <option value="signals">Signals only</option>
+                </select>
+                <TopicPicker
+                  value={tagTopic}
+                  compact
+                  showMeta={false}
+                  emptyLabel="Default topic"
+                  className="min-w-[8rem]"
+                  onChange={setTagTopic}
+                />
+                <Input
+                  type="number"
+                  value={tagMax}
+                  onChange={(e) => setTagMax(e.target.value)}
+                  className="w-24"
+                  min={1}
+                  max={5000}
+                  title="Max projects"
+                />
+                <Button type="submit" disabled={busy || !tagSlug.trim()}>
+                  {busy ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="size-3.5" />
+                  )}
+                  Enroll tag
+                </Button>
+              </form>
+              {rules.length > 0 ? (
+                <ul className="mt-3 space-y-1.5 border-t border-border/50 pt-3 text-xs">
+                  {rules.map((r) => (
+                    <li
+                      key={r.id}
+                      className="flex flex-wrap items-center justify-between gap-2"
+                    >
+                      <span>
+                        <Badge variant={r.enabled ? "success" : "muted"} className="mr-1 text-[10px]">
+                          {r.tagSlug}
+                        </Badge>
+                        every {formatInterval(r.intervalSec)}
+                        {r.topicId != null ? ` · topic ${r.topicId}` : ""}
+                        {" · "}
+                        {r.enrolledCount} enrolled
+                      </span>
+                      <span className="flex gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7"
+                          disabled={busy}
+                          onClick={() => void toggleRule(r)}
+                        >
+                          {r.enabled ? "Off" : "On"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-destructive"
+                          disabled={busy}
+                          onClick={() => void deleteRule(r.id)}
+                        >
+                          <Trash2 className="size-3" />
+                        </Button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </CardContent>
+          </Card>
+        </div>
       ) : null}
 
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-border/60 py-3">
-          <CardTitle className="text-base">Monitored users</CardTitle>
+          <CardTitle className="text-base">Monitored projects</CardTitle>
           <CardDescription>
-            Each row is one @username timeline. Polled ~every 2 min. First poll seeds last record
-            only (no history flood). After downtime use <strong>Skip backlog</strong> to set last
-            record to now so old posts are not alerted.
+            Job runs often; each row only does a cheap tweetCount check when its interval is due.
+            Timeline fetch only if count increased. Username renames detected via rest id.
+            Use <strong>Skip backlog</strong> after downtime.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -360,6 +627,20 @@ export function MonitorsPanel({ initialItems }: { initialItems: ProjectMonitorIt
                             heat {m.heatAtEnroll}
                           </Badge>
                         ) : null}
+                        <Badge variant="muted" className="text-[10px]">
+                          every {formatInterval(m.intervalSec ?? 300)}
+                        </Badge>
+                        {m.lastTweetCount != null ? (
+                          <Badge variant="muted" className="text-[10px]">
+                            tweets {m.lastTweetCount}
+                          </Badge>
+                        ) : null}
+                        {m.usernameChangedAt || m.previousUsername ? (
+                          <Badge variant="destructive" className="text-[10px]">
+                            renamed
+                            {m.previousUsername ? ` from @${m.previousUsername}` : ""}
+                          </Badge>
+                        ) : null}
                         <span className="text-[11px] text-muted-foreground">
                           alerts {m.alertCount}
                           {m.lastPolledAt ? ` · polled ${fmtDate(m.lastPolledAt)}` : " · never polled"}
@@ -368,6 +649,9 @@ export function MonitorsPanel({ initialItems }: { initialItems: ProjectMonitorIt
                             : " · no last record"}
                         </span>
                       </div>
+                      <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                        id {m.twitterUserId}
+                      </p>
                       {m.lastError ? (
                         <p className="mt-1 text-xs text-destructive">{m.lastError}</p>
                       ) : null}
@@ -386,6 +670,30 @@ export function MonitorsPanel({ initialItems }: { initialItems: ProjectMonitorIt
                           >
                             <option value="all">Every post</option>
                             <option value="signals">Signals only</option>
+                          </select>
+                          <select
+                            value={String(m.intervalSec ?? 300)}
+                            disabled={busy}
+                            onChange={(e) =>
+                              void patch(
+                                m.id,
+                                { intervalSec: Number(e.target.value) },
+                                `Interval ${formatInterval(Number(e.target.value))}`,
+                              )
+                            }
+                            className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                            title="Check interval"
+                          >
+                            {INTERVAL_PRESETS.map((o) => (
+                              <option key={o.sec} value={String(o.sec)}>
+                                {o.label}
+                              </option>
+                            ))}
+                            {!INTERVAL_PRESETS.some((o) => o.sec === (m.intervalSec ?? 300)) ? (
+                              <option value={String(m.intervalSec)}>
+                                {formatInterval(m.intervalSec ?? 300)}
+                              </option>
+                            ) : null}
                           </select>
                           <Button
                             type="button"

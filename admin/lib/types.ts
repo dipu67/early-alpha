@@ -351,11 +351,31 @@ export interface ProjectMonitorItem {
   alertMode: string;
   alertEnabled: boolean;
   topicId: number | null;
+  intervalSec: number;
   lastTweetId: string | null;
+  lastTweetCount: number | null;
   lastPolledAt: string | null;
   lastError: string | null;
   alertCount: number;
   heatAtEnroll: number | null;
+  previousUsername: string | null;
+  usernameChangedAt: string | null;
+  createdAt: string;
+}
+
+/** Tag → enroll all projects rule for user monitor. */
+export interface ProjectMonitorTagRule {
+  id: string;
+  tagSlug: string;
+  enabled: boolean;
+  intervalSec: number;
+  topicId: number | null;
+  alertMode: string;
+  alertEnabled: boolean;
+  maxProjects: number;
+  lastEnrollAt: string | null;
+  lastRunAt: string | null;
+  enrolledCount: number;
   createdAt: string;
 }
 

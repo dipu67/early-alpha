@@ -56,8 +56,6 @@ browser ──(session cookie)──> Next.js admin (:3000)
 | seed-full-sync | daily 03:00 UTC | Full seed sync |
 | daily-digest | daily 09:00 UTC | Seed digest |
 | health-check | every 6h | Health |
-| list-reconcile | every 1h | Project list reconcile |
-| list-poll | every 5m | List membership poll |
 | early-digest | 09:00 & 21:00 UTC | Early-project digest |
 | search-poll | every 1m | Search queries |
 | list-monitor-poll | every 1m | Public list monitors |

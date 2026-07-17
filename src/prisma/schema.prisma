@@ -569,17 +569,19 @@ model TelegramTopic {
 }
 
 /// Live tweet monitor for high-potential project accounts.
-/// Polls getUserTweets, watermarks lastTweetId, Telegram alert on new posts.
+/// Cheap path: getUsersByIds → compare tweetCount; only then getUserTweets.
+/// Watermark lastTweetId; Telegram alert on new posts.
 model ProjectMonitor {
   id            BigInt    @id @default(autoincrement())
-  twitterUserId String    @map("twitter_user_id")
-  username      String    @unique
+  /// Stable X rest id — unique (usernames change).
+  twitterUserId String    @unique @map("twitter_user_id")
+  username      String
   name          String    @default("")
-  /// Primary tag slug for topic routing (from classify)
+  /// Primary tag slug for topic routing (from classify / tag enroll)
   primaryTag    String?   @map("primary_tag")
   tags          String[]  @default([])
   isActive      Boolean   @default(true) @map("is_active")
-  /// manual | hunter | stage — auto-enroll can drop hunter/stage when cold
+  /// manual | hunter | stage | tag | signal
   source        String    @default("manual")
   /// all = every new post; signals = mint/TGE/launch lexicon only
   alertMode     String    @default("all") @map("alert_mode")
@@ -587,18 +589,46 @@ model ProjectMonitor {
   alertEnabled  Boolean   @default(true) @map("alert_enabled")
   /// Optional forum topic override
   topicId       Int?      @map("topic_id")
+  /// Min seconds between cheap tweetCount checks for this row
+  intervalSec   Int       @default(300) @map("interval_sec")
   lastTweetId   String?   @map("last_tweet_id")
+  /// Last statuses_count from UsersByRestIds — skip getUserTweets if unchanged
+  lastTweetCount Int?     @map("last_tweet_count")
   lastPolledAt  DateTime? @map("last_polled_at") @db.Timestamptz
   lastError     String?   @map("last_error")
   alertCount    Int       @default(0) @map("alert_count")
   /// Heat at enroll time (hunter auto)
   heatAtEnroll  Float?    @map("heat_at_enroll")
+  /// Previous handle when X username changed (detection via usersByIds)
+  previousUsername String? @map("previous_username")
+  usernameChangedAt DateTime? @map("username_changed_at") @db.Timestamptz
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([isActive, lastPolledAt])
-  @@index([twitterUserId])
+  @@index([username])
+  @@index([primaryTag, isActive])
   @@map("project_monitors")
+}
+
+/// Tag-based monitor enrollment: e.g. all `nft` projects → poll every 1h → TG topic.
+model ProjectMonitorTagRule {
+  id            BigInt    @id @default(autoincrement())
+  tagSlug       String    @unique @map("tag_slug")
+  enabled       Boolean   @default(true)
+  /// Cheap check interval for enrolled projects (default 1h)
+  intervalSec   Int       @default(3600) @map("interval_sec")
+  topicId       Int?      @map("topic_id")
+  alertMode     String    @default("all") @map("alert_mode")
+  alertEnabled  Boolean   @default(true) @map("alert_enabled")
+  /// Cap projects enrolled from this tag
+  maxProjects   Int       @default(1000) @map("max_projects")
+  lastEnrollAt  DateTime? @map("last_enroll_at") @db.Timestamptz
+  lastRunAt     DateTime? @map("last_run_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("project_monitor_tag_rules")
 }
 
 /// Watch a public GitHub repo for new commits (and optional path filter).

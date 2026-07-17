@@ -18,8 +18,6 @@ export const SCHEDULERS: SchedulerDef[] = [
   { key: "seed-full-sync", queue: "seed-tracker", schedulerId: "seed-full-sync", jobName: "track-seeds", data: { fullSync: true }, defaultCron: "0 3 * * *", label: "Daily full sync" },
   { key: "daily-digest", queue: "seed-tracker", schedulerId: "daily-digest", jobName: "daily-digest", data: {}, defaultCron: "0 9 * * *", label: "Daily digest" },
   { key: "health-check", queue: "seed-tracker", schedulerId: "health-check", jobName: "health-check", data: {}, defaultEvery: 6 * 60 * 60 * 1000, label: "Health check" },
-  { key: "list-reconcile", queue: "list-tracker", schedulerId: "list-reconcile", jobName: "reconcile-lists", data: {}, defaultEvery: 60 * 60 * 1000, label: "List reconcile" },
-  { key: "list-poll", queue: "list-tracker", schedulerId: "list-poll", jobName: "poll-lists", data: {}, defaultEvery: 5 * 60 * 1000, label: "List poll" },
   { key: "early-digest", queue: "list-tracker", schedulerId: "early-digest", jobName: "early-digest", data: {}, defaultCron: "0 9,21 * * *", label: "Early-project digest (09:00 & 21:00 UTC)" },
   { key: "search-poll", queue: "list-tracker", schedulerId: "search-poll", jobName: "poll-searches", data: {}, defaultEvery: 60 * 1000, label: "Twitter search poll" },
   { key: "list-monitor-poll", queue: "list-tracker", schedulerId: "list-monitor-poll", jobName: "poll-list-monitors", data: {}, defaultEvery: 60 * 1000, label: "Public Twitter list monitors" },

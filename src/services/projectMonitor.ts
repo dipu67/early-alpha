@@ -1,12 +1,17 @@
-// Per-user timeline monitor (NOT Project Lists / getListTweets).
+// Per-user / tag-based project tweet monitor (NOT Project Lists).
 //
-// Polls getUserTweets for each monitored @username. First poll baselines
-// lastTweetId only; later polls alert on newer tweets via Telegram ("monitor").
-// No list membership required — fully independent of list-poller.
+// Cheap path (scale to 1k+ projects):
+//   1) getUsersByIds in batches of 100 → compare statuses_count (tweetCount)
+//   2) If tweetCount unchanged vs DB → skip (no new posts)
+//   3) If tweetCount increased (or first seed) → getUserTweets for that user only
+//   4) Only process tweets with snowflake id > lastTweetId
 //
-// alertMode:
-//   "all"     — every new post from that user
-//   "signals" — only posts matching mint/TGE/launch lexicon
+// Rate limits (per auth account, ~15 min window — rotate via pool):
+//   UsersByRestIds ~100 req, up to 100 ids/req
+//   UserTweets     ~50 req
+//
+// Username changes: usersByIds returns current screen_name by rest id; we update
+// monitor + twitter_accounts and set previousUsername / usernameChangedAt.
 
 import { prisma } from "../db/prisma.js";
 import type { TweetData, UserData } from "../TwitterClient/types.js";
@@ -24,8 +29,17 @@ import { getHotBoard } from "./hunter.js";
 import { prunePostAlertsForSlug } from "./postAlerts.js";
 
 const TWEETS_PER_USER = Number(process.env.MONITOR_POLL_COUNT ?? 20);
-const FETCH_DELAY_MS = Number(process.env.MONITOR_FETCH_DELAY_MS ?? 600);
-/** Max active auto-enrolled monitors (manual never auto-dropped). */
+const FETCH_DELAY_MS = Number(process.env.MONITOR_FETCH_DELAY_MS ?? 400);
+/** UsersByRestIds batch size (API allows up to ~100). */
+const USERS_BY_IDS_BATCH = Math.min(
+  Number(process.env.MONITOR_USERS_BATCH ?? 100),
+  100,
+);
+/** Soft cap UserTweets calls per poll cycle (RL ~50 / 15m per auth). */
+const MAX_TIMELINE_FETCHES = Number(process.env.MONITOR_MAX_TIMELINES ?? 50);
+/** Soft cap UsersByRestIds requests per cycle (RL ~100 / 15m per auth). */
+const MAX_USERS_BY_IDS_REQ = Number(process.env.MONITOR_MAX_USERS_REQ ?? 100);
+
 const AUTO_CAP = Number(process.env.MONITOR_AUTO_CAP ?? 40);
 const AUTO_MIN_HEAT = Number(process.env.MONITOR_AUTO_MIN_HEAT ?? 40);
 const AUTO_MAX_FOLLOWERS = Number(process.env.MONITOR_AUTO_MAX_FOLLOWERS ?? 80_000);
@@ -61,20 +75,22 @@ function postedAt(tweet: TweetData): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-export type MonitorSource = "manual" | "hunter" | "stage" | "signal";
+export type MonitorSource = "manual" | "hunter" | "stage" | "signal" | "tag";
 export type MonitorAlertMode = "all" | "signals";
 
 export interface AddMonitorOpts {
   username: string;
-  /** Skip Twitter resolve if already known. */
   twitterUserId?: string;
   name?: string;
   source?: MonitorSource;
   alertMode?: MonitorAlertMode;
   alertEnabled?: boolean;
   topicId?: number | null;
+  intervalSec?: number;
   heatAtEnroll?: number | null;
   profile?: UserData | null;
+  primaryTag?: string | null;
+  tags?: string[];
 }
 
 export interface MonitorView {
@@ -89,15 +105,19 @@ export interface MonitorView {
   alertMode: string;
   alertEnabled: boolean;
   topicId: number | null;
+  intervalSec: number;
   lastTweetId: string | null;
+  lastTweetCount: number | null;
   lastPolledAt: Date | null;
   lastError: string | null;
   alertCount: number;
   heatAtEnroll: number | null;
+  previousUsername: string | null;
+  usernameChangedAt: Date | null;
   createdAt: Date;
 }
 
-function viewRow(m: {
+type MonitorRow = {
   id: bigint;
   twitterUserId: string;
   username: string;
@@ -109,13 +129,19 @@ function viewRow(m: {
   alertMode: string;
   alertEnabled: boolean;
   topicId: number | null;
+  intervalSec: number;
   lastTweetId: string | null;
+  lastTweetCount: number | null;
   lastPolledAt: Date | null;
   lastError: string | null;
   alertCount: number;
   heatAtEnroll: number | null;
+  previousUsername: string | null;
+  usernameChangedAt: Date | null;
   createdAt: Date;
-}): MonitorView {
+};
+
+function viewRow(m: MonitorRow): MonitorView {
   return {
     id: m.id.toString(),
     twitterUserId: m.twitterUserId,
@@ -128,16 +154,26 @@ function viewRow(m: {
     alertMode: m.alertMode,
     alertEnabled: m.alertEnabled,
     topicId: m.topicId,
+    intervalSec: m.intervalSec,
     lastTweetId: m.lastTweetId,
+    lastTweetCount: m.lastTweetCount,
     lastPolledAt: m.lastPolledAt,
     lastError: m.lastError,
     alertCount: m.alertCount,
     heatAtEnroll: m.heatAtEnroll,
+    previousUsername: m.previousUsername,
+    usernameChangedAt: m.usernameChangedAt,
     createdAt: m.createdAt,
   };
 }
 
-/** Resolve username via Twitter and upsert a ProjectMonitor. */
+function isDue(row: MonitorRow, now = Date.now()): boolean {
+  if (!row.lastPolledAt) return true;
+  const intervalMs = Math.max(30, row.intervalSec) * 1000;
+  return now - row.lastPolledAt.getTime() >= intervalMs;
+}
+
+/** Resolve username via Twitter and upsert a ProjectMonitor (keyed by rest id). */
 export async function addMonitor(opts: AddMonitorOpts): Promise<MonitorView> {
   const screenName = opts.username.replace(/^@/, "").trim();
   if (!/^[A-Za-z0-9_]{1,15}$/.test(screenName)) {
@@ -145,17 +181,10 @@ export async function addMonitor(opts: AddMonitorOpts): Promise<MonitorView> {
   }
   const usernameKey = screenName.toLowerCase();
 
-  const existing = await prisma.projectMonitor.findUnique({
-    where: { username: usernameKey },
-  });
-  if (existing?.isActive) {
-    return viewRow(existing);
-  }
-
   let twitterUserId = opts.twitterUserId?.trim();
   let name = opts.name ?? "";
   let profile = opts.profile ?? null;
-  let tags: string[] = [];
+  let tags: string[] = opts.tags ?? [];
 
   if (!twitterUserId || !profile) {
     const { client, accountId } = await getTwitterClient();
@@ -173,11 +202,22 @@ export async function addMonitor(opts: AddMonitorOpts): Promise<MonitorView> {
     name = result.user.name ?? name;
   }
 
-  tags = await classifyAccount(profile);
-  const primaryTag =
-    tags.find((t) => t !== DEFAULT_SLUG && t !== "unknown") ?? tags[0] ?? null;
+  const existing = await prisma.projectMonitor.findUnique({
+    where: { twitterUserId },
+  });
+  if (existing?.isActive && opts.source !== "tag" && opts.source !== "manual") {
+    return viewRow(existing as MonitorRow);
+  }
 
-  // Keep TwitterAccount in sync for hunter / projects
+  if (tags.length === 0) {
+    tags = await classifyAccount(profile);
+  }
+  const primaryTag =
+    opts.primaryTag ??
+    tags.find((t) => t !== DEFAULT_SLUG && t !== "unknown") ??
+    tags[0] ??
+    null;
+
   await prisma.twitterAccount.upsert({
     where: { id: twitterUserId },
     create: {
@@ -200,6 +240,7 @@ export async function addMonitor(opts: AddMonitorOpts): Promise<MonitorView> {
       description: profile.description ?? null,
       tags,
       followersCount: profile.followersCount ?? null,
+      ...(profile.tweetCount != null ? { tweetCount: profile.tweetCount } : {}),
       isBlueVerified: profile.isBlueVerified ?? null,
     },
   });
@@ -216,8 +257,12 @@ export async function addMonitor(opts: AddMonitorOpts): Promise<MonitorView> {
     alertMode: opts.alertMode ?? "all",
     alertEnabled: opts.alertEnabled ?? true,
     topicId: opts.topicId ?? null,
+    intervalSec: opts.intervalSec ?? 300,
     heatAtEnroll: opts.heatAtEnroll ?? null,
     lastError: null as string | null,
+    ...(profile.tweetCount != null
+      ? { lastTweetCount: profile.tweetCount }
+      : {}),
   };
 
   const row = existing
@@ -225,32 +270,279 @@ export async function addMonitor(opts: AddMonitorOpts): Promise<MonitorView> {
         where: { id: existing.id },
         data: {
           ...data,
-          // Manual re-add upgrades source to manual so auto-drop won't remove
-          source: opts.source ?? "manual",
+          source:
+            opts.source === "manual" || existing.source === "manual"
+              ? opts.source === "manual"
+                ? "manual"
+                : existing.source
+              : (opts.source ?? existing.source),
         },
       })
     : await prisma.projectMonitor.create({ data });
 
-  return viewRow(row);
+  return viewRow(row as MonitorRow);
 }
 
 export async function listMonitors(): Promise<MonitorView[]> {
   const items = await prisma.projectMonitor.findMany({
     orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
   });
-  return items.map(viewRow);
+  return items.map((m) => viewRow(m as MonitorRow));
+}
+
+// ── Tag rules ──────────────────────────────────────────────────────────
+
+export interface TagRuleView {
+  id: string;
+  tagSlug: string;
+  enabled: boolean;
+  intervalSec: number;
+  topicId: number | null;
+  alertMode: string;
+  alertEnabled: boolean;
+  maxProjects: number;
+  lastEnrollAt: Date | null;
+  lastRunAt: Date | null;
+  enrolledCount: number;
+  createdAt: Date;
+}
+
+export async function listTagRules(): Promise<TagRuleView[]> {
+  const rules = await prisma.projectMonitorTagRule.findMany({
+    orderBy: { tagSlug: "asc" },
+  });
+  const out: TagRuleView[] = [];
+  for (const r of rules) {
+    const enrolledCount = await prisma.projectMonitor.count({
+      where: {
+        isActive: true,
+        source: "tag",
+        OR: [{ primaryTag: r.tagSlug }, { tags: { has: r.tagSlug } }],
+      },
+    });
+    out.push({
+      id: r.id.toString(),
+      tagSlug: r.tagSlug,
+      enabled: r.enabled,
+      intervalSec: r.intervalSec,
+      topicId: r.topicId,
+      alertMode: r.alertMode,
+      alertEnabled: r.alertEnabled,
+      maxProjects: r.maxProjects,
+      lastEnrollAt: r.lastEnrollAt,
+      lastRunAt: r.lastRunAt,
+      enrolledCount,
+      createdAt: r.createdAt,
+    });
+  }
+  return out;
+}
+
+export async function upsertTagRule(input: {
+  tagSlug: string;
+  enabled?: boolean;
+  intervalSec?: number;
+  topicId?: number | null;
+  alertMode?: MonitorAlertMode;
+  alertEnabled?: boolean;
+  maxProjects?: number;
+}): Promise<TagRuleView> {
+  const tagSlug = input.tagSlug.trim().toLowerCase();
+  if (!tagSlug) throw new Error("tag_required");
+
+  const row = await prisma.projectMonitorTagRule.upsert({
+    where: { tagSlug },
+    create: {
+      tagSlug,
+      enabled: input.enabled ?? true,
+      intervalSec: input.intervalSec ?? 3600,
+      topicId: input.topicId ?? null,
+      alertMode: input.alertMode ?? "all",
+      alertEnabled: input.alertEnabled ?? true,
+      maxProjects: input.maxProjects ?? 1000,
+    },
+    update: {
+      ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
+      ...(input.intervalSec !== undefined
+        ? { intervalSec: Math.max(60, input.intervalSec) }
+        : {}),
+      ...(input.topicId !== undefined ? { topicId: input.topicId } : {}),
+      ...(input.alertMode !== undefined ? { alertMode: input.alertMode } : {}),
+      ...(input.alertEnabled !== undefined
+        ? { alertEnabled: input.alertEnabled }
+        : {}),
+      ...(input.maxProjects !== undefined
+        ? { maxProjects: Math.max(1, Math.min(5000, input.maxProjects)) }
+        : {}),
+    },
+  });
+
+  const rules = await listTagRules();
+  return rules.find((r) => r.tagSlug === tagSlug)!;
 }
 
 /**
- * Poll one monitor. First poll seeds watermark only.
- * Returns counts of new tweets processed / alerts sent.
+ * Enroll all TwitterAccounts that have this tag into ProjectMonitor.
+ * Applies interval / topic / alert settings from the tag rule.
+ */
+export async function enrollByTag(tagSlug: string): Promise<{
+  tagSlug: string;
+  scanned: number;
+  enrolled: number;
+  updated: number;
+  ruleId: string;
+}> {
+  const slug = tagSlug.trim().toLowerCase();
+  const rule = await prisma.projectMonitorTagRule.findUnique({
+    where: { tagSlug: slug },
+  });
+  if (!rule) throw new Error("tag_rule_not_found");
+  if (!rule.enabled) throw new Error("tag_rule_disabled");
+
+  const accounts = await prisma.twitterAccount.findMany({
+    where: { tags: { has: slug } },
+    orderBy: { firstSeenAt: "desc" },
+    take: rule.maxProjects,
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      tags: true,
+      tweetCount: true,
+      followersCount: true,
+      isBlueVerified: true,
+      description: true,
+    },
+  });
+
+  let enrolled = 0;
+  let updated = 0;
+
+  for (const acc of accounts) {
+    const existing = await prisma.projectMonitor.findUnique({
+      where: { twitterUserId: acc.id },
+    });
+
+    const profile: UserData = {
+      id: acc.id,
+      username: acc.username,
+      name: acc.name,
+    };
+    if (acc.description != null) profile.description = acc.description;
+    if (acc.followersCount != null) profile.followersCount = acc.followersCount;
+    if (acc.tweetCount != null) profile.tweetCount = acc.tweetCount;
+    if (acc.isBlueVerified != null) profile.isBlueVerified = acc.isBlueVerified;
+
+    if (existing) {
+      await prisma.projectMonitor.update({
+        where: { id: existing.id },
+        data: {
+          isActive: true,
+          username: acc.username.toLowerCase(),
+          name: acc.name,
+          primaryTag: slug,
+          tags: acc.tags,
+          topicId: rule.topicId,
+          alertMode: rule.alertMode,
+          alertEnabled: rule.alertEnabled,
+          intervalSec: rule.intervalSec,
+          // Don't downgrade manual → tag source
+          source: existing.source === "manual" ? "manual" : "tag",
+          lastError: null,
+          ...(acc.tweetCount != null && existing.lastTweetCount == null
+            ? { lastTweetCount: acc.tweetCount }
+            : {}),
+        },
+      });
+      updated++;
+      continue;
+    }
+
+    await addMonitor({
+      username: acc.username,
+      twitterUserId: acc.id,
+      name: acc.name,
+      source: "tag",
+      alertMode: (rule.alertMode === "signals" ? "signals" : "all") as MonitorAlertMode,
+      alertEnabled: rule.alertEnabled,
+      topicId: rule.topicId,
+      intervalSec: rule.intervalSec,
+      primaryTag: slug,
+      tags: acc.tags,
+      profile,
+    });
+    enrolled++;
+  }
+
+  await prisma.projectMonitorTagRule.update({
+    where: { id: rule.id },
+    data: { lastEnrollAt: new Date() },
+  });
+
+  // Propagate interval/topic to all active tag monitors for this slug
+  await prisma.projectMonitor.updateMany({
+    where: {
+      isActive: true,
+      OR: [{ primaryTag: slug }, { tags: { has: slug } }],
+      source: { in: ["tag", "hunter", "stage", "signal"] },
+    },
+    data: {
+      intervalSec: rule.intervalSec,
+      topicId: rule.topicId,
+      alertMode: rule.alertMode,
+      alertEnabled: rule.alertEnabled,
+    },
+  });
+
+  console.log(
+    `[monitor] enroll-by-tag ${slug} scanned=${accounts.length} enrolled=${enrolled} updated=${updated}`,
+  );
+
+  return {
+    tagSlug: slug,
+    scanned: accounts.length,
+    enrolled,
+    updated,
+    ruleId: rule.id.toString(),
+  };
+}
+
+// ── Poll: tweetCount prefilter → selective getUserTweets ───────────────
+
+/**
+ * Fetch timeline for one monitor (after tweetCount said "maybe new").
+ * First poll with empty lastTweetId seeds watermark only.
  */
 export async function pollMonitor(
   monitorId: bigint,
-): Promise<{ fetched: number; fresh: number; alerted: number; seeded?: boolean; error?: string }> {
+  opts: { forceTimeline?: boolean } = {},
+): Promise<{
+  fetched: number;
+  fresh: number;
+  alerted: number;
+  seeded?: boolean;
+  skipped?: boolean;
+  usernameChanged?: boolean;
+  error?: string;
+}> {
   const row = await prisma.projectMonitor.findUnique({ where: { id: monitorId } });
   if (!row || !row.isActive) return { fetched: 0, fresh: 0, alerted: 0 };
 
+  // Force full path when explicitly requested; otherwise still allow single poll
+  if (!opts.forceTimeline) {
+    // Single-monitor poll always does timeline (UI "Poll" button)
+  }
+
+  return fetchTimelineAndAlert(row as MonitorRow);
+}
+
+async function fetchTimelineAndAlert(row: MonitorRow): Promise<{
+  fetched: number;
+  fresh: number;
+  alerted: number;
+  seeded?: boolean;
+  error?: string;
+}> {
   let client;
   let accountId: bigint;
   try {
@@ -260,7 +552,7 @@ export async function pollMonitor(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await prisma.projectMonitor.update({
-      where: { id: monitorId },
+      where: { id: row.id },
       data: { lastError: msg, lastPolledAt: new Date() },
     });
     return { fetched: 0, fresh: 0, alerted: 0, error: msg };
@@ -277,7 +569,7 @@ export async function pollMonitor(
       await markAuthInvalid(accountId, msg);
     }
     await prisma.projectMonitor.update({
-      where: { id: monitorId },
+      where: { id: row.id },
       data: { lastError: msg, lastPolledAt: new Date() },
     });
     return { fetched: 0, fresh: 0, alerted: 0, error: msg };
@@ -289,7 +581,7 @@ export async function pollMonitor(
   // First poll: baseline only
   if (!row.lastTweetId) {
     await prisma.projectMonitor.update({
-      where: { id: monitorId },
+      where: { id: row.id },
       data: {
         lastTweetId: newest,
         lastPolledAt: new Date(),
@@ -310,10 +602,14 @@ export async function pollMonitor(
     if (did) alerted++;
   }
 
+  // Only advance watermark forward
+  const advanced =
+    newest && toId(newest) > cutoff ? newest : row.lastTweetId;
+
   await prisma.projectMonitor.update({
-    where: { id: monitorId },
+    where: { id: row.id },
     data: {
-      lastTweetId: newest ?? row.lastTweetId,
+      lastTweetId: advanced,
       lastPolledAt: new Date(),
       lastError: null,
       ...(alerted > 0 ? { alertCount: { increment: alerted } } : {}),
@@ -337,11 +633,9 @@ async function handleMonitorTweet(
   },
   tweet: TweetData,
 ): Promise<boolean> {
-  // Dedupe by tweet id (shared with list poller so one TG message max)
   const seen = await prisma.postAlert.findUnique({ where: { tweetId: tweet.id } });
   if (seen) return false;
 
-  // Optional tag only for signal lexicon matching — never requires list membership
   const tagHint =
     row.primaryTag && row.primaryTag !== "unknown"
       ? row.primaryTag
@@ -352,15 +646,13 @@ async function handleMonitorTweet(
 
   if (mode === "signals" && signals.length === 0) return false;
 
-  // Record PostAlert for dedupe (even if Telegram muted)
   const feedSlug = `user:@${row.username}`;
   try {
     await prisma.postAlert.create({
       data: {
         tweetId: tweet.id,
         accountId: row.twitterUserId,
-        username: row.username,
-        // User-timeline source — not a ProjectList slug
+        username: tweet.author.username || row.username,
         slug: feedSlug,
         signals: signals.length > 0 ? signals : mode === "all" ? ["post"] : [],
         text: tweet.text,
@@ -370,7 +662,6 @@ async function handleMonitorTweet(
   } catch {
     return false;
   }
-  // Cap monitor feed rows per user slug (same 20 as tag feed)
   try {
     await prunePostAlertsForSlug(feedSlug);
   } catch (err) {
@@ -391,52 +682,275 @@ async function handleMonitorTweet(
     alertMode: mode,
   });
 
-  // Topic: per-user override only. Else Telegram alert-type "monitor" routing
-  // (never ProjectList / tag topic maps).
   const thread = row.topicId != null ? row.topicId : undefined;
-
   await sendTelegramAlert(msg, "MarkdownV2", thread, "monitor");
   return true;
 }
 
-/** Poll all active monitors (oldest lastPolled first). */
+/**
+ * Efficient bulk poll:
+ *   usersByIds (100/batch) → tweetCount delta → getUserTweets only when needed.
+ * Also detects username changes by rest id.
+ */
 export async function pollAllMonitors(): Promise<{
-  polled: number;
+  due: number;
+  checked: number;
+  skippedUnchanged: number;
+  timelines: number;
   alerted: number;
+  usernameChanges: number;
+  missing: number;
   errors: number;
 }> {
-  const items = await prisma.projectMonitor.findMany({
+  const now = Date.now();
+  const allActive = await prisma.projectMonitor.findMany({
     where: { isActive: true },
     orderBy: { lastPolledAt: { sort: "asc", nulls: "first" } },
   });
 
-  let polled = 0;
-  let alerted = 0;
-  let errors = 0;
+  const due = allActive.filter((m) => isDue(m as MonitorRow, now)) as MonitorRow[];
 
-  for (const m of items) {
+  let checked = 0;
+  let skippedUnchanged = 0;
+  let timelines = 0;
+  let alerted = 0;
+  let usernameChanges = 0;
+  let missing = 0;
+  let errors = 0;
+  let usersByIdsReqs = 0;
+  let timelineBudget = MAX_TIMELINE_FETCHES;
+
+  // Mark tag rules lastRunAt
+  await prisma.projectMonitorTagRule.updateMany({
+    where: { enabled: true },
+    data: { lastRunAt: new Date() },
+  });
+
+  if (due.length === 0) {
+    console.log(`[monitor] poll-all nothing due (active=${allActive.length})`);
+    return {
+      due: 0,
+      checked: 0,
+      skippedUnchanged: 0,
+      timelines: 0,
+      alerted: 0,
+      usernameChanges: 0,
+      missing: 0,
+      errors: 0,
+    };
+  }
+
+  let client;
+  let accountId: bigint;
+  try {
+    const resolved = await getTwitterClient();
+    client = resolved.client;
+    accountId = resolved.accountId;
+  } catch (err) {
+    console.error("[monitor] poll-all no twitter client:", err);
+    return {
+      due: due.length,
+      checked: 0,
+      skippedUnchanged: 0,
+      timelines: 0,
+      alerted: 0,
+      usernameChanges: 0,
+      missing: 0,
+      errors: 1,
+    };
+  }
+
+  /** Monitors that need a timeline fetch after tweetCount check. */
+  const needTimeline: MonitorRow[] = [];
+
+  for (let i = 0; i < due.length; i += USERS_BY_IDS_BATCH) {
+    if (usersByIdsReqs >= MAX_USERS_BY_IDS_REQ) {
+      console.warn(
+        `[monitor] usersByIds request budget exhausted (${MAX_USERS_BY_IDS_REQ})`,
+      );
+      break;
+    }
+
+    const chunk = due.slice(i, i + USERS_BY_IDS_BATCH);
+    const ids = chunk.map((m) => m.twitterUserId);
+    usersByIdsReqs++;
+
+    const res = await client.getUsersByIds(ids);
+    if (res.rateLimit && res.rateLimit.remaining === 0) {
+      await markRateLimited(accountId, res.rateLimit.reset);
+    }
+    if (!res.success) {
+      errors++;
+      const msg = res.error ?? "getUsersByIds failed";
+      if (isTwitterAuthError(msg)) await markAuthInvalid(accountId, msg);
+      console.warn(`[monitor] getUsersByIds: ${msg}`);
+      // Fall back: mark chunk errors but continue other chunks
+      for (const m of chunk) {
+        await prisma.projectMonitor.update({
+          where: { id: m.id },
+          data: { lastError: msg, lastPolledAt: new Date() },
+        });
+      }
+      continue;
+    }
+
+    const byId = new Map((res.users ?? []).map((u) => [u.id, u]));
+
+    for (const m of chunk) {
+      checked++;
+      const u = byId.get(m.twitterUserId);
+
+      if (!u) {
+        missing++;
+        await prisma.projectMonitor.update({
+          where: { id: m.id },
+          data: {
+            lastError: "user_not_found_or_suspended",
+            lastPolledAt: new Date(),
+          },
+        });
+        continue;
+      }
+
+      const liveUsername = (u.username ?? m.username).toLowerCase();
+      const liveName = u.name ?? m.name;
+      const liveCount =
+        typeof u.tweetCount === "number" ? u.tweetCount : null;
+
+      let usernameChanged = false;
+      if (liveUsername && liveUsername !== m.username.toLowerCase()) {
+        usernameChanged = true;
+        usernameChanges++;
+        console.log(
+          `[monitor] username change id=${m.twitterUserId} @${m.username} → @${liveUsername}`,
+        );
+      }
+
+      // Keep TwitterAccount in sync (username + counts)
+      try {
+        await prisma.twitterAccount.update({
+          where: { id: m.twitterUserId },
+          data: {
+            username: liveUsername,
+            name: liveName,
+            ...(liveCount != null ? { tweetCount: liveCount } : {}),
+            ...(u.followersCount != null
+              ? { followersCount: u.followersCount }
+              : {}),
+            ...(u.isBlueVerified != null
+              ? { isBlueVerified: u.isBlueVerified }
+              : {}),
+          },
+        });
+      } catch {
+        /* account row may not exist */
+      }
+
+      const prevCount = m.lastTweetCount;
+      const needsTweets =
+        // Never seeded timeline watermark
+        !m.lastTweetId ||
+        // No prior count baseline — seed count + check timeline once
+        prevCount == null ||
+        // Tweet count went up → new posts likely
+        (liveCount != null && liveCount > prevCount);
+
+      if (!needsTweets) {
+        skippedUnchanged++;
+        await prisma.projectMonitor.update({
+          where: { id: m.id },
+          data: {
+            username: liveUsername,
+            name: liveName,
+            lastTweetCount: liveCount ?? prevCount,
+            lastPolledAt: new Date(),
+            lastError: null,
+            ...(usernameChanged
+              ? {
+                  previousUsername: m.username,
+                  usernameChangedAt: new Date(),
+                }
+              : {}),
+          },
+        });
+        continue;
+      }
+
+      // Queue for timeline — update profile fields first
+      await prisma.projectMonitor.update({
+        where: { id: m.id },
+        data: {
+          username: liveUsername,
+          name: liveName,
+          lastTweetCount: liveCount ?? prevCount,
+          ...(usernameChanged
+            ? {
+                previousUsername: m.username,
+                usernameChangedAt: new Date(),
+              }
+            : {}),
+        },
+      });
+
+      needTimeline.push({
+        ...m,
+        username: liveUsername,
+        name: liveName,
+        lastTweetCount: liveCount ?? prevCount,
+      });
+    }
+
+    if (FETCH_DELAY_MS > 0) await sleep(Math.min(FETCH_DELAY_MS, 200));
+  }
+
+  // Phase 2 — getUserTweets only for candidates (budget-capped)
+  for (const m of needTimeline) {
+    if (timelineBudget <= 0) {
+      console.warn(
+        `[monitor] UserTweets budget exhausted (${MAX_TIMELINE_FETCHES}); remaining=${needTimeline.length - timelines} deferred`,
+      );
+      break;
+    }
+    timelineBudget--;
+    timelines++;
+
     try {
-      const r = await pollMonitor(m.id);
-      polled++;
+      const freshRow = await prisma.projectMonitor.findUnique({
+        where: { id: m.id },
+      });
+      if (!freshRow?.isActive) continue;
+      const r = await fetchTimelineAndAlert(freshRow as MonitorRow);
       alerted += r.alerted;
       if (r.error) errors++;
-      if (FETCH_DELAY_MS > 0) await sleep(FETCH_DELAY_MS);
     } catch (err) {
       errors++;
-      console.error(`[monitor] poll ${m.username} failed:`, err);
+      console.error(`[monitor] timeline @${m.username}:`, err);
     }
+
+    if (FETCH_DELAY_MS > 0) await sleep(FETCH_DELAY_MS);
   }
 
   console.log(
-    `[monitor] polled=${polled} alerted=${alerted} errors=${errors} (of ${items.length} active)`,
+    `[monitor] poll-all due=${due.length} checked=${checked} ` +
+      `unchanged=${skippedUnchanged} timelines=${timelines} alerted=${alerted} ` +
+      `renames=${usernameChanges} missing=${missing} errors=${errors} ` +
+      `usersByIdsReqs=${usersByIdsReqs}`,
   );
-  return { polled, alerted, errors };
+
+  return {
+    due: due.length,
+    checked,
+    skippedUnchanged,
+    timelines,
+    alerted,
+    usernameChanges,
+    missing,
+    errors,
+  };
 }
 
-/**
- * Auto-enroll top hunter heat accounts as monitors.
- * Manual monitors are never removed. Auto sources can be deactivated when cold.
- */
+// ── Hunter auto-enroll (unchanged behaviour, keyed by twitterUserId) ───
+
 export async function autoEnrollFromHunter(): Promise<{
   enrolled: number;
   reactivated: number;
@@ -449,10 +963,14 @@ export async function autoEnrollFromHunter(): Promise<{
     limit: AUTO_CAP + 20,
   });
 
-  // Prefer soft/hot stages; exclude skip/taken
   const candidates = board
     .filter((b) => b.huntStage !== "skip" && b.huntStage !== "taken")
-    .filter((b) => b.heat >= AUTO_MIN_HEAT || b.huntStage === "hot" || b.huntStage === "soft")
+    .filter(
+      (b) =>
+        b.heat >= AUTO_MIN_HEAT ||
+        b.huntStage === "hot" ||
+        b.huntStage === "soft",
+    )
     .slice(0, AUTO_CAP);
 
   const candidateIds = new Set(candidates.map((c) => c.accountId));
@@ -461,7 +979,7 @@ export async function autoEnrollFromHunter(): Promise<{
 
   for (const c of candidates) {
     const existing = await prisma.projectMonitor.findUnique({
-      where: { username: c.username.toLowerCase() },
+      where: { twitterUserId: c.accountId },
     });
 
     if (existing) {
@@ -477,7 +995,6 @@ export async function autoEnrollFromHunter(): Promise<{
         });
         reactivated++;
       } else if (existing.isActive) {
-        // refresh heat snapshot
         await prisma.projectMonitor.update({
           where: { id: existing.id },
           data: { heatAtEnroll: c.heat },
@@ -512,7 +1029,6 @@ export async function autoEnrollFromHunter(): Promise<{
     }
   }
 
-  // Deactivate cold auto-monitors not on board (keep manual)
   const autoActive = await prisma.projectMonitor.findMany({
     where: {
       isActive: true,
@@ -523,10 +1039,8 @@ export async function autoEnrollFromHunter(): Promise<{
   let deactivated = 0;
   for (const m of autoActive) {
     if (!candidateIds.has(m.twitterUserId)) {
-      // Only drop if over cap or not in top board
       const overCap = autoActive.length - deactivated > AUTO_CAP;
       if (overCap || !candidateIds.has(m.twitterUserId)) {
-        // Keep if still high stage on account
         const acc = await prisma.twitterAccount.findUnique({
           where: { id: m.twitterUserId },
           select: { huntStage: true },
@@ -550,7 +1064,6 @@ export async function autoEnrollFromHunter(): Promise<{
   return { enrolled, reactivated, deactivated };
 }
 
-/** Enroll a single account when hunt stage flips to hot/soft. */
 export async function enrollFromStage(
   accountId: string,
   stage: string,

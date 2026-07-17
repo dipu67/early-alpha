@@ -15,7 +15,8 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 /**
  * Model ProjectMonitor
  * Live tweet monitor for high-potential project accounts.
- * Polls getUserTweets, watermarks lastTweetId, Telegram alert on new posts.
+ * Cheap path: getUsersByIds → compare tweetCount; only then getUserTweets.
+ * Watermark lastTweetId; Telegram alert on new posts.
  */
 export type ProjectMonitorModel = runtime.Types.Result.DefaultSelection<Prisma.$ProjectMonitorPayload>
 
@@ -30,6 +31,8 @@ export type AggregateProjectMonitor = {
 export type ProjectMonitorAvgAggregateOutputType = {
   id: number | null
   topicId: number | null
+  intervalSec: number | null
+  lastTweetCount: number | null
   alertCount: number | null
   heatAtEnroll: number | null
 }
@@ -37,6 +40,8 @@ export type ProjectMonitorAvgAggregateOutputType = {
 export type ProjectMonitorSumAggregateOutputType = {
   id: bigint | null
   topicId: number | null
+  intervalSec: number | null
+  lastTweetCount: number | null
   alertCount: number | null
   heatAtEnroll: number | null
 }
@@ -52,11 +57,15 @@ export type ProjectMonitorMinAggregateOutputType = {
   alertMode: string | null
   alertEnabled: boolean | null
   topicId: number | null
+  intervalSec: number | null
   lastTweetId: string | null
+  lastTweetCount: number | null
   lastPolledAt: Date | null
   lastError: string | null
   alertCount: number | null
   heatAtEnroll: number | null
+  previousUsername: string | null
+  usernameChangedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -72,11 +81,15 @@ export type ProjectMonitorMaxAggregateOutputType = {
   alertMode: string | null
   alertEnabled: boolean | null
   topicId: number | null
+  intervalSec: number | null
   lastTweetId: string | null
+  lastTweetCount: number | null
   lastPolledAt: Date | null
   lastError: string | null
   alertCount: number | null
   heatAtEnroll: number | null
+  previousUsername: string | null
+  usernameChangedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -93,11 +106,15 @@ export type ProjectMonitorCountAggregateOutputType = {
   alertMode: number
   alertEnabled: number
   topicId: number
+  intervalSec: number
   lastTweetId: number
+  lastTweetCount: number
   lastPolledAt: number
   lastError: number
   alertCount: number
   heatAtEnroll: number
+  previousUsername: number
+  usernameChangedAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -107,6 +124,8 @@ export type ProjectMonitorCountAggregateOutputType = {
 export type ProjectMonitorAvgAggregateInputType = {
   id?: true
   topicId?: true
+  intervalSec?: true
+  lastTweetCount?: true
   alertCount?: true
   heatAtEnroll?: true
 }
@@ -114,6 +133,8 @@ export type ProjectMonitorAvgAggregateInputType = {
 export type ProjectMonitorSumAggregateInputType = {
   id?: true
   topicId?: true
+  intervalSec?: true
+  lastTweetCount?: true
   alertCount?: true
   heatAtEnroll?: true
 }
@@ -129,11 +150,15 @@ export type ProjectMonitorMinAggregateInputType = {
   alertMode?: true
   alertEnabled?: true
   topicId?: true
+  intervalSec?: true
   lastTweetId?: true
+  lastTweetCount?: true
   lastPolledAt?: true
   lastError?: true
   alertCount?: true
   heatAtEnroll?: true
+  previousUsername?: true
+  usernameChangedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -149,11 +174,15 @@ export type ProjectMonitorMaxAggregateInputType = {
   alertMode?: true
   alertEnabled?: true
   topicId?: true
+  intervalSec?: true
   lastTweetId?: true
+  lastTweetCount?: true
   lastPolledAt?: true
   lastError?: true
   alertCount?: true
   heatAtEnroll?: true
+  previousUsername?: true
+  usernameChangedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -170,11 +199,15 @@ export type ProjectMonitorCountAggregateInputType = {
   alertMode?: true
   alertEnabled?: true
   topicId?: true
+  intervalSec?: true
   lastTweetId?: true
+  lastTweetCount?: true
   lastPolledAt?: true
   lastError?: true
   alertCount?: true
   heatAtEnroll?: true
+  previousUsername?: true
+  usernameChangedAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -278,11 +311,15 @@ export type ProjectMonitorGroupByOutputType = {
   alertMode: string
   alertEnabled: boolean
   topicId: number | null
+  intervalSec: number
   lastTweetId: string | null
+  lastTweetCount: number | null
   lastPolledAt: Date | null
   lastError: string | null
   alertCount: number
   heatAtEnroll: number | null
+  previousUsername: string | null
+  usernameChangedAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: ProjectMonitorCountAggregateOutputType | null
@@ -322,11 +359,15 @@ export type ProjectMonitorWhereInput = {
   alertMode?: Prisma.StringFilter<"ProjectMonitor"> | string
   alertEnabled?: Prisma.BoolFilter<"ProjectMonitor"> | boolean
   topicId?: Prisma.IntNullableFilter<"ProjectMonitor"> | number | null
+  intervalSec?: Prisma.IntFilter<"ProjectMonitor"> | number
   lastTweetId?: Prisma.StringNullableFilter<"ProjectMonitor"> | string | null
+  lastTweetCount?: Prisma.IntNullableFilter<"ProjectMonitor"> | number | null
   lastPolledAt?: Prisma.DateTimeNullableFilter<"ProjectMonitor"> | Date | string | null
   lastError?: Prisma.StringNullableFilter<"ProjectMonitor"> | string | null
   alertCount?: Prisma.IntFilter<"ProjectMonitor"> | number
   heatAtEnroll?: Prisma.FloatNullableFilter<"ProjectMonitor"> | number | null
+  previousUsername?: Prisma.StringNullableFilter<"ProjectMonitor"> | string | null
+  usernameChangedAt?: Prisma.DateTimeNullableFilter<"ProjectMonitor"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ProjectMonitor"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ProjectMonitor"> | Date | string
 }
@@ -343,22 +384,26 @@ export type ProjectMonitorOrderByWithRelationInput = {
   alertMode?: Prisma.SortOrder
   alertEnabled?: Prisma.SortOrder
   topicId?: Prisma.SortOrderInput | Prisma.SortOrder
+  intervalSec?: Prisma.SortOrder
   lastTweetId?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastTweetCount?: Prisma.SortOrderInput | Prisma.SortOrder
   lastPolledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   lastError?: Prisma.SortOrderInput | Prisma.SortOrder
   alertCount?: Prisma.SortOrder
   heatAtEnroll?: Prisma.SortOrderInput | Prisma.SortOrder
+  previousUsername?: Prisma.SortOrderInput | Prisma.SortOrder
+  usernameChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type ProjectMonitorWhereUniqueInput = Prisma.AtLeast<{
   id?: bigint | number
-  username?: string
+  twitterUserId?: string
   AND?: Prisma.ProjectMonitorWhereInput | Prisma.ProjectMonitorWhereInput[]
   OR?: Prisma.ProjectMonitorWhereInput[]
   NOT?: Prisma.ProjectMonitorWhereInput | Prisma.ProjectMonitorWhereInput[]
-  twitterUserId?: Prisma.StringFilter<"ProjectMonitor"> | string
+  username?: Prisma.StringFilter<"ProjectMonitor"> | string
   name?: Prisma.StringFilter<"ProjectMonitor"> | string
   primaryTag?: Prisma.StringNullableFilter<"ProjectMonitor"> | string | null
   tags?: Prisma.StringNullableListFilter<"ProjectMonitor">
@@ -367,14 +412,18 @@ export type ProjectMonitorWhereUniqueInput = Prisma.AtLeast<{
   alertMode?: Prisma.StringFilter<"ProjectMonitor"> | string
   alertEnabled?: Prisma.BoolFilter<"ProjectMonitor"> | boolean
   topicId?: Prisma.IntNullableFilter<"ProjectMonitor"> | number | null
+  intervalSec?: Prisma.IntFilter<"ProjectMonitor"> | number
   lastTweetId?: Prisma.StringNullableFilter<"ProjectMonitor"> | string | null
+  lastTweetCount?: Prisma.IntNullableFilter<"ProjectMonitor"> | number | null
   lastPolledAt?: Prisma.DateTimeNullableFilter<"ProjectMonitor"> | Date | string | null
   lastError?: Prisma.StringNullableFilter<"ProjectMonitor"> | string | null
   alertCount?: Prisma.IntFilter<"ProjectMonitor"> | number
   heatAtEnroll?: Prisma.FloatNullableFilter<"ProjectMonitor"> | number | null
+  previousUsername?: Prisma.StringNullableFilter<"ProjectMonitor"> | string | null
+  usernameChangedAt?: Prisma.DateTimeNullableFilter<"ProjectMonitor"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ProjectMonitor"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ProjectMonitor"> | Date | string
-}, "id" | "username">
+}, "id" | "twitterUserId">
 
 export type ProjectMonitorOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -388,11 +437,15 @@ export type ProjectMonitorOrderByWithAggregationInput = {
   alertMode?: Prisma.SortOrder
   alertEnabled?: Prisma.SortOrder
   topicId?: Prisma.SortOrderInput | Prisma.SortOrder
+  intervalSec?: Prisma.SortOrder
   lastTweetId?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastTweetCount?: Prisma.SortOrderInput | Prisma.SortOrder
   lastPolledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   lastError?: Prisma.SortOrderInput | Prisma.SortOrder
   alertCount?: Prisma.SortOrder
   heatAtEnroll?: Prisma.SortOrderInput | Prisma.SortOrder
+  previousUsername?: Prisma.SortOrderInput | Prisma.SortOrder
+  usernameChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ProjectMonitorCountOrderByAggregateInput
@@ -417,11 +470,15 @@ export type ProjectMonitorScalarWhereWithAggregatesInput = {
   alertMode?: Prisma.StringWithAggregatesFilter<"ProjectMonitor"> | string
   alertEnabled?: Prisma.BoolWithAggregatesFilter<"ProjectMonitor"> | boolean
   topicId?: Prisma.IntNullableWithAggregatesFilter<"ProjectMonitor"> | number | null
+  intervalSec?: Prisma.IntWithAggregatesFilter<"ProjectMonitor"> | number
   lastTweetId?: Prisma.StringNullableWithAggregatesFilter<"ProjectMonitor"> | string | null
+  lastTweetCount?: Prisma.IntNullableWithAggregatesFilter<"ProjectMonitor"> | number | null
   lastPolledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ProjectMonitor"> | Date | string | null
   lastError?: Prisma.StringNullableWithAggregatesFilter<"ProjectMonitor"> | string | null
   alertCount?: Prisma.IntWithAggregatesFilter<"ProjectMonitor"> | number
   heatAtEnroll?: Prisma.FloatNullableWithAggregatesFilter<"ProjectMonitor"> | number | null
+  previousUsername?: Prisma.StringNullableWithAggregatesFilter<"ProjectMonitor"> | string | null
+  usernameChangedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ProjectMonitor"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ProjectMonitor"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ProjectMonitor"> | Date | string
 }
@@ -438,11 +495,15 @@ export type ProjectMonitorCreateInput = {
   alertMode?: string
   alertEnabled?: boolean
   topicId?: number | null
+  intervalSec?: number
   lastTweetId?: string | null
+  lastTweetCount?: number | null
   lastPolledAt?: Date | string | null
   lastError?: string | null
   alertCount?: number
   heatAtEnroll?: number | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -459,11 +520,15 @@ export type ProjectMonitorUncheckedCreateInput = {
   alertMode?: string
   alertEnabled?: boolean
   topicId?: number | null
+  intervalSec?: number
   lastTweetId?: string | null
+  lastTweetCount?: number | null
   lastPolledAt?: Date | string | null
   lastError?: string | null
   alertCount?: number
   heatAtEnroll?: number | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -480,11 +545,15 @@ export type ProjectMonitorUpdateInput = {
   alertMode?: Prisma.StringFieldUpdateOperationsInput | string
   alertEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   topicId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervalSec?: Prisma.IntFieldUpdateOperationsInput | number
   lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastTweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastPolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   alertCount?: Prisma.IntFieldUpdateOperationsInput | number
   heatAtEnroll?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -501,11 +570,15 @@ export type ProjectMonitorUncheckedUpdateInput = {
   alertMode?: Prisma.StringFieldUpdateOperationsInput | string
   alertEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   topicId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervalSec?: Prisma.IntFieldUpdateOperationsInput | number
   lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastTweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastPolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   alertCount?: Prisma.IntFieldUpdateOperationsInput | number
   heatAtEnroll?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -522,11 +595,15 @@ export type ProjectMonitorCreateManyInput = {
   alertMode?: string
   alertEnabled?: boolean
   topicId?: number | null
+  intervalSec?: number
   lastTweetId?: string | null
+  lastTweetCount?: number | null
   lastPolledAt?: Date | string | null
   lastError?: string | null
   alertCount?: number
   heatAtEnroll?: number | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -543,11 +620,15 @@ export type ProjectMonitorUpdateManyMutationInput = {
   alertMode?: Prisma.StringFieldUpdateOperationsInput | string
   alertEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   topicId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervalSec?: Prisma.IntFieldUpdateOperationsInput | number
   lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastTweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastPolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   alertCount?: Prisma.IntFieldUpdateOperationsInput | number
   heatAtEnroll?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -564,11 +645,15 @@ export type ProjectMonitorUncheckedUpdateManyInput = {
   alertMode?: Prisma.StringFieldUpdateOperationsInput | string
   alertEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   topicId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  intervalSec?: Prisma.IntFieldUpdateOperationsInput | number
   lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastTweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   lastPolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   alertCount?: Prisma.IntFieldUpdateOperationsInput | number
   heatAtEnroll?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -585,11 +670,15 @@ export type ProjectMonitorCountOrderByAggregateInput = {
   alertMode?: Prisma.SortOrder
   alertEnabled?: Prisma.SortOrder
   topicId?: Prisma.SortOrder
+  intervalSec?: Prisma.SortOrder
   lastTweetId?: Prisma.SortOrder
+  lastTweetCount?: Prisma.SortOrder
   lastPolledAt?: Prisma.SortOrder
   lastError?: Prisma.SortOrder
   alertCount?: Prisma.SortOrder
   heatAtEnroll?: Prisma.SortOrder
+  previousUsername?: Prisma.SortOrder
+  usernameChangedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -597,6 +686,8 @@ export type ProjectMonitorCountOrderByAggregateInput = {
 export type ProjectMonitorAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
   topicId?: Prisma.SortOrder
+  intervalSec?: Prisma.SortOrder
+  lastTweetCount?: Prisma.SortOrder
   alertCount?: Prisma.SortOrder
   heatAtEnroll?: Prisma.SortOrder
 }
@@ -612,11 +703,15 @@ export type ProjectMonitorMaxOrderByAggregateInput = {
   alertMode?: Prisma.SortOrder
   alertEnabled?: Prisma.SortOrder
   topicId?: Prisma.SortOrder
+  intervalSec?: Prisma.SortOrder
   lastTweetId?: Prisma.SortOrder
+  lastTweetCount?: Prisma.SortOrder
   lastPolledAt?: Prisma.SortOrder
   lastError?: Prisma.SortOrder
   alertCount?: Prisma.SortOrder
   heatAtEnroll?: Prisma.SortOrder
+  previousUsername?: Prisma.SortOrder
+  usernameChangedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -632,11 +727,15 @@ export type ProjectMonitorMinOrderByAggregateInput = {
   alertMode?: Prisma.SortOrder
   alertEnabled?: Prisma.SortOrder
   topicId?: Prisma.SortOrder
+  intervalSec?: Prisma.SortOrder
   lastTweetId?: Prisma.SortOrder
+  lastTweetCount?: Prisma.SortOrder
   lastPolledAt?: Prisma.SortOrder
   lastError?: Prisma.SortOrder
   alertCount?: Prisma.SortOrder
   heatAtEnroll?: Prisma.SortOrder
+  previousUsername?: Prisma.SortOrder
+  usernameChangedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -644,6 +743,8 @@ export type ProjectMonitorMinOrderByAggregateInput = {
 export type ProjectMonitorSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
   topicId?: Prisma.SortOrder
+  intervalSec?: Prisma.SortOrder
+  lastTweetCount?: Prisma.SortOrder
   alertCount?: Prisma.SortOrder
   heatAtEnroll?: Prisma.SortOrder
 }
@@ -679,11 +780,15 @@ export type ProjectMonitorSelect<ExtArgs extends runtime.Types.Extensions.Intern
   alertMode?: boolean
   alertEnabled?: boolean
   topicId?: boolean
+  intervalSec?: boolean
   lastTweetId?: boolean
+  lastTweetCount?: boolean
   lastPolledAt?: boolean
   lastError?: boolean
   alertCount?: boolean
   heatAtEnroll?: boolean
+  previousUsername?: boolean
+  usernameChangedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["projectMonitor"]>
@@ -700,11 +805,15 @@ export type ProjectMonitorSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   alertMode?: boolean
   alertEnabled?: boolean
   topicId?: boolean
+  intervalSec?: boolean
   lastTweetId?: boolean
+  lastTweetCount?: boolean
   lastPolledAt?: boolean
   lastError?: boolean
   alertCount?: boolean
   heatAtEnroll?: boolean
+  previousUsername?: boolean
+  usernameChangedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["projectMonitor"]>
@@ -721,11 +830,15 @@ export type ProjectMonitorSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   alertMode?: boolean
   alertEnabled?: boolean
   topicId?: boolean
+  intervalSec?: boolean
   lastTweetId?: boolean
+  lastTweetCount?: boolean
   lastPolledAt?: boolean
   lastError?: boolean
   alertCount?: boolean
   heatAtEnroll?: boolean
+  previousUsername?: boolean
+  usernameChangedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["projectMonitor"]>
@@ -742,33 +855,40 @@ export type ProjectMonitorSelectScalar = {
   alertMode?: boolean
   alertEnabled?: boolean
   topicId?: boolean
+  intervalSec?: boolean
   lastTweetId?: boolean
+  lastTweetCount?: boolean
   lastPolledAt?: boolean
   lastError?: boolean
   alertCount?: boolean
   heatAtEnroll?: boolean
+  previousUsername?: boolean
+  usernameChangedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ProjectMonitorOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "twitterUserId" | "username" | "name" | "primaryTag" | "tags" | "isActive" | "source" | "alertMode" | "alertEnabled" | "topicId" | "lastTweetId" | "lastPolledAt" | "lastError" | "alertCount" | "heatAtEnroll" | "createdAt" | "updatedAt", ExtArgs["result"]["projectMonitor"]>
+export type ProjectMonitorOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "twitterUserId" | "username" | "name" | "primaryTag" | "tags" | "isActive" | "source" | "alertMode" | "alertEnabled" | "topicId" | "intervalSec" | "lastTweetId" | "lastTweetCount" | "lastPolledAt" | "lastError" | "alertCount" | "heatAtEnroll" | "previousUsername" | "usernameChangedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["projectMonitor"]>
 
 export type $ProjectMonitorPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ProjectMonitor"
   objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: bigint
+    /**
+     * Stable X rest id — unique (usernames change).
+     */
     twitterUserId: string
     username: string
     name: string
     /**
-     * Primary tag slug for topic routing (from classify)
+     * Primary tag slug for topic routing (from classify / tag enroll)
      */
     primaryTag: string | null
     tags: string[]
     isActive: boolean
     /**
-     * manual | hunter | stage — auto-enroll can drop hunter/stage when cold
+     * manual | hunter | stage | tag | signal
      */
     source: string
     /**
@@ -783,7 +903,15 @@ export type $ProjectMonitorPayload<ExtArgs extends runtime.Types.Extensions.Inte
      * Optional forum topic override
      */
     topicId: number | null
+    /**
+     * Min seconds between cheap tweetCount checks for this row
+     */
+    intervalSec: number
     lastTweetId: string | null
+    /**
+     * Last statuses_count from UsersByRestIds — skip getUserTweets if unchanged
+     */
+    lastTweetCount: number | null
     lastPolledAt: Date | null
     lastError: string | null
     alertCount: number
@@ -791,6 +919,11 @@ export type $ProjectMonitorPayload<ExtArgs extends runtime.Types.Extensions.Inte
      * Heat at enroll time (hunter auto)
      */
     heatAtEnroll: number | null
+    /**
+     * Previous handle when X username changed (detection via usersByIds)
+     */
+    previousUsername: string | null
+    usernameChangedAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["projectMonitor"]>
@@ -1227,11 +1360,15 @@ export interface ProjectMonitorFieldRefs {
   readonly alertMode: Prisma.FieldRef<"ProjectMonitor", 'String'>
   readonly alertEnabled: Prisma.FieldRef<"ProjectMonitor", 'Boolean'>
   readonly topicId: Prisma.FieldRef<"ProjectMonitor", 'Int'>
+  readonly intervalSec: Prisma.FieldRef<"ProjectMonitor", 'Int'>
   readonly lastTweetId: Prisma.FieldRef<"ProjectMonitor", 'String'>
+  readonly lastTweetCount: Prisma.FieldRef<"ProjectMonitor", 'Int'>
   readonly lastPolledAt: Prisma.FieldRef<"ProjectMonitor", 'DateTime'>
   readonly lastError: Prisma.FieldRef<"ProjectMonitor", 'String'>
   readonly alertCount: Prisma.FieldRef<"ProjectMonitor", 'Int'>
   readonly heatAtEnroll: Prisma.FieldRef<"ProjectMonitor", 'Float'>
+  readonly previousUsername: Prisma.FieldRef<"ProjectMonitor", 'String'>
+  readonly usernameChangedAt: Prisma.FieldRef<"ProjectMonitor", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"ProjectMonitor", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ProjectMonitor", 'DateTime'>
 }

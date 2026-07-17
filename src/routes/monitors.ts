@@ -1,13 +1,18 @@
-// Per-user timeline monitors — poll getUserTweets by username (not lists).
-// Empty by default: only usernames you add manually are monitored.
+// Project monitors — tag-based enrollment + efficient tweetCount prefilter poll.
 //
-//   GET    /monitors                 list
-//   POST   /monitors                 add by username
-//   DELETE /monitors                 wipe all monitors
-//   PATCH  /monitors/:id             update mode / active / topic / alerts
-//   DELETE /monitors/:id             remove one
-//   POST   /monitors/:id/poll        poll this account now
-//   POST   /monitors/poll-all        enqueue poll-monitors job
+//   GET    /monitors                    list monitors
+//   POST   /monitors                    add by username
+//   DELETE /monitors                    wipe all
+//   PATCH  /monitors/:id                update
+//   DELETE /monitors/:id                remove one
+//   POST   /monitors/:id/poll           poll one (timeline)
+//   POST   /monitors/:id/skip-backlog   clear watermark + re-seed
+//   POST   /monitors/poll-all           enqueue bulk poll job
+//   POST   /monitors/skip-all-backlogs  clear all watermarks
+//   GET    /monitors/tag-rules          list tag enroll rules
+//   POST   /monitors/tag-rules          upsert tag rule
+//   POST   /monitors/enroll-by-tag      enroll all projects for a tag
+//   DELETE /monitors/tag-rules/:id      delete rule
 
 import { Router } from "express";
 import { z } from "zod";
@@ -18,6 +23,9 @@ import { enqueueJob } from "../enqueue.js";
 import {
   addMonitor,
   listMonitors,
+  listTagRules,
+  upsertTagRule,
+  enrollByTag,
   pollMonitor,
 } from "../services/projectMonitor.js";
 
@@ -40,13 +48,122 @@ monitorsRouter.get(
   }),
 );
 
+// ── Tag rules (static paths first) ─────────────────────────────────────
+
+monitorsRouter.get(
+  "/tag-rules",
+  asyncHandler(async (_req, res) => {
+    const items = await listTagRules();
+    res.json({ items: jsonSafe(items) });
+  }),
+);
+
+const tagRuleBody = z.object({
+  tagSlug: z.string().min(1),
+  enabled: z.boolean().optional(),
+  intervalSec: z.number().int().min(60).max(86_400).optional(),
+  topicId: z.number().int().nullable().optional(),
+  alertMode: z.enum(["all", "signals"]).optional(),
+  alertEnabled: z.boolean().optional(),
+  maxProjects: z.number().int().min(1).max(5000).optional(),
+});
+
+monitorsRouter.post(
+  "/tag-rules",
+  asyncHandler(async (req, res) => {
+    const body = tagRuleBody.parse(req.body ?? {});
+    try {
+      const row = await upsertTagRule({
+        tagSlug: body.tagSlug,
+        ...(body.enabled !== undefined ? { enabled: body.enabled } : {}),
+        ...(body.intervalSec !== undefined
+          ? { intervalSec: body.intervalSec }
+          : {}),
+        ...(body.topicId !== undefined ? { topicId: body.topicId } : {}),
+        ...(body.alertMode !== undefined ? { alertMode: body.alertMode } : {}),
+        ...(body.alertEnabled !== undefined
+          ? { alertEnabled: body.alertEnabled }
+          : {}),
+        ...(body.maxProjects !== undefined
+          ? { maxProjects: body.maxProjects }
+          : {}),
+      });
+      res.status(201).json(jsonSafe(row));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === "tag_required") throw new HttpError(400, msg);
+      throw err;
+    }
+  }),
+);
+
+monitorsRouter.delete(
+  "/tag-rules/:id",
+  asyncHandler(async (req, res) => {
+    const id = parseId(req.params.id);
+    await prisma.projectMonitorTagRule.delete({ where: { id } }).catch(() => {
+      throw new HttpError(404, "not_found");
+    });
+    res.json({ ok: true });
+  }),
+);
+
+const enrollBody = z.object({
+  tagSlug: z.string().min(1),
+  /** If true, upsert the rule with the given settings first. */
+  createRule: z.boolean().optional(),
+  intervalSec: z.number().int().min(60).max(86_400).optional(),
+  topicId: z.number().int().nullable().optional(),
+  alertMode: z.enum(["all", "signals"]).optional(),
+  alertEnabled: z.boolean().optional(),
+  maxProjects: z.number().int().min(1).max(5000).optional(),
+  enabled: z.boolean().optional(),
+});
+
+monitorsRouter.post(
+  "/enroll-by-tag",
+  asyncHandler(async (req, res) => {
+    const body = enrollBody.parse(req.body ?? {});
+    const slug = body.tagSlug.trim().toLowerCase();
+
+    if (body.createRule !== false) {
+      await upsertTagRule({
+        tagSlug: slug,
+        enabled: body.enabled !== false,
+        ...(body.intervalSec !== undefined
+          ? { intervalSec: body.intervalSec }
+          : {}),
+        ...(body.topicId !== undefined ? { topicId: body.topicId } : {}),
+        ...(body.alertMode !== undefined ? { alertMode: body.alertMode } : {}),
+        ...(body.alertEnabled !== undefined
+          ? { alertEnabled: body.alertEnabled }
+          : {}),
+        ...(body.maxProjects !== undefined
+          ? { maxProjects: body.maxProjects }
+          : {}),
+      });
+    }
+
+    try {
+      const result = await enrollByTag(slug);
+      res.json(jsonSafe(result));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === "tag_rule_not_found") throw new HttpError(404, msg);
+      if (msg === "tag_rule_disabled") throw new HttpError(400, msg);
+      throw err;
+    }
+  }),
+);
+
 const addBody = z.object({
   username: z.string().min(1),
   twitterUserId: z.string().min(1).optional(),
-  source: z.enum(["manual", "hunter", "stage", "signal"]).optional(),
+  source: z.enum(["manual", "hunter", "stage", "signal", "tag"]).optional(),
   alertMode: z.enum(["all", "signals"]).optional(),
   alertEnabled: z.boolean().optional(),
   topicId: z.number().int().nullable().optional(),
+  intervalSec: z.number().int().min(60).max(86_400).optional(),
   heatAtEnroll: z.number().optional(),
 });
 
@@ -62,6 +179,9 @@ monitorsRouter.post(
         alertMode: body.alertMode ?? "all",
         alertEnabled: body.alertEnabled ?? true,
         topicId: body.topicId ?? null,
+        ...(body.intervalSec !== undefined
+          ? { intervalSec: body.intervalSec }
+          : {}),
         heatAtEnroll: body.heatAtEnroll ?? null,
       });
       res.status(201).json(jsonSafe(row));
@@ -75,7 +195,6 @@ monitorsRouter.post(
   }),
 );
 
-// Static paths before /:id
 monitorsRouter.post(
   "/poll-all",
   asyncHandler(async (_req, res) => {
@@ -84,10 +203,6 @@ monitorsRouter.post(
   }),
 );
 
-/**
- * Clear every lastTweetId so the next poll re-seeds to current head
- * without alerting backlog posts (use after long downtime).
- */
 monitorsRouter.post(
   "/skip-all-backlogs",
   asyncHandler(async (_req, res) => {
@@ -104,7 +219,6 @@ monitorsRouter.post(
   }),
 );
 
-/** Wipe entire user monitor list (default empty state). */
 monitorsRouter.delete(
   "/",
   asyncHandler(async (_req, res) => {
@@ -118,6 +232,7 @@ const patchBody = z.object({
   alertMode: z.enum(["all", "signals"]).optional(),
   alertEnabled: z.boolean().optional(),
   topicId: z.number().int().nullable().optional(),
+  intervalSec: z.number().int().min(60).max(86_400).optional(),
   resetWatermark: z.boolean().optional(),
 });
 
@@ -129,18 +244,12 @@ monitorsRouter.patch(
     const existing = await prisma.projectMonitor.findUnique({ where: { id } });
     if (!existing) throw new HttpError(404, "not_found");
 
-    const data: {
-      isActive?: boolean;
-      alertMode?: string;
-      alertEnabled?: boolean;
-      topicId?: number | null;
-      lastTweetId?: null;
-      lastError?: null;
-    } = {};
+    const data: Record<string, unknown> = {};
     if (body.isActive !== undefined) data.isActive = body.isActive;
     if (body.alertMode !== undefined) data.alertMode = body.alertMode;
     if (body.alertEnabled !== undefined) data.alertEnabled = body.alertEnabled;
     if (body.topicId !== undefined) data.topicId = body.topicId;
+    if (body.intervalSec !== undefined) data.intervalSec = body.intervalSec;
     if (body.resetWatermark) {
       data.lastTweetId = null;
       data.lastError = null;
@@ -160,11 +269,15 @@ monitorsRouter.patch(
         alertMode: row.alertMode,
         alertEnabled: row.alertEnabled,
         topicId: row.topicId,
+        intervalSec: row.intervalSec,
         lastTweetId: row.lastTweetId,
+        lastTweetCount: row.lastTweetCount,
         lastPolledAt: row.lastPolledAt,
         lastError: row.lastError,
         alertCount: row.alertCount,
         heatAtEnroll: row.heatAtEnroll,
+        previousUsername: row.previousUsername,
+        usernameChangedAt: row.usernameChangedAt,
         createdAt: row.createdAt,
       }),
     );
@@ -188,15 +301,11 @@ monitorsRouter.post(
     const id = parseId(req.params.id);
     const existing = await prisma.projectMonitor.findUnique({ where: { id } });
     if (!existing) throw new HttpError(404, "not_found");
-    const result = await pollMonitor(id);
+    const result = await pollMonitor(id, { forceTimeline: true });
     res.json(result);
   }),
 );
 
-/**
- * Skip backlog for one monitor: clear lastTweetId, then poll once to
- * re-seed watermark at current newest tweet (no history flood).
- */
 monitorsRouter.post(
   "/:id/skip-backlog",
   asyncHandler(async (req, res) => {
@@ -209,13 +318,12 @@ monitorsRouter.post(
       data: { lastTweetId: null, lastError: null },
     });
 
-    // Inactive monitors only clear; active ones re-seed immediately.
     if (!existing.isActive) {
       res.json({ ok: true, cleared: true, seeded: false, skippedPoll: true });
       return;
     }
 
-    const result = await pollMonitor(id);
+    const result = await pollMonitor(id, { forceTimeline: true });
     res.json({ ok: true, cleared: true, ...result });
   }),
 );

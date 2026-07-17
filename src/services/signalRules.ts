@@ -24,6 +24,25 @@ function t(
 ): SignalRuleSeed {
   return { slug, category, label, pattern };
 }
+/** Tag-specific regex rule (isRegex: true). */
+function tr(
+  slug: string,
+  category: string,
+  label: string,
+  pattern: string,
+): SignalRuleSeed {
+  return { slug, category, label, pattern, isRegex: true };
+}
+// Shared date fragments for mint-date regexes
+const RE_MONTH =
+  "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?";
+const RE_DOW =
+  "monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun";
+/** 15th / 1st / 2nd / 3rd / 15 */
+const RE_DOM = "\\d{1,2}(?:st|nd|rd|th)?";
+/** 03/15, 3-15-2025, 15.03.25 */
+const RE_NUMERIC_DATE =
+  "\\d{1,2}[\\/\\-\\.]\\d{1,2}(?:[\\/\\-\\.]\\d{2,4})?";
 
 /**
  * Default detection lexicon.
@@ -135,6 +154,69 @@ export const DEFAULT_SIGNAL_RULES: SignalRuleSeed[] = [
   t("nft", "wl", "wl"),
   t("nft", "wl", "whitelist"),
   t("nft", "wl", "allowlist"),
+
+  // ── NFT mint date detection (phrases + structured dates) ──
+  t("nft", "mint_date", "mint date"),
+  t("nft", "mint_date", "minting date"),
+  t("nft", "mint_date", "official mint date"),
+  t("nft", "mint_date", "confirmed mint date"),
+  t("nft", "mint_date", "mint date announced"),
+  t("nft", "mint_date", "mint date is"),
+  t("nft", "mint_date", "mint date set"),
+  t("nft", "mint_date", "mint calendar"),
+  t("nft", "mint_date", "save the date"),
+  t("nft", "mint_date", "mark your calendars"),
+  t("nft", "mint_date", "mark your calendar"),
+  t("nft", "mint_date", "drop date"),
+  t("nft", "mint_date", "public mint date"),
+  t("nft", "mint_date", "wl mint date"),
+  t("nft", "mint_date", "whitelist mint date"),
+  t("nft", "mint_date", "mint schedule"),
+  t("nft", "mint_date", "minting schedule"),
+  t("nft", "mint_date", "mint window"),
+  t("nft", "mint_date", "mint starts on"),
+  t("nft", "mint_date", "mint opens on"),
+  t("nft", "mint_date", "minting on"),
+  t("nft", "mint_date", "mint on"),
+  t("nft", "mint_date", "we mint on"),
+  t("nft", "mint_date", "mint goes live on"),
+  t("nft", "mint_date", "minting goes live on"),
+
+  // mint date: March 15 / mint date is 15 March / mint date 03/15
+  tr(
+    "nft",
+    "mint_date",
+    "mint date + calendar",
+    `mint(?:ing)?\\s*dates?\\s*[:\\-–—]?\\s*(?:is\\s+|set\\s+(?:for\\s+|to\\s+)?|announced\\s+)?(?:on\\s+)?(?:(?:${RE_MONTH})\\s*${RE_DOM}|${RE_DOM}\\s*(?:of\\s+)?(?:${RE_MONTH})|${RE_NUMERIC_DATE}|(?:${RE_DOW})|tomorrow|tonight|today)`,
+  ),
+  // mint on March 15 / minting Friday / mint goes live April 1st
+  tr(
+    "nft",
+    "mint_date",
+    "mint on + date",
+    `mint(?:ing)?\\s+(?:goes\\s+live\\s+|opens?\\s+|starts?\\s+|begins?\\s+|live\\s+)?(?:on\\s+|this\\s+)?(?:(?:${RE_MONTH})\\s*${RE_DOM}|${RE_DOM}\\s*(?:of\\s+)?(?:${RE_MONTH})|${RE_NUMERIC_DATE}|(?:${RE_DOW})|tomorrow|tonight)`,
+  ),
+  // public mint March 15 / free mint April 2nd
+  tr(
+    "nft",
+    "mint_date",
+    "mint + month day",
+    `(?:public|free|wl|whitelist|allowlist|guaranteed)?\\s*mint(?:ing)?\\s+(?:${RE_MONTH})\\s*${RE_DOM}`,
+  ),
+  // 🗓️ / 📅 near mint date language (common in NFT tweets)
+  tr(
+    "nft",
+    "mint_date",
+    "mint date emoji",
+    `(?:🗓️|📅|🗓).{0,40}mint|(?:mint(?:ing)?\\s*date).{0,20}(?:🗓️|📅|🗓)`,
+  ),
+  // mint @ 2pm / mint at 18:00 UTC with a nearby date word
+  tr(
+    "nft",
+    "mint_date",
+    "mint time slot",
+    `mint(?:ing)?\\s*(?:@|at)\\s*\\d{1,2}(?::\\d{2})?\\s*(?:am|pm|utc|est|et|gmt|pst|pt)?`,
+  ),
 
   // ── GameFi ──
   t("gamefi", "launch", "game live"),

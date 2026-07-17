@@ -27,6 +27,7 @@ export async function checkFollowingDiff(
 
   const { client, accountId } = await getTwitterClient();
   const result = await client.getFollowing(entry.twitterUserId, 20);
+  client.getUsersByIds
   if (result.rateLimit && result.rateLimit.remaining === 0) {
     await markRateLimited(accountId, result.rateLimit.reset);
   }

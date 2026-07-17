@@ -97,24 +97,6 @@ export const SCHEDULERS: SchedulerDef[] = [
     label: "Health check",
   },
   {
-    key: "list-reconcile",
-    queue: "list-tracker",
-    schedulerId: "list-reconcile",
-    jobName: "reconcile-lists",
-    data: {},
-    defaultEvery: 60 * 60 * 1000,
-    label: "List reconcile",
-  },
-  {
-    key: "list-poll",
-    queue: "list-tracker",
-    schedulerId: "list-poll",
-    jobName: "poll-lists",
-    data: {},
-    defaultEvery: 5 * 60 * 1000,
-    label: "List poll",
-  },
-  {
     key: "early-digest",
     queue: "list-tracker",
     schedulerId: "early-digest",
@@ -248,8 +230,22 @@ export async function registerScheduler(def: SchedulerDef): Promise<void> {
   });
 }
 
+/**
+ * Recurring jobs that were removed from SCHEDULERS — strip from Redis so an
+ * old process restart does not leave them running forever.
+ */
+const REMOVED_SCHEDULERS: { queue: QueueName; schedulerId: string }[] = [
+  { queue: "list-tracker", schedulerId: "list-reconcile" },
+  { queue: "list-tracker", schedulerId: "list-poll" },
+];
+
 /** Register every scheduler (startup). */
 export async function registerAllSchedulers(): Promise<void> {
+  for (const dead of REMOVED_SCHEDULERS) {
+    await QUEUES[dead.queue]
+      .removeJobScheduler(dead.schedulerId)
+      .catch(() => undefined);
+  }
   for (const def of SCHEDULERS) {
     await registerScheduler(def);
   }

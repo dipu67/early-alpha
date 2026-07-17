@@ -8,11 +8,10 @@ const {client} = await getTwitterClient()
 
 
 const userIds = [
-  "2025465937781260288",
-  "1388477070523572227",
+  "2067583076100968448",
 ];
 
-const res = await client.getMyLists()
+const res = await client.getUsersByIds(userIds);
 
 if (!res.success) {
   console.error("getUsersByIds failed:", res);

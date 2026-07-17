@@ -81,6 +81,7 @@ export const ModelName = {
   TelegramGroup: 'TelegramGroup',
   TelegramTopic: 'TelegramTopic',
   ProjectMonitor: 'ProjectMonitor',
+  ProjectMonitorTagRule: 'ProjectMonitorTagRule',
   GithubRepoMonitor: 'GithubRepoMonitor',
   GithubRepoCommit: 'GithubRepoCommit'
 } as const
@@ -549,16 +550,38 @@ export const ProjectMonitorScalarFieldEnum = {
   alertMode: 'alertMode',
   alertEnabled: 'alertEnabled',
   topicId: 'topicId',
+  intervalSec: 'intervalSec',
   lastTweetId: 'lastTweetId',
+  lastTweetCount: 'lastTweetCount',
   lastPolledAt: 'lastPolledAt',
   lastError: 'lastError',
   alertCount: 'alertCount',
   heatAtEnroll: 'heatAtEnroll',
+  previousUsername: 'previousUsername',
+  usernameChangedAt: 'usernameChangedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type ProjectMonitorScalarFieldEnum = (typeof ProjectMonitorScalarFieldEnum)[keyof typeof ProjectMonitorScalarFieldEnum]
+
+
+export const ProjectMonitorTagRuleScalarFieldEnum = {
+  id: 'id',
+  tagSlug: 'tagSlug',
+  enabled: 'enabled',
+  intervalSec: 'intervalSec',
+  topicId: 'topicId',
+  alertMode: 'alertMode',
+  alertEnabled: 'alertEnabled',
+  maxProjects: 'maxProjects',
+  lastEnrollAt: 'lastEnrollAt',
+  lastRunAt: 'lastRunAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectMonitorTagRuleScalarFieldEnum = (typeof ProjectMonitorTagRuleScalarFieldEnum)[keyof typeof ProjectMonitorTagRuleScalarFieldEnum]
 
 
 export const GithubRepoMonitorScalarFieldEnum = {

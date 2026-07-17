@@ -414,6 +414,7 @@ export const ModelName = {
   TelegramGroup: 'TelegramGroup',
   TelegramTopic: 'TelegramTopic',
   ProjectMonitor: 'ProjectMonitor',
+  ProjectMonitorTagRule: 'ProjectMonitorTagRule',
   GithubRepoMonitor: 'GithubRepoMonitor',
   GithubRepoCommit: 'GithubRepoCommit'
 } as const
@@ -431,7 +432,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "projectTag" | "adminUser" | "setting" | "telegramBot" | "twitterAccount" | "projectList" | "listMember" | "postAlert" | "seedAccount" | "trackingRun" | "followEdge" | "alert" | "twitterAuthAccount" | "signalScan" | "signalRule" | "authFollow" | "searchQuery" | "searchHit" | "listMonitor" | "listMonitorHit" | "watchList" | "followSnapshot" | "alertLog" | "grokConversation" | "grokMessage" | "grokResearchPrompt" | "grokResearchRun" | "telegramGroup" | "telegramTopic" | "projectMonitor" | "githubRepoMonitor" | "githubRepoCommit"
+    modelProps: "projectTag" | "adminUser" | "setting" | "telegramBot" | "twitterAccount" | "projectList" | "listMember" | "postAlert" | "seedAccount" | "trackingRun" | "followEdge" | "alert" | "twitterAuthAccount" | "signalScan" | "signalRule" | "authFollow" | "searchQuery" | "searchHit" | "listMonitor" | "listMonitorHit" | "watchList" | "followSnapshot" | "alertLog" | "grokConversation" | "grokMessage" | "grokResearchPrompt" | "grokResearchRun" | "telegramGroup" | "telegramTopic" | "projectMonitor" | "projectMonitorTagRule" | "githubRepoMonitor" | "githubRepoCommit"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2655,6 +2656,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ProjectMonitorTagRule: {
+      payload: Prisma.$ProjectMonitorTagRulePayload<ExtArgs>
+      fields: Prisma.ProjectMonitorTagRuleFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ProjectMonitorTagRuleFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectMonitorTagRulePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ProjectMonitorTagRuleFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectMonitorTagRulePayload>
+        }
+        findFirst: {
+          args: Prisma.ProjectMonitorTagRuleFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectMonitorTagRulePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ProjectMonitorTagRuleFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectMonitorTagRulePayload>
+        }
+        findMany: {
+          args: Prisma.ProjectMonitorTagRuleFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectMonitorTagRulePayload>[]
+        }
+        create: {
+          args: Prisma.ProjectMonitorTagRuleCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectMonitorTagRulePayload>
+        }
+        createMany: {
+          args: Prisma.ProjectMonitorTagRuleCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ProjectMonitorTagRuleCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectMonitorTagRulePayload>[]
+        }
+        delete: {
+          args: Prisma.ProjectMonitorTagRuleDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectMonitorTagRulePayload>
+        }
+        update: {
+          args: Prisma.ProjectMonitorTagRuleUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectMonitorTagRulePayload>
+        }
+        deleteMany: {
+          args: Prisma.ProjectMonitorTagRuleDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ProjectMonitorTagRuleUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ProjectMonitorTagRuleUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectMonitorTagRulePayload>[]
+        }
+        upsert: {
+          args: Prisma.ProjectMonitorTagRuleUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectMonitorTagRulePayload>
+        }
+        aggregate: {
+          args: Prisma.ProjectMonitorTagRuleAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateProjectMonitorTagRule>
+        }
+        groupBy: {
+          args: Prisma.ProjectMonitorTagRuleGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectMonitorTagRuleGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ProjectMonitorTagRuleCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectMonitorTagRuleCountAggregateOutputType> | number
+        }
+      }
+    }
     GithubRepoMonitor: {
       payload: Prisma.$GithubRepoMonitorPayload<ExtArgs>
       fields: Prisma.GithubRepoMonitorFieldRefs
@@ -3290,16 +3365,38 @@ export const ProjectMonitorScalarFieldEnum = {
   alertMode: 'alertMode',
   alertEnabled: 'alertEnabled',
   topicId: 'topicId',
+  intervalSec: 'intervalSec',
   lastTweetId: 'lastTweetId',
+  lastTweetCount: 'lastTweetCount',
   lastPolledAt: 'lastPolledAt',
   lastError: 'lastError',
   alertCount: 'alertCount',
   heatAtEnroll: 'heatAtEnroll',
+  previousUsername: 'previousUsername',
+  usernameChangedAt: 'usernameChangedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type ProjectMonitorScalarFieldEnum = (typeof ProjectMonitorScalarFieldEnum)[keyof typeof ProjectMonitorScalarFieldEnum]
+
+
+export const ProjectMonitorTagRuleScalarFieldEnum = {
+  id: 'id',
+  tagSlug: 'tagSlug',
+  enabled: 'enabled',
+  intervalSec: 'intervalSec',
+  topicId: 'topicId',
+  alertMode: 'alertMode',
+  alertEnabled: 'alertEnabled',
+  maxProjects: 'maxProjects',
+  lastEnrollAt: 'lastEnrollAt',
+  lastRunAt: 'lastRunAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectMonitorTagRuleScalarFieldEnum = (typeof ProjectMonitorTagRuleScalarFieldEnum)[keyof typeof ProjectMonitorTagRuleScalarFieldEnum]
 
 
 export const GithubRepoMonitorScalarFieldEnum = {
@@ -3591,6 +3688,7 @@ export type GlobalOmitConfig = {
   telegramGroup?: Prisma.TelegramGroupOmit
   telegramTopic?: Prisma.TelegramTopicOmit
   projectMonitor?: Prisma.ProjectMonitorOmit
+  projectMonitorTagRule?: Prisma.ProjectMonitorTagRuleOmit
   githubRepoMonitor?: Prisma.GithubRepoMonitorOmit
   githubRepoCommit?: Prisma.GithubRepoCommitOmit
 }
