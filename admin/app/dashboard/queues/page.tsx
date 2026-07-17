@@ -13,7 +13,7 @@ export default async function QueuesPage() {
     <div>
       <PageHeader
         title="Queues"
-        description="Recurring job schedulers. Pause, trigger, or edit interval/cron schedules — changes persist across restarts."
+        description="Recurring job schedulers. Pause, trigger, or edit interval/cron schedules — changes persist across restarts. Next run times use your browser’s local timezone."
       />
       {!res.ok ? <p className="mb-3 text-sm text-destructive">Backend error {res.status}.</p> : null}
       <QueuesTable initial={data.items} />

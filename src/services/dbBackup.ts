@@ -278,6 +278,8 @@ function reviveRow(
 export async function getBackupSummary(): Promise<{
   tables: { key: string; table: string; count: number }[];
   totalRows: number;
+  /** Hint for UI: follow_snapshots explode size (each row holds full following id lists). */
+  notes?: string[];
 }> {
   const tables: { key: string; table: string; count: number }[] = [];
   let totalRows = 0;
@@ -286,17 +288,171 @@ export async function getBackupSummary(): Promise<{
     tables.push({ key: def.key, table: def.table, count });
     totalRows += count;
   }
-  return { tables, totalRows };
+  const snap = tables.find((t) => t.table === "follow_snapshots");
+  const notes: string[] = [];
+  if (snap && snap.count > 50) {
+    notes.push(
+      `follow_snapshots has ${snap.count} rows (each can store thousands of user ids). ` +
+        `Export defaults to latest snapshot per watch account only — use ?full=1 for every historical snapshot (can OOM).`,
+    );
+  }
+  return { tables, totalRows, notes };
 }
 
-export async function exportDatabase(): Promise<DbBackupFile> {
+export type ExportDatabaseOpts = {
+  /**
+   * When false (default), only the **latest** follow_snapshot per watch list
+   * is exported. Full history is huge (userIds[] per poll) and previously
+   * crashed the API / killed the Node process.
+   */
+  fullSnapshots?: boolean;
+};
+
+const PAGE = 500;
+
+/** Cursor field for paging; null → load whole table (small / composite PK). */
+const PAGE_CURSOR: Partial<Record<BackupTableKey, string>> = {
+  adminUser: "id",
+  telegramBot: "id",
+  twitterAuthAccount: "id",
+  twitterAccount: "id",
+  seedAccount: "id",
+  trackingRun: "id",
+  watchList: "id",
+  projectList: "id",
+  searchQuery: "id",
+  listMonitor: "id",
+  grokConversation: "id",
+  grokResearchPrompt: "id",
+  postAlert: "tweetId",
+  // followEdge: composite PK — no cursor
+  alert: "id",
+  searchHit: "id",
+  followSnapshot: "id",
+  alertLog: "id",
+  grokMessage: "id",
+  grokResearchRun: "id",
+  telegramGroup: "id",
+  telegramTopic: "id",
+};
+
+/**
+ * Load a table in ordered pages so we never materialize a multi‑GB Prisma
+ * result set in one round-trip (follow_snapshots was the killer).
+ */
+async function loadTablePaged(
+  def: BackupTableDef,
+): Promise<Record<string, unknown>[]> {
+  const model = prisma as unknown as Record<
+    string,
+    {
+      findMany: (args: Record<string, unknown>) => Promise<Record<string, unknown>[]>;
+    }
+  >;
+  const d = model[def.key];
+  if (!d?.findMany) {
+    throw new Error(`backup: missing prisma model ${def.key}`);
+  }
+
+  const cursorField = PAGE_CURSOR[def.key];
+  // Small / composite-key tables: one shot is fine.
+  if (!cursorField) {
+    const all = await d.findMany({});
+    return all.map((r) => serializeRow(r));
+  }
+
+  const out: Record<string, unknown>[] = [];
+  let cursorVal: string | number | bigint | null = null;
+
+  for (;;) {
+    const args: Record<string, unknown> = {
+      take: PAGE,
+      orderBy: { [cursorField]: "asc" },
+    };
+    if (cursorVal != null) {
+      args.skip = 1;
+      args.cursor = { [cursorField]: cursorVal };
+    }
+
+    let batch: Record<string, unknown>[];
+    try {
+      batch = await d.findMany(args);
+    } catch (err) {
+      // Fallback: no usable cursor (e.g. follow_edge uses composite unique).
+      if (cursorVal == null) {
+        console.warn(
+          `[backup:export] paged ${def.table} failed, loading all:`,
+          err instanceof Error ? err.message : err,
+        );
+        const all = await d.findMany({});
+        return all.map((r) => serializeRow(r));
+      }
+      throw err;
+    }
+
+    if (batch.length === 0) break;
+    for (const row of batch) out.push(serializeRow(row));
+
+    const last = batch[batch.length - 1]!;
+    const next = last[cursorField];
+    if (next == null) break;
+    cursorVal = next as string | number | bigint;
+    if (batch.length < PAGE) break;
+  }
+
+  return out;
+}
+
+/**
+ * Latest follow_snapshot per watch_list only — enough to resume tracking after
+ * restore without shipping tens of thousands of multi‑MB historical rows.
+ */
+async function loadLatestFollowSnapshots(): Promise<Record<string, unknown>[]> {
+  const watches = await prisma.watchList.findMany({
+    select: { id: true },
+    orderBy: { id: "asc" },
+  });
+  const out: Record<string, unknown>[] = [];
+  for (const w of watches) {
+    const latest = await prisma.followSnapshot.findFirst({
+      where: { watchListId: w.id },
+      orderBy: [{ takenAt: "desc" }, { id: "desc" }],
+    });
+    if (latest) out.push(serializeRow(latest as unknown as Record<string, unknown>));
+  }
+  return out;
+}
+
+export async function exportDatabase(
+  opts: ExportDatabaseOpts = {},
+): Promise<DbBackupFile & { compact: boolean; warnings: string[] }> {
+  const fullSnapshots = opts.fullSnapshots === true;
   const tables: Record<string, unknown[]> = {};
   const counts: Record<string, number> = {};
+  const warnings: string[] = [];
 
   for (const def of BACKUP_TABLES) {
-    const rows = await delegate(def.key).findMany();
-    tables[def.table] = rows.map((r) => serializeRow(r));
+    const t0 = Date.now();
+    let rows: Record<string, unknown>[];
+
+    if (def.key === "followSnapshot" && !fullSnapshots) {
+      rows = await loadLatestFollowSnapshots();
+      const total = await prisma.followSnapshot.count();
+      if (total > rows.length) {
+        warnings.push(
+          `follow_snapshots: exported ${rows.length} latest (of ${total} total). ` +
+            `Pass full=1 for full history (risk of OOM).`,
+        );
+      }
+    } else {
+      rows = await loadTablePaged(def);
+    }
+
+    tables[def.table] = rows;
     counts[def.table] = rows.length;
+    console.log(
+      `[backup:export] ${def.table} rows=${rows.length} ms=${Date.now() - t0}`,
+    );
   }
 
   return {
@@ -306,6 +462,8 @@ export async function exportDatabase(): Promise<DbBackupFile> {
     app: "early-alpha",
     tables,
     counts,
+    compact: !fullSnapshots,
+    warnings,
   };
 }
 
@@ -335,6 +493,177 @@ export function parseBackupPayload(raw: unknown): DbBackupFile {
 
 const BATCH = 500;
 
+/** backupId (string) → live DB id */
+type IdMap = Map<string, bigint>;
+
+function asBigInt(v: unknown): bigint | null {
+  if (v == null || v === "") return null;
+  if (typeof v === "bigint") return v;
+  try {
+    return BigInt(String(v));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * After parents land, remap child FKs.
+ * Merge often keeps existing watch_list rows (unique username) with **different**
+ * ids than the backup — follow_snapshots / alert_logs then violate FKs.
+ */
+async function buildWatchListIdMap(
+  backupRows: Record<string, unknown>[],
+): Promise<IdMap> {
+  const map: IdMap = new Map();
+  if (backupRows.length === 0) return map;
+
+  const live = await prisma.watchList.findMany({
+    select: { id: true, username: true, twitterUserId: true },
+  });
+  const byUsername = new Map(
+    live.map((w) => [w.username.toLowerCase(), w.id] as const),
+  );
+  const byTwitter = new Map(
+    live.map((w) => [w.twitterUserId, w.id] as const),
+  );
+
+  for (const row of backupRows) {
+    const backupId = asBigInt(row.id);
+    if (backupId == null) continue;
+    const username =
+      typeof row.username === "string" ? row.username.toLowerCase() : "";
+    const twitterUserId =
+      typeof row.twitterUserId === "string" ? row.twitterUserId : "";
+    const liveId =
+      (username && byUsername.get(username)) ||
+      (twitterUserId && byTwitter.get(twitterUserId)) ||
+      null;
+    if (liveId != null) map.set(String(backupId), liveId);
+  }
+  return map;
+}
+
+async function buildAuthAccountIdMap(
+  backupRows: Record<string, unknown>[],
+): Promise<IdMap> {
+  const map: IdMap = new Map();
+  if (backupRows.length === 0) return map;
+
+  const live = await prisma.twitterAuthAccount.findMany({
+    select: { id: true, username: true },
+  });
+  const byUsername = new Map(
+    live.map((a) => [a.username.toLowerCase(), a.id] as const),
+  );
+
+  for (const row of backupRows) {
+    const backupId = asBigInt(row.id);
+    if (backupId == null) continue;
+    const username =
+      typeof row.username === "string" ? row.username.toLowerCase() : "";
+    const liveId = username ? byUsername.get(username) : null;
+    if (liveId != null) map.set(String(backupId), liveId);
+  }
+  return map;
+}
+
+async function buildSearchQueryIdMap(
+  backupRows: Record<string, unknown>[],
+): Promise<IdMap> {
+  const map: IdMap = new Map();
+  if (backupRows.length === 0) return map;
+
+  // Match by (query, label) — best-effort; not unique but good enough for restore.
+  const live = await prisma.searchQuery.findMany({
+    select: { id: true, query: true, label: true },
+  });
+  const keyOf = (q: string, label: string | null) =>
+    `${q}\0${label ?? ""}`;
+  const byKey = new Map(
+    live.map((r) => [keyOf(r.query, r.label), r.id] as const),
+  );
+
+  for (const row of backupRows) {
+    const backupId = asBigInt(row.id);
+    if (backupId == null) continue;
+    const q = typeof row.query === "string" ? row.query : "";
+    const label =
+      row.label == null || row.label === ""
+        ? null
+        : String(row.label);
+    const liveId = byKey.get(keyOf(q, label));
+    if (liveId != null) map.set(String(backupId), liveId);
+  }
+  return map;
+}
+
+/**
+ * Prepare a row for insert: revive types, remap FKs, and in merge mode drop
+ * autoincrement PKs so we don't collide with existing serial ids.
+ */
+function prepareImportRow(
+  def: BackupTableDef,
+  raw: Record<string, unknown>,
+  mode: BackupMode,
+  maps: {
+    watchList: IdMap;
+    authAccount: IdMap;
+    searchQuery: IdMap;
+  },
+): { row: Record<string, unknown> | null; skipReason?: string } {
+  const row = reviveRow(def, raw);
+
+  // ── FK remaps ────────────────────────────────────────────────────────
+  if (def.key === "followSnapshot" || def.key === "alertLog") {
+    const old = asBigInt(row.watchListId);
+    if (old == null) return { row: null, skipReason: "missing watchListId" };
+    const mapped = maps.watchList.get(String(old));
+    if (mapped != null) {
+      row.watchListId = mapped;
+    } else if (mode === "merge") {
+      // Parent may not exist under this id after merge-skip.
+      return {
+        row: null,
+        skipReason: `no watch_list for backup id ${old}`,
+      };
+    }
+    // replace: keep backup id; parent should have been inserted with same id
+  }
+
+  if (
+    def.key === "projectList" ||
+    def.key === "searchQuery" ||
+    def.key === "listMonitor"
+  ) {
+    const old = asBigInt(row.authAccountId);
+    if (old != null) {
+      const mapped = maps.authAccount.get(String(old));
+      if (mapped != null) row.authAccountId = mapped;
+      else if (mode === "merge") row.authAccountId = null; // optional FK
+    }
+  }
+
+  if (def.key === "searchHit") {
+    const old = asBigInt(row.queryId);
+    if (old == null) return { row: null, skipReason: "missing queryId" };
+    const mapped = maps.searchQuery.get(String(old));
+    if (mapped != null) row.queryId = mapped;
+    else if (mode === "merge") {
+      return {
+        row: null,
+        skipReason: `no search_query for backup id ${old}`,
+      };
+    }
+  }
+
+  // Merge: let Postgres assign new serial ids (avoids PK + FK id drift).
+  if (mode === "merge" && def.bigints.includes("id") && "id" in row) {
+    delete row.id;
+  }
+
+  return { row };
+}
+
 export async function importDatabase(
   backup: DbBackupFile,
   mode: BackupMode,
@@ -342,10 +671,12 @@ export async function importDatabase(
   mode: BackupMode;
   imported: Record<string, number>;
   wiped: Record<string, number>;
+  skipped: Record<string, number>;
   errors: string[];
 }> {
   const imported: Record<string, number> = {};
   const wiped: Record<string, number> = {};
+  const skipped: Record<string, number> = {};
   const errors: string[] = [];
 
   // Optional wipe in reverse dependency order
@@ -362,6 +693,12 @@ export async function importDatabase(
     }
   }
 
+  const maps = {
+    watchList: new Map<string, bigint>() as IdMap,
+    authAccount: new Map<string, bigint>() as IdMap,
+    searchQuery: new Map<string, bigint>() as IdMap,
+  };
+
   for (const def of BACKUP_TABLES) {
     const rows = backup.tables[def.table];
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -369,19 +706,41 @@ export async function importDatabase(
       continue;
     }
 
+    // Parents first in BACKUP_TABLES — rebuild maps after each parent table.
+    if (def.key === "watchList") {
+      // import first, then map (below after insert)
+    }
+
     let ok = 0;
+    let skip = 0;
+
     for (let i = 0; i < rows.length; i += BATCH) {
       const slice = rows.slice(i, i + BATCH) as Record<string, unknown>[];
-      const data = slice.map((r) => reviveRow(def, r));
+      const prepared: Record<string, unknown>[] = [];
+
+      for (const raw of slice) {
+        const { row, skipReason } = prepareImportRow(def, raw, mode, maps);
+        if (!row) {
+          skip++;
+          if (skipReason && errors.length < 40) {
+            errors.push(`${def.table}: skipped — ${skipReason}`);
+          }
+          continue;
+        }
+        prepared.push(row);
+      }
+
+      if (prepared.length === 0) continue;
+
       try {
         const r = await delegate(def.key).createMany({
-          data,
+          data: prepared,
           skipDuplicates: mode === "merge",
         });
         ok += r.count;
-      } catch (err) {
-        // Fallback: try one-by-one so one bad row doesn't kill the batch
-        for (const row of data) {
+      } catch {
+        // Fallback: one-by-one so one bad row doesn't kill the batch
+        for (const row of prepared) {
           try {
             const r = await delegate(def.key).createMany({
               data: [row],
@@ -389,19 +748,46 @@ export async function importDatabase(
             });
             ok += r.count;
           } catch (e2) {
-            errors.push(
-              `${def.table}: ${e2 instanceof Error ? e2.message : String(e2)}`,
-            );
+            skip++;
+            if (errors.length < 50) {
+              const msg = e2 instanceof Error ? e2.message : String(e2);
+              // Collapse noisy FK noise into one line pattern
+              const short = msg.includes("Foreign key constraint")
+                ? "foreign key constraint violated"
+                : msg.slice(0, 180);
+              errors.push(`${def.table}: ${short}`);
+            }
           }
         }
-        if (errors.length > 50) {
+        if (errors.length >= 50) {
           errors.push("…truncated further errors");
-          break;
         }
       }
     }
+
     imported[def.table] = ok;
+    if (skip > 0) skipped[def.table] = skip;
+
+    // Refresh id maps after parent tables land
+    if (def.key === "watchList") {
+      maps.watchList = await buildWatchListIdMap(
+        rows as Record<string, unknown>[],
+      );
+      console.log(
+        `[backup:import] watch_list id map size=${maps.watchList.size}`,
+      );
+    }
+    if (def.key === "twitterAuthAccount") {
+      maps.authAccount = await buildAuthAccountIdMap(
+        rows as Record<string, unknown>[],
+      );
+    }
+    if (def.key === "searchQuery") {
+      maps.searchQuery = await buildSearchQueryIdMap(
+        rows as Record<string, unknown>[],
+      );
+    }
   }
 
-  return { mode, imported, wiped, errors };
+  return { mode, imported, wiped, skipped, errors };
 }

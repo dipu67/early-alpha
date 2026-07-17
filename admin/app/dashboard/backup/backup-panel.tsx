@@ -37,6 +37,7 @@ export function BackupPanel({
   const [lastImport, setLastImport] = useState<{
     imported: Record<string, number>;
     wiped: Record<string, number>;
+    skipped?: Record<string, number>;
     errors: string[];
     mode: string;
   } | null>(null);
@@ -55,43 +56,80 @@ export function BackupPanel({
     }
   }
 
-  async function downloadBackup() {
+  async function downloadBackup(full = false) {
     if (!canAdmin) return;
     setBusy(true);
+    toast.message(
+      full
+        ? "Exporting full history — this can take several minutes…"
+        : "Exporting compact backup (latest follow snapshots only)…",
+    );
     try {
-      // Use proxy so session + API key are applied; then trigger browser download.
-      const res = await fetch("/api/proxy/api/backup/export", {
+      // Compact by default: full follow_snapshot history previously OOMed the API.
+      const qs = full ? "?full=1" : "";
+      const res = await fetch(`/api/proxy/api/backup/export${qs}`, {
         method: "GET",
         credentials: "include",
+        cache: "no-store",
       });
       if (!res.ok) {
         const text = await res.text();
         let msg = `Export failed (${res.status})`;
         try {
-          const j = JSON.parse(text) as { error?: string };
-          if (j.error) msg = j.error;
+          const j = JSON.parse(text) as {
+            error?: string;
+            message?: string;
+          };
+          if (j.message) msg = j.message;
+          else if (j.error) msg = j.error;
         } catch {
-          /* ignore */
+          if (text && text.length < 200) msg = text;
+        }
+        if (res.status === 502 || res.status === 0) {
+          msg +=
+            " — API may have crashed; restart it and use compact export (default).";
         }
         toast.error(msg);
         return;
       }
-      const blob = await res.blob();
-      const cd = res.headers.get("content-disposition");
-      const match = cd?.match(/filename="?([^";]+)"?/);
-      const filename =
-        match?.[1] ??
-        `early-alpha-backup-${new Date().toISOString().slice(0, 10)}.json`;
 
+      const blob = await res.blob();
+      if (!blob || blob.size === 0) {
+        toast.error(
+          "Export returned empty file. Restart the API (export may have crashed it) and try compact download again.",
+        );
+        return;
+      }
+
+      const cd = res.headers.get("content-disposition");
+      const match = cd?.match(/filename\*?=(?:UTF-8''|")?([^";]+)"?/i);
+      const filename = decodeURIComponent(
+        match?.[1]?.trim() ??
+          `early-alpha-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      );
+
+      // Must attach to DOM for Safari / some Chromium builds to start download.
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
+      a.rel = "noopener";
+      a.style.display = "none";
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
-      toast.success(`Downloaded ${filename}`);
+      a.remove();
+      // Delay revoke so the browser can finish reading the blob.
+      window.setTimeout(() => URL.revokeObjectURL(url), 2_000);
+
+      const mb = (blob.size / (1024 * 1024)).toFixed(2);
+      const warn = res.headers.get("x-backup-warnings");
+      toast.success(`Downloaded ${filename} (${mb} MB)`);
+      if (warn) toast.message(warn);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Download failed");
+      const msg = e instanceof Error ? e.message : "Download failed";
+      toast.error(
+        `${msg}. If the API died, restart it — use compact export (not full history).`,
+      );
     } finally {
       setBusy(false);
     }
@@ -127,15 +165,18 @@ export function BackupPanel({
         const body = res.body as {
           imported: Record<string, number>;
           wiped: Record<string, number>;
+          skipped?: Record<string, number>;
           errors: string[];
           mode: string;
         };
         setLastImport(body);
         setPendingImport(null);
         const n = Object.values(body.imported ?? {}).reduce((a, b) => a + b, 0);
+        const sk = Object.values(body.skipped ?? {}).reduce((a, b) => a + b, 0);
         toast.success(
           `Import ${body.mode}: ${n} rows written` +
-            (body.errors?.length ? ` (${body.errors.length} errors)` : ""),
+            (sk ? `, ${sk} skipped` : "") +
+            (body.errors?.length ? ` (${body.errors.length} notes)` : ""),
         );
         await refresh();
       } else {
@@ -178,31 +219,53 @@ export function BackupPanel({
             treat the file as a secret.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <Button
-            type="button"
-            disabled={busy}
-            onClick={() => void downloadBackup()}
-          >
-            {busy ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Download className="size-3.5" />
-            )}
-            Download full backup
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy}
-            onClick={() => void refresh()}
-          >
-            <RefreshCw className="size-3.5" />
-            Refresh counts
-          </Button>
-          <span className="text-xs text-muted-foreground sm:self-center">
-            CLI: <code className="text-[11px]">npm run db:export -- ./backup.json</code>
-          </span>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-xs text-muted-foreground">
+            Default export is <strong>compact</strong>: latest follow snapshot per
+            watched account only. Full historical snapshots can be multi‑GB and
+            previously crashed the API — only use full when you really need them.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button
+              type="button"
+              disabled={busy}
+              onClick={() => void downloadBackup(false)}
+            >
+              {busy ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Download className="size-3.5" />
+              )}
+              Download backup
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              title="Includes every follow_snapshot row — can crash the API on large DBs"
+              onClick={() => void downloadBackup(true)}
+            >
+              {busy ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Download className="size-3.5" />
+              )}
+              Download full history
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => void refresh()}
+            >
+              <RefreshCw className="size-3.5" />
+              Refresh counts
+            </Button>
+            <span className="text-xs text-muted-foreground sm:self-center">
+              CLI:{" "}
+              <code className="text-[11px]">npm run db:export -- ./backup.json</code>
+            </span>
+          </div>
         </CardContent>
       </Card>
 
@@ -337,10 +400,17 @@ export function BackupPanel({
                         + {t}: {c}
                       </li>
                     ))}
+                  {Object.entries(lastImport.skipped ?? {})
+                    .filter(([, c]) => c > 0)
+                    .map(([t, c]) => (
+                      <li key={`s-${t}`} className="text-muted-foreground">
+                        ~ {t}: {c} skipped
+                      </li>
+                    ))}
                 </ul>
                 {lastImport.errors?.length ? (
                   <p className="mt-2 text-destructive">
-                    {lastImport.errors.length} error(s) — first:{" "}
+                    {lastImport.errors.length} note(s) — first:{" "}
                     {lastImport.errors[0]}
                   </p>
                 ) : null}

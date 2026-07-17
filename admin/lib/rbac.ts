@@ -22,6 +22,10 @@ export function atLeast(role: Role, min: Role): boolean {
  */
 export function requiredRoleFor(method: string, backendPath: string): Role {
   const m = method.toUpperCase();
+
+  // Backup export/import/summary — always admin (including GET download).
+  if (backendPath.startsWith("/api/backup")) return "admin";
+
   if (m === "GET" || m === "HEAD") return "viewer";
 
   // Admin-only surfaces.
@@ -29,7 +33,6 @@ export function requiredRoleFor(method: string, backendPath: string): Role {
   if (backendPath.startsWith("/api/settings")) return "admin";
   if (backendPath.startsWith("/api/queues")) return "admin";
   if (backendPath.startsWith("/api/tg")) return "admin";
-  if (backendPath.startsWith("/api/backup")) return "admin";
   if (backendPath.startsWith("/api/lists/delete")) return "admin";
   // Bulk wipe of all Grok chats is admin-only; single deletes stay editor.
   if (

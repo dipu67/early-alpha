@@ -258,7 +258,7 @@ export async function registerAllSchedulers(): Promise<void> {
 // ── Per-watch dynamic schedulers (driven by the WatchList) ──
 
 /** How often each watched account is polled for new follows. */
-export const FOLLOW_TRACKER_EVERY_MS = 5 * 60 * 1000; // 5 minutes
+export const FOLLOW_TRACKER_EVERY_MS = 10 * 60 * 1000; // 10 minutes
 
 export async function addWatchJob(watchListId: bigint, username: string): Promise<void> {
   const jobId = `watch-${watchListId.toString()}`;

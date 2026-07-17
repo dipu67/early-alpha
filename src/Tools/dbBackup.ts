@@ -32,10 +32,14 @@ async function main(): Promise<void> {
 
   if (cmd === "export") {
     const out = resolve(args[1] ?? `early-alpha-backup-${Date.now()}.json`);
-    const backup = await exportDatabase();
+    const full = args.includes("--full");
+    const backup = await exportDatabase({ fullSnapshots: full });
     await writeFile(out, JSON.stringify(backup, null, 2), "utf-8");
     const n = Object.values(backup.counts).reduce((a, b) => a + b, 0);
-    console.log(`[db:export] wrote ${n} rows → ${out}`);
+    console.log(
+      `[db:export] wrote ${n} rows → ${out} (compact=${backup.compact})`,
+    );
+    for (const w of backup.warnings) console.log(`[db:export] note: ${w}`);
     return;
   }
 
@@ -55,6 +59,9 @@ async function main(): Promise<void> {
     const result = await importDatabase(backup, mode);
     for (const [t, c] of Object.entries(result.imported)) {
       if (c > 0) console.log(`  + ${t}: ${c}`);
+    }
+    for (const [t, c] of Object.entries(result.skipped ?? {})) {
+      if (c > 0) console.log(`  ~ skipped ${t}: ${c}`);
     }
     if (mode === "replace") {
       for (const [t, c] of Object.entries(result.wiped)) {

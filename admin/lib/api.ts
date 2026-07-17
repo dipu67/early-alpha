@@ -16,6 +16,27 @@ export interface BackendResponse {
   body: unknown;
 }
 
+export interface BackendRawResponse {
+  status: number;
+  ok: boolean;
+  headers: Headers;
+  /** Raw response bytes (do not re-parse as JSON for large downloads). */
+  body: ArrayBuffer;
+}
+
+function buildUrl(
+  path: string,
+  query?: Record<string, string | undefined>,
+): URL {
+  const url = new URL(path, BASE);
+  if (query) {
+    for (const [k, v] of Object.entries(query)) {
+      if (v !== undefined && v !== "") url.searchParams.set(k, v);
+    }
+  }
+  return url;
+}
+
 /**
  * Call the early-alpha backend with the admin key attached. `path` starts with
  * "/api/..." (the backend's route space). Returns status + parsed body; never
@@ -25,12 +46,7 @@ export async function backendFetch(
   path: string,
   init: { method?: string; body?: unknown; query?: Record<string, string | undefined> } = {},
 ): Promise<BackendResponse> {
-  const url = new URL(path, BASE);
-  if (init.query) {
-    for (const [k, v] of Object.entries(init.query)) {
-      if (v !== undefined && v !== "") url.searchParams.set(k, v);
-    }
-  }
+  const url = buildUrl(path, init.query);
 
   const hasBody = init.body !== undefined && init.method && init.method !== "GET";
   const res = await fetch(url, {
@@ -53,4 +69,35 @@ export async function backendFetch(
     }
   }
   return { status: res.status, ok: res.ok, body };
+}
+
+/**
+ * Same as backendFetch but keeps the body as raw bytes and preserves response
+ * headers. Use for file downloads (backup export) so we do not JSON.parse +
+ * Response.json a multi‑MB payload (slow, can OOM / empty downloads).
+ */
+export async function backendFetchRaw(
+  path: string,
+  init: { method?: string; body?: unknown; query?: Record<string, string | undefined> } = {},
+): Promise<BackendRawResponse> {
+  const url = buildUrl(path, init.query);
+
+  const hasBody = init.body !== undefined && init.method && init.method !== "GET";
+  const res = await fetch(url, {
+    method: init.method ?? "GET",
+    headers: {
+      "x-api-key": apiKey(),
+      ...(hasBody ? { "content-type": "application/json" } : {}),
+    },
+    ...(hasBody ? { body: JSON.stringify(init.body) } : {}),
+    cache: "no-store",
+  });
+
+  const body = await res.arrayBuffer();
+  return {
+    status: res.status,
+    ok: res.ok,
+    headers: res.headers,
+    body,
+  };
 }

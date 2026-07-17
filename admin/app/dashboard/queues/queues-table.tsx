@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Play, Pause, Zap, Trash2, Pencil } from "lucide-react";
 import {
   Table,
@@ -15,7 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { proxy } from "@/lib/client";
 import { toast } from "@/components/ui/sonner";
-import { fmtDate, fmtEvery, type Scheduler } from "@/lib/types";
+import { LocalTime } from "@/components/local-time";
+import { getLocalTimeZone, getLocalTimeZoneShort } from "@/lib/time";
+import { fmtEvery, type Scheduler } from "@/lib/types";
 
 /** Loose cron check: 5 space-separated fields (minute hour dom month dow). */
 function isLikelyCron(s: string): boolean {
@@ -26,6 +28,11 @@ function isLikelyCron(s: string): boolean {
 export function QueuesTable({ initial }: { initial: Scheduler[] }) {
   const [rows, setRows] = useState(initial);
   const [editing, setEditing] = useState<string | null>(null);
+  const [localZone, setLocalZone] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocalZone(`${getLocalTimeZoneShort()} · ${getLocalTimeZone()}`);
+  }, []);
 
   async function refresh() {
     const res = await proxy("/api/queues");
@@ -62,13 +69,29 @@ export function QueuesTable({ initial }: { initial: Scheduler[] }) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">
+        Next run times are shown in your local timezone
+        {localZone ? (
+          <>
+            {" "}
+            (
+            <span className="font-medium text-foreground/80">{localZone}</span>
+            )
+          </>
+        ) : null}
+        . Cron patterns run in the API process timezone (usually UTC on a VPS).
+      </p>
+      <div className="rounded-lg border border-border bg-card">
       <Table className="min-w-[48rem]">
         <TableHeader>
           <TableRow>
             <TableHead>Job</TableHead>
             <TableHead>Schedule</TableHead>
-            <TableHead>Next run</TableHead>
+            <TableHead>
+              Next run{" "}
+              <span className="font-normal text-muted-foreground">(local)</span>
+            </TableHead>
             <TableHead>Queue counts</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Actions</TableHead>
@@ -109,7 +132,13 @@ export function QueuesTable({ initial }: { initial: Scheduler[] }) {
                 )}
               </TableCell>
               <TableCell className="whitespace-nowrap text-muted-foreground">
-                {s.paused ? "—" : s.nextRun ? fmtDate(new Date(s.nextRun).toISOString()) : "—"}
+                {s.paused ? (
+                  "—"
+                ) : s.nextRun ? (
+                  <LocalTime iso={s.nextRun} className="text-sm" />
+                ) : (
+                  "—"
+                )}
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1 text-xs">
@@ -184,6 +213,7 @@ export function QueuesTable({ initial }: { initial: Scheduler[] }) {
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }
@@ -265,7 +295,9 @@ function ScheduleEditor({
       {mode === "cron" ? (
         <p className="text-[11px] text-muted-foreground">
           Format: <code>min hour dom month dow</code> — e.g.{" "}
-          <code>0 9 * * *</code> daily 09:00, <code>0 */6 * * *</code> every 6h
+          <code>0 9 * * *</code> daily 09:00, <code>0 */6 * * *</code> every 6h.
+          Pattern clock is the <strong>API server</strong> timezone (often UTC);
+          the Next run column always shows your local time.
         </p>
       ) : null}
       <div className="flex items-center gap-1">

@@ -27,13 +27,54 @@ backupRouter.get(
 
 backupRouter.get(
   "/export",
-  asyncHandler(async (_req, res) => {
-    const backup = await exportDatabase();
+  asyncHandler(async (req, res) => {
+    // full=1 exports every follow_snapshot (can be multi‑GB and OOM the process).
+    // Default is compact: latest snapshot per watched account only.
+    const full =
+      req.query.full === "1" ||
+      req.query.full === "true" ||
+      req.query.fullSnapshots === "1";
+
+    console.log(`[backup:export] start compact=${!full}`);
+    const t0 = Date.now();
+
+    let backup;
+    try {
+      backup = await exportDatabase({ fullSnapshots: full });
+    } catch (err) {
+      console.error("[backup:export] failed:", err);
+      throw err instanceof Error
+        ? err
+        : new Error(String(err));
+    }
+
+    // BigInts already stringified in exportDatabase.serializeRow
+    let payload: string;
+    try {
+      payload = JSON.stringify(backup);
+    } catch (err) {
+      console.error("[backup:export] stringify failed:", err);
+      throw new HttpError(
+        500,
+        "export_stringify_failed — try compact export (default) without full=1",
+      );
+    }
+
     const filename = `early-alpha-backup-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+    res.status(200);
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    // jsonSafe for BigInts already handled inside exportDatabase
-    res.status(200).send(JSON.stringify(backup));
+    res.setHeader("Content-Length", Buffer.byteLength(payload, "utf8"));
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("X-Backup-Compact", backup.compact ? "1" : "0");
+    if (backup.warnings.length) {
+      res.setHeader("X-Backup-Warnings", backup.warnings.join(" | ").slice(0, 900));
+    }
+    console.log(
+      `[backup:export] done rows=${Object.values(backup.counts).reduce((a, b) => a + b, 0)} ` +
+        `bytes=${payload.length} ms=${Date.now() - t0}`,
+    );
+    res.send(payload);
   }),
 );
 
