@@ -8,7 +8,7 @@ const {client} = await getTwitterClient()
 
 
 const userIds = [
-  "2067583076100968448",
+  "2076903536202280960",
 ];
 
 const res = await client.getUsersByIds(userIds);

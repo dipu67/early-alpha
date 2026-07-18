@@ -156,16 +156,78 @@ export function MonitorsPanel({
           scanned?: number;
           enrolled?: number;
           updated?: number;
+          deactivated?: number;
+          reactivated?: number;
           tagSlug?: string;
         };
         toast.success(
-          `Tag “${b.tagSlug}”: scanned ${b.scanned ?? 0} · +${b.enrolled ?? 0} new · ${b.updated ?? 0} updated`,
+          `Tag “${b.tagSlug}”: ${b.scanned ?? 0} projects · +${b.enrolled ?? 0} · ~${b.updated ?? 0}` +
+            (b.reactivated ? ` · ↻${b.reactivated}` : "") +
+            (b.deactivated ? ` · −${b.deactivated}` : ""),
         );
         await refresh();
       } else {
         const b = res.body as { error?: string } | null;
         toast.error(b?.error ?? `Error ${res.status}`);
       }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Re-sync one existing rule (same as enroll — full add/update/remove). */
+  async function syncRule(slug: string) {
+    setBusy(true);
+    try {
+      const res = await proxy("/api/monitors/enroll-by-tag", {
+        method: "POST",
+        body: { tagSlug: slug, createRule: false },
+      });
+      if (res.ok) {
+        const b = res.body as {
+          scanned?: number;
+          enrolled?: number;
+          updated?: number;
+          deactivated?: number;
+          reactivated?: number;
+        };
+        toast.success(
+          `Synced “${slug}”: +${b.enrolled ?? 0} · ~${b.updated ?? 0}` +
+            (b.reactivated ? ` · ↻${b.reactivated}` : "") +
+            (b.deactivated ? ` · −${b.deactivated}` : ""),
+        );
+        await refresh();
+      } else {
+        const b = res.body as { error?: string } | null;
+        toast.error(b?.error ?? "Sync failed");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function syncAllRules() {
+    setBusy(true);
+    try {
+      const res = await proxy("/api/monitors/sync-tag-rules", {
+        method: "POST",
+        body: {},
+      });
+      if (res.ok) {
+        const b = res.body as {
+          rules?: number;
+          enrolled?: number;
+          updated?: number;
+          deactivated?: number;
+          reactivated?: number;
+        };
+        toast.success(
+          `Synced ${b.rules ?? 0} rules: +${b.enrolled ?? 0} · ~${b.updated ?? 0}` +
+            (b.reactivated ? ` · ↻${b.reactivated}` : "") +
+            (b.deactivated ? ` · −${b.deactivated}` : ""),
+        );
+        await refresh();
+      } else toast.error("Sync all failed");
     } finally {
       setBusy(false);
     }
@@ -436,8 +498,9 @@ export function MonitorsPanel({
             <CardHeader className="py-3">
               <CardTitle className="text-base">Enroll by tag</CardTitle>
               <CardDescription>
-                e.g. all <strong>nft</strong> projects (up to max). Sets shared interval + TG
-                topic. Scales to ~1k via tweetCount prefilter.
+                e.g. all <strong>nft</strong> projects. Re-run anytime — auto{" "}
+                <strong>+add</strong> / <strong>−remove</strong> as tag membership changes.
+                Also syncs on every monitor poll cycle.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -502,8 +565,19 @@ export function MonitorsPanel({
                   ) : (
                     <Plus className="size-3.5" />
                   )}
-                  Enroll tag
+                  Enroll / re-sync tag
                 </Button>
+                {rules.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => void syncAllRules()}
+                  >
+                    <RefreshCw className={cn("size-3.5", busy && "animate-spin")} />
+                    Sync all rules
+                  </Button>
+                ) : null}
               </form>
               {rules.length > 0 ? (
                 <ul className="mt-3 space-y-1.5 border-t border-border/50 pt-3 text-xs">
@@ -520,8 +594,26 @@ export function MonitorsPanel({
                         {r.topicId != null ? ` · topic ${r.topicId}` : ""}
                         {" · "}
                         {r.enrolledCount} enrolled
+                        {r.lastEnrollAt ? (
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · synced {fmtDate(r.lastEnrollAt)}
+                          </span>
+                        ) : null}
                       </span>
                       <span className="flex gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="h-7"
+                          disabled={busy || !r.enabled}
+                          title="Re-sync: add new tagged projects, drop those that lost the tag"
+                          onClick={() => void syncRule(r.tagSlug)}
+                        >
+                          <RefreshCw className="size-3" />
+                          Sync
+                        </Button>
                         <Button
                           type="button"
                           size="sm"

@@ -381,23 +381,35 @@ export async function upsertTagRule(input: {
   return rules.find((r) => r.tagSlug === tagSlug)!;
 }
 
-/**
- * Enroll all TwitterAccounts that have this tag into ProjectMonitor.
- * Applies interval / topic / alert settings from the tag rule.
- */
-export async function enrollByTag(tagSlug: string): Promise<{
+export type EnrollByTagResult = {
   tagSlug: string;
   scanned: number;
   enrolled: number;
   updated: number;
+  /** Tag-sourced monitors paused because project no longer has this tag (or fell off max cap). */
+  deactivated: number;
+  /** Tag-sourced monitors re-activated because project regained the tag. */
+  reactivated: number;
   ruleId: string;
-}> {
+};
+
+/**
+ * Full sync of monitored projects for a tag rule (safe to re-run anytime):
+ *   + enroll new accounts that have the tag
+ *   ~ update settings for existing
+ *   − deactivate source=tag monitors that no longer carry the tag (or over max)
+ * Manual monitors are never removed.
+ */
+export async function enrollByTag(
+  tagSlug: string,
+  opts: { allowDisabled?: boolean } = {},
+): Promise<EnrollByTagResult> {
   const slug = tagSlug.trim().toLowerCase();
   const rule = await prisma.projectMonitorTagRule.findUnique({
     where: { tagSlug: slug },
   });
   if (!rule) throw new Error("tag_rule_not_found");
-  if (!rule.enabled) throw new Error("tag_rule_disabled");
+  if (!rule.enabled && !opts.allowDisabled) throw new Error("tag_rule_disabled");
 
   const accounts = await prisma.twitterAccount.findMany({
     where: { tags: { has: slug } },
@@ -415,8 +427,10 @@ export async function enrollByTag(tagSlug: string): Promise<{
     },
   });
 
+  const keepIds = new Set(accounts.map((a) => a.id));
   let enrolled = 0;
   let updated = 0;
+  let reactivated = 0;
 
   for (const acc of accounts) {
     const existing = await prisma.projectMonitor.findUnique({
@@ -434,19 +448,31 @@ export async function enrollByTag(tagSlug: string): Promise<{
     if (acc.isBlueVerified != null) profile.isBlueVerified = acc.isBlueVerified;
 
     if (existing) {
+      const wasInactive = !existing.isActive;
       await prisma.projectMonitor.update({
         where: { id: existing.id },
         data: {
           isActive: true,
           username: acc.username.toLowerCase(),
           name: acc.name,
-          primaryTag: slug,
+          // Tag enroll owns primaryTag only for non-manual sources
+          primaryTag:
+            existing.source === "manual" ? existing.primaryTag : slug,
           tags: acc.tags,
-          topicId: rule.topicId,
-          alertMode: rule.alertMode,
-          alertEnabled: rule.alertEnabled,
-          intervalSec: rule.intervalSec,
-          // Don't downgrade manual → tag source
+          topicId:
+            existing.source === "manual" ? existing.topicId : rule.topicId,
+          alertMode:
+            existing.source === "manual"
+              ? existing.alertMode
+              : rule.alertMode,
+          alertEnabled:
+            existing.source === "manual"
+              ? existing.alertEnabled
+              : rule.alertEnabled,
+          intervalSec:
+            existing.source === "manual"
+              ? existing.intervalSec
+              : rule.intervalSec,
           source: existing.source === "manual" ? "manual" : "tag",
           lastError: null,
           ...(acc.tweetCount != null && existing.lastTweetCount == null
@@ -454,7 +480,8 @@ export async function enrollByTag(tagSlug: string): Promise<{
             : {}),
         },
       });
-      updated++;
+      if (wasInactive && existing.source !== "manual") reactivated++;
+      else updated++;
       continue;
     }
 
@@ -474,17 +501,40 @@ export async function enrollByTag(tagSlug: string): Promise<{
     enrolled++;
   }
 
-  await prisma.projectMonitorTagRule.update({
-    where: { id: rule.id },
-    data: { lastEnrollAt: new Date() },
+  // Deactivate tag-owned monitors no longer in the tag set (decrease)
+  const stale = await prisma.projectMonitor.findMany({
+    where: {
+      isActive: true,
+      source: "tag",
+      primaryTag: slug,
+    },
+    select: { id: true, twitterUserId: true, username: true },
   });
 
-  // Propagate interval/topic to all active tag monitors for this slug
+  let deactivated = 0;
+  for (const m of stale) {
+    if (keepIds.has(m.twitterUserId)) continue;
+    await prisma.projectMonitor.update({
+      where: { id: m.id },
+      data: {
+        isActive: false,
+        lastError: `tag_sync: no longer tagged “${slug}”`,
+      },
+    });
+    deactivated++;
+  }
+
+  await prisma.projectMonitorTagRule.update({
+    where: { id: rule.id },
+    data: { lastEnrollAt: new Date(), lastRunAt: new Date() },
+  });
+
+  // Propagate interval/topic to active tag monitors for this slug
   await prisma.projectMonitor.updateMany({
     where: {
       isActive: true,
-      OR: [{ primaryTag: slug }, { tags: { has: slug } }],
-      source: { in: ["tag", "hunter", "stage", "signal"] },
+      source: "tag",
+      primaryTag: slug,
     },
     data: {
       intervalSec: rule.intervalSec,
@@ -495,7 +545,8 @@ export async function enrollByTag(tagSlug: string): Promise<{
   });
 
   console.log(
-    `[monitor] enroll-by-tag ${slug} scanned=${accounts.length} enrolled=${enrolled} updated=${updated}`,
+    `[monitor] tag-sync ${slug} scanned=${accounts.length} +${enrolled} ~${updated} ` +
+      `reactivated=${reactivated} -${deactivated}`,
   );
 
   return {
@@ -503,7 +554,56 @@ export async function enrollByTag(tagSlug: string): Promise<{
     scanned: accounts.length,
     enrolled,
     updated,
+    deactivated,
+    reactivated,
     ruleId: rule.id.toString(),
+  };
+}
+
+/**
+ * Re-sync every enabled tag rule (auto-run on monitor poll).
+ * Adds new tagged projects, drops tag monitors that lost the tag.
+ */
+export async function syncAllEnabledTagRules(): Promise<{
+  rules: number;
+  enrolled: number;
+  updated: number;
+  deactivated: number;
+  reactivated: number;
+}> {
+  const rules = await prisma.projectMonitorTagRule.findMany({
+    where: { enabled: true },
+  });
+  let enrolled = 0;
+  let updated = 0;
+  let deactivated = 0;
+  let reactivated = 0;
+  for (const r of rules) {
+    try {
+      const res = await enrollByTag(r.tagSlug);
+      enrolled += res.enrolled;
+      updated += res.updated;
+      deactivated += res.deactivated;
+      reactivated += res.reactivated;
+    } catch (err) {
+      console.warn(
+        `[monitor] tag-sync ${r.tagSlug} failed:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+  if (rules.length > 0) {
+    console.log(
+      `[monitor] tag-sync-all rules=${rules.length} +${enrolled} ~${updated} ` +
+        `reactivated=${reactivated} -${deactivated}`,
+    );
+  }
+  return {
+    rules: rules.length,
+    enrolled,
+    updated,
+    deactivated,
+    reactivated,
   };
 }
 
@@ -703,12 +803,6 @@ export async function pollAllMonitors(): Promise<{
   errors: number;
 }> {
   const now = Date.now();
-  const allActive = await prisma.projectMonitor.findMany({
-    where: { isActive: true },
-    orderBy: { lastPolledAt: { sort: "asc", nulls: "first" } },
-  });
-
-  const due = allActive.filter((m) => isDue(m as MonitorRow, now)) as MonitorRow[];
 
   let checked = 0;
   let skippedUnchanged = 0;
@@ -720,14 +814,27 @@ export async function pollAllMonitors(): Promise<{
   let usersByIdsReqs = 0;
   let timelineBudget = MAX_TIMELINE_FETCHES;
 
-  // Mark tag rules lastRunAt
-  await prisma.projectMonitorTagRule.updateMany({
-    where: { enabled: true },
-    data: { lastRunAt: new Date() },
+  // Auto-sync tag membership (add / remove as tag sets grow or shrink)
+  try {
+    await syncAllEnabledTagRules();
+  } catch (err) {
+    console.warn(
+      "[monitor] tag-sync-all failed:",
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  // Load due list after tag sync (new enrollments may be due immediately)
+  const afterSync = await prisma.projectMonitor.findMany({
+    where: { isActive: true },
+    orderBy: { lastPolledAt: { sort: "asc", nulls: "first" } },
   });
+  const due = afterSync.filter((m) => isDue(m as MonitorRow, now)) as MonitorRow[];
 
   if (due.length === 0) {
-    console.log(`[monitor] poll-all nothing due (active=${allActive.length})`);
+    console.log(
+      `[monitor] poll-all nothing due (active=${afterSync.length} after tag-sync)`,
+    );
     return {
       due: 0,
       checked: 0,

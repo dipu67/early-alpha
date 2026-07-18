@@ -11,7 +11,8 @@
 //   POST   /monitors/skip-all-backlogs  clear all watermarks
 //   GET    /monitors/tag-rules          list tag enroll rules
 //   POST   /monitors/tag-rules          upsert tag rule
-//   POST   /monitors/enroll-by-tag      enroll all projects for a tag
+//   POST   /monitors/enroll-by-tag      sync tag set (add/update/deactivate)
+//   POST   /monitors/sync-tag-rules     re-sync all enabled tag rules
 //   DELETE /monitors/tag-rules/:id      delete rule
 
 import { Router } from "express";
@@ -26,6 +27,7 @@ import {
   listTagRules,
   upsertTagRule,
   enrollByTag,
+  syncAllEnabledTagRules,
   pollMonitor,
 } from "../services/projectMonitor.js";
 
@@ -145,6 +147,7 @@ monitorsRouter.post(
     }
 
     try {
+      // Full sync: +new, ~update, -lost tag (re-run anytime)
       const result = await enrollByTag(slug);
       res.json(jsonSafe(result));
     } catch (err) {
@@ -153,6 +156,15 @@ monitorsRouter.post(
       if (msg === "tag_rule_disabled") throw new HttpError(400, msg);
       throw err;
     }
+  }),
+);
+
+/** Re-sync every enabled tag rule against current project tags. */
+monitorsRouter.post(
+  "/sync-tag-rules",
+  asyncHandler(async (_req, res) => {
+    const result = await syncAllEnabledTagRules();
+    res.json(jsonSafe({ ok: true, ...result }));
   }),
 );
 
