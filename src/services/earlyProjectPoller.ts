@@ -454,7 +454,7 @@ async function handleProjectTweet(opts: {
       importance: toAlertImportanceView(imp),
     }),
     "MarkdownV2",
-    thread,
+    2833, // update-all signal thread
     "signal",
   );
   return true;
