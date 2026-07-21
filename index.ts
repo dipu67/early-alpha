@@ -1,5 +1,4 @@
 import "dotenv/config";
-import "./src/services/worker.js";
 import "./src/services/seedWorker.js";
 import "./src/services/listWorker.js";
 import { registerAllSchedulers } from "./src/services/queue.js";
@@ -9,8 +8,6 @@ import { startGrokBot } from "./src/tg/grokBot.js";
 export { prisma } from "./src/db/prisma.js";
 export { getTwitterClient, markRateLimited } from "./src/twitter/getClient.js";
 export { TwitterClient } from "./src/TwitterClient/TwitterClient.js";
-export { followTrackerQueue, addWatchJob, removeWatchJob } from "./src/services/queue.js";
-export { checkFollowingDiff } from "./src/services/followDiff.js";
 
 import { createApp } from "./src/server.js";
 import { env } from "./src/env.js";
@@ -37,3 +34,15 @@ startBot("Grok", () => startGrokBot());
 
 await registerAllSchedulers();
 console.log("[scheduler] Schedulers registered from registry");
+
+// Catch digests missed while the process was down (marker-based; no flood on first boot).
+void import("./src/services/digestCatchUp.js")
+  .then(({ catchUpMissedDigests }) => catchUpMissedDigests())
+  .then((r) =>
+    console.log(
+      `[digest-catchup] done daily=${r.daily} early=${r.early}`,
+    ),
+  )
+  .catch((err) =>
+    console.error("[digest-catchup] failed:", err),
+  );

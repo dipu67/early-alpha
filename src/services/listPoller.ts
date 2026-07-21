@@ -17,6 +17,12 @@ import { reclassifyAccount, ALPHA_SLUG, type ListSyncCtx } from "./projectLists.
 import { sendTelegramAlert, topicForSlug, isAlertEnabled } from "../tg/sendAlert.js";
 import { formatSignalAlert, formatReclassifyAlert } from "./formatAlert.js";
 import { prunePostAlertsForSlug } from "./postAlerts.js";
+import {
+  evaluateSignalImportance,
+  shouldPersistSignal,
+  shouldTelegramSignal,
+  toAlertImportanceView,
+} from "./signalIntel.js";
 
 /** Tweets fetched per list per cycle. */
 const TWEETS_PER_LIST = Number(process.env.LIST_POLL_COUNT ?? 40);
@@ -162,6 +168,20 @@ async function handleTweet(ctx: ListSyncCtx, slug: string, tweet: TweetData): Pr
   if (signals.length === 0) return;
 
   const alertSlug = reclassifiedTo?.[0] ?? slug;
+  const imp = evaluateSignalImportance({
+    text: tweet.text,
+    signals,
+    tagSlug: alertSlug,
+    isOfficialAuthor: true,
+  });
+  if (!shouldPersistSignal(imp)) {
+    console.log(
+      `[list-poll] drop @${tweet.author.username} score=${imp.score} labels=${signals.join(",")}`,
+    );
+    return;
+  }
+
+  const storeSignals = imp.displayLabels;
 
   try {
     await prisma.postAlert.create({
@@ -170,7 +190,7 @@ async function handleTweet(ctx: ListSyncCtx, slug: string, tweet: TweetData): Pr
         accountId: accountId ?? tweet.author.username,
         username: tweet.author.username,
         slug: alertSlug,
-        signals,
+        signals: storeSignals,
         text: tweet.text,
         postedAt: postedAt(tweet) ?? null,
       },
@@ -185,15 +205,18 @@ async function handleTweet(ctx: ListSyncCtx, slug: string, tweet: TweetData): Pr
     console.warn(`[list-poll] prune slug=${alertSlug}:`, err);
   }
   if (!(await isAlertEnabled("signal"))) return;
+  if (!shouldTelegramSignal(imp)) return;
+
   await sendTelegramAlert(
     formatSignalAlert({
       accountId: accountId ?? tweet.author.username,
       username: tweet.author.username,
       name: tweet.author.name,
       slug: alertSlug,
-      signals,
+      signals: storeSignals,
       text: tweet.text,
       tweetId: tweet.id,
+      importance: toAlertImportanceView(imp),
     }),
     "MarkdownV2",
     await topicForSlug(alertSlug),

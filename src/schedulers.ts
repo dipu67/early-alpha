@@ -4,7 +4,7 @@
 
 export interface SchedulerDef {
   key: string;
-  queue: "follow-tracker" | "seed-tracker" | "list-tracker";
+  queue: "seed-tracker" | "list-tracker";
   schedulerId: string;
   jobName: string;
   data: Record<string, unknown>;
@@ -25,6 +25,8 @@ export const SCHEDULERS: SchedulerDef[] = [
   { key: "github-repo-poll", queue: "list-tracker", schedulerId: "github-repo-poll", jobName: "poll-github-repos", data: {}, defaultEvery: 5 * 60 * 1000, label: "GitHub repo commit monitors" },
   { key: "monitor-poll", queue: "list-tracker", schedulerId: "monitor-poll", jobName: "poll-monitors", data: {}, defaultEvery: 2 * 60 * 1000, label: "User timeline monitors" },
   { key: "home-signal-poll", queue: "list-tracker", schedulerId: "home-signal-poll", jobName: "poll-home-signals", data: {}, defaultEvery: 2 * 60 * 1000, label: "HomeLatest signal scans" },
+  { key: "early-project-poll", queue: "list-tracker", schedulerId: "early-project-poll", jobName: "poll-early-projects", data: {}, defaultEvery: 60 * 60 * 1000, label: "Early projects usersByIds (1h)" },
+  { key: "growth-report", queue: "list-tracker", schedulerId: "growth-report", jobName: "growth-report", data: {}, defaultCron: "0 10 * * 1", label: "Weekly top growing projects (Mon 10:00 UTC)" },
 ];
 
 export function getScheduler(key: string): SchedulerDef | undefined {

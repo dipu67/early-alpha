@@ -19,6 +19,12 @@ import { detectSignalsWithRules } from "./signalRules.js";
 import { formatSignalAlert } from "./formatAlert.js";
 import { sendTelegramAlert, topicForSlug, isAlertEnabled } from "../tg/sendAlert.js";
 import { prunePostAlertsForSlug, pruneAllPostAlerts } from "./postAlerts.js";
+import {
+  evaluateSignalImportance,
+  shouldPersistSignal,
+  shouldTelegramSignal,
+  toAlertImportanceView,
+} from "./signalIntel.js";
 
 function toId(id: string): bigint {
   try {
@@ -153,7 +159,8 @@ export async function pollSignalScan(scanId: bigint): Promise<{
  * Pipeline for one new HomeLatest tweet:
  *   1) skip if already alerted (PostAlert tweetId)
  *   2) run rules: generic mint/wl/… + tag-specific
- *   3) if any match → save PostAlert + Telegram "signal"
+ *   3) score importance (drop bare noise)
+ *   4) if pass → save PostAlert + Telegram "signal"
  */
 async function handleHomeTweet(
   tagSlug: string,
@@ -167,6 +174,19 @@ async function handleHomeTweet(
   const signals = await detectSignalsWithRules(tweet.text, tagSlug);
   if (signals.length === 0) return false;
 
+  const imp = evaluateSignalImportance({
+    text: tweet.text,
+    signals,
+    tagSlug,
+    isOfficialAuthor: true, // HomeLatest of followed projects
+  });
+  if (!shouldPersistSignal(imp)) {
+    console.log(
+      `[signal-scan] drop @${tweet.author.username} score=${imp.score} labels=${signals.join(",")}`,
+    );
+    return false;
+  }
+
   const username = (tweet.author.username || "").toLowerCase();
   if (!username) return false;
 
@@ -175,6 +195,7 @@ async function handleHomeTweet(
     select: { id: true },
   });
   const accountId = accountRow?.id ?? tweet.author.username;
+  const storeSignals = imp.displayLabels;
 
   try {
     await prisma.postAlert.create({
@@ -183,7 +204,7 @@ async function handleHomeTweet(
         accountId,
         username: tweet.author.username,
         slug: tagSlug,
-        signals,
+        signals: storeSignals,
         text: tweet.text,
         postedAt: postedAt(tweet),
       },
@@ -200,14 +221,17 @@ async function handleHomeTweet(
 
   if (!opts.alertEnabled) {
     console.log(
-      `[signal-scan] matched @${tweet.author.username} ${signals.join(",")} (tg off for scan)`,
+      `[signal-scan] matched @${tweet.author.username} ${storeSignals.join(",")} (tg off for scan)`,
     );
     return true;
   }
   if (!(await isAlertEnabled("signal"))) {
     console.log(
-      `[signal-scan] matched @${tweet.author.username} ${signals.join(",")} (global signal alert disabled)`,
+      `[signal-scan] matched @${tweet.author.username} ${storeSignals.join(",")} (global signal alert disabled)`,
     );
+    return true;
+  }
+  if (!shouldTelegramSignal(imp)) {
     return true;
   }
 
@@ -220,16 +244,17 @@ async function handleHomeTweet(
       username: tweet.author.username,
       name: tweet.author.name || tweet.author.username,
       slug: tagSlug,
-      signals,
+      signals: storeSignals,
       text: tweet.text,
       tweetId: tweet.id,
+      importance: toAlertImportanceView(imp),
     }),
     "MarkdownV2",
     thread,
     "signal",
   );
   console.log(
-    `[signal-scan] TG alert @${tweet.author.username} signals=[${signals.join(", ")}] tag=${tagSlug}`,
+    `[signal-scan] TG alert @${tweet.author.username} tier=${imp.tier} score=${imp.score} signals=[${signals.join(", ")}] tag=${tagSlug}`,
   );
   return true;
 }

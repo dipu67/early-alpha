@@ -5,27 +5,63 @@ import { fileURLToPath } from "node:url";
 import { prisma } from "../../db/prisma.js";
 import { getTwitterClient, markRateLimited } from "../../twitter/getClient.js";
 import type { UserData } from "../../TwitterClient/types.js";
-import { sendTelegramAlert, sendTelegramPlaintext, isAlertEnabled } from "../../tg/sendAlert.js";
+import {
+  sendTelegramAlert,
+  sendTelegramPlaintext,
+  isAlertEnabled,
+} from "../../tg/sendAlert.js";
 import {
   formatConvergenceAlert,
   type ConvergenceAlertData,
   type DigestEntry,
   formatDailyDigest,
   getAccountAge,
+  formatNewFollowAlert,
 } from "../../services/formatAlert.js";
 import { classifyAccount } from "../../services/projectTagger.js";
 
 // --- Category tagging ---
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  DeFi: ["defi", "dex", "swap", "yield", "lending", "liquidity", "amm", "vault", "staking"],
+  DeFi: [
+    "defi",
+    "dex",
+    "swap",
+    "yield",
+    "lending",
+    "liquidity",
+    "amm",
+    "vault",
+    "staking",
+  ],
   NFT: ["nft", "nfts", "collectible", "pfp", "mint", "opensea"],
   L1: ["layer 1", "l1", "blockchain", "chain", "mainnet"],
-  L2: ["layer 2", "l2", "rollup", "zk", "optimistic", "arbitrum", "optimism", "base", "zksync", "starknet"],
+  L2: [
+    "layer 2",
+    "l2",
+    "rollup",
+    "zk",
+    "optimistic",
+    "arbitrum",
+    "optimism",
+    "base",
+    "zksync",
+    "starknet",
+  ],
   GameFi: ["gamefi", "play-to-earn", "p2e", "gaming", "metaverse", "web3 game"],
 };
 
-const EXCHANGE_NAMES = ["binance", "coinbase", "kraken", "okx", "bybit", "kucoin", "huobi", "bitfinex", "gemini"];
+const EXCHANGE_NAMES = [
+  "binance",
+  "coinbase",
+  "kraken",
+  "okx",
+  "bybit",
+  "kucoin",
+  "huobi",
+  "bitfinex",
+  "gemini",
+];
 const EXCLUDE_BIO_TERMS = ["airdrop", "giveaway"];
 
 export function categorizeFromBio(bio: string | null | undefined): string[] {
@@ -35,7 +71,10 @@ export function categorizeFromBio(bio: string | null | undefined): string[] {
 
   for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
     for (const kw of keywords) {
-      const regex = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+      const regex = new RegExp(
+        `\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+        "i",
+      );
       if (regex.test(lower)) {
         matched.push(category);
         break;
@@ -187,9 +226,11 @@ interface TrackOptions {
   fullSync?: boolean;
 }
 
-export async function runTrackingCycle(options: TrackOptions = {}): Promise<void> {
+export async function runTrackingCycle(
+  options: TrackOptions = {},
+): Promise<void> {
   const { fullSync = false } = options;
-  const fetchCount = fullSync ? 5000 : 200;
+  const fetchCount = fullSync ? 5000 : 20;
 
   const seeds = await prisma.seedAccount.findMany({
     where: { active: true, twitterId: { not: null } },
@@ -200,7 +241,7 @@ export async function runTrackingCycle(options: TrackOptions = {}): Promise<void
     return;
   }
 
-  const seedTwitterIds = new Set(seeds.map(s => s.twitterId!));
+  const seedTwitterIds = new Set(seeds.map((s) => s.twitterId!));
 
   const run = await prisma.trackingRun.create({
     data: { status: "running" },
@@ -274,13 +315,21 @@ export async function runTrackingCycle(options: TrackOptions = {}): Promise<void
         });
 
         const existingEdge = await prisma.followEdge.findUnique({
-          where: { seedId_followingId: { seedId: seed.id, followingId: user.id } },
+          where: {
+            seedId_followingId: { seedId: seed.id, followingId: user.id },
+          },
         });
 
         if (existingEdge) {
           await prisma.followEdge.update({
-            where: { seedId_followingId: { seedId: seed.id, followingId: user.id } },
-            data: { lastSeenAt: new Date(), lastSeenRunId: run.id, active: true },
+            where: {
+              seedId_followingId: { seedId: seed.id, followingId: user.id },
+            },
+            data: {
+              lastSeenAt: new Date(),
+              lastSeenRunId: run.id,
+              active: true,
+            },
           });
         } else {
           await prisma.followEdge.create({
@@ -293,7 +342,8 @@ export async function runTrackingCycle(options: TrackOptions = {}): Promise<void
             },
           });
           newEdges++;
-
+          const msgFormat = await formatNewFollowAlert(seed.username, user);
+          await sendTelegramAlert(msgFormat, "MarkdownV2", 1724, "newFollow");
           if (!isPopulationRun) {
             const categories = categorizeFromBio(user.description);
 
@@ -309,7 +359,9 @@ export async function runTrackingCycle(options: TrackOptions = {}): Promise<void
       }
 
       seedsProcessed++;
-      console.log(`[track] @${seed.username}: ${users.length} following, ${newEdges} new edges`);
+      console.log(
+        `[track] @${seed.username}: ${users.length} following, ${newEdges} new edges`,
+      );
 
       await sleep(3000);
     } catch (error) {
@@ -328,7 +380,9 @@ export async function runTrackingCycle(options: TrackOptions = {}): Promise<void
     },
   });
 
-  console.log(`[track] Run #${run.id} complete: ${seedsProcessed} seeds, ${accountsSeen} accounts, ${newEdges} new edges`);
+  console.log(
+    `[track] Run #${run.id} complete: ${seedsProcessed} seeds, ${accountsSeen} accounts, ${newEdges} new edges`,
+  );
 }
 
 async function isFirstRunForSeed(seedId: bigint): Promise<boolean> {
@@ -338,15 +392,18 @@ async function isFirstRunForSeed(seedId: bigint): Promise<boolean> {
   return edgeCount === 0;
 }
 
-async function markUnfollowedEdges(seedId: bigint, currentFollowingIds: Set<string>): Promise<void> {
+async function markUnfollowedEdges(
+  seedId: bigint,
+  currentFollowingIds: Set<string>,
+): Promise<void> {
   const activeEdges = await prisma.followEdge.findMany({
     where: { seedId, active: true },
     select: { followingId: true },
   });
 
   const unfollowedIds = activeEdges
-    .filter(e => !currentFollowingIds.has(e.followingId))
-    .map(e => e.followingId);
+    .filter((e) => !currentFollowingIds.has(e.followingId))
+    .map((e) => e.followingId);
 
   if (unfollowedIds.length > 0) {
     await prisma.followEdge.updateMany({
@@ -356,7 +413,9 @@ async function markUnfollowedEdges(seedId: bigint, currentFollowingIds: Set<stri
       },
       data: { active: false },
     });
-    console.log(`[track] Marked ${unfollowedIds.length} edges inactive for seed ${seedId}`);
+    console.log(
+      `[track] Marked ${unfollowedIds.length} edges inactive for seed ${seedId}`,
+    );
   }
 }
 
@@ -392,10 +451,10 @@ async function checkAndAlertConvergence(
   });
 
   const seedAccounts = await prisma.seedAccount.findMany({
-    where: { id: { in: edges.map(e => e.seedId) } },
+    where: { id: { in: edges.map((e) => e.seedId) } },
     select: { username: true },
   });
-  const seedUsernames = seedAccounts.map(s => s.username);
+  const seedUsernames = seedAccounts.map((s) => s.username);
 
   if (recentAlert) {
     await prisma.alert.update({
@@ -444,7 +503,10 @@ async function checkAndAlertConvergence(
       );
     }
   } catch (error) {
-    console.error(`[track] Failed to send convergence alert for @${target.username}:`, error);
+    console.error(
+      `[track] Failed to send convergence alert for @${target.username}:`,
+      error,
+    );
   }
 }
 
@@ -465,16 +527,23 @@ export async function sendDailyDigestMessage(): Promise<void> {
   });
 
   const seedTwitterIds = new Set(
-    (await prisma.seedAccount.findMany({ where: { active: true }, select: { twitterId: true } }))
-      .map(s => s.twitterId)
+    (
+      await prisma.seedAccount.findMany({
+        where: { active: true },
+        select: { twitterId: true },
+      })
+    )
+      .map((s) => s.twitterId)
       .filter(Boolean),
   );
 
   const convergenceTargets = new Set(
-    (await prisma.alert.findMany({
-      where: { alertType: "convergence", createdAt: { gte: since } },
-      select: { followingId: true },
-    })).map(a => a.followingId),
+    (
+      await prisma.alert.findMany({
+        where: { alertType: "convergence", createdAt: { gte: since } },
+        select: { followingId: true },
+      })
+    ).map((a) => a.followingId),
   );
 
   const digestEntries: DigestEntry[] = [];
@@ -504,15 +573,30 @@ export async function sendDailyDigestMessage(): Promise<void> {
     categorized.get(cat)!.push(entry);
   }
 
-  if (digestEntries.length === 0) return;
+  if (digestEntries.length === 0) {
+    // Still mark so catch-up does not re-fire empty windows forever.
+    const { markDailyDigestSent } =
+      await import("../../services/digestCatchUp.js");
+    await markDailyDigestSent();
+    console.log("[digest] No entries in last 24h — marker set");
+    return;
+  }
 
-  const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const today = new Date().toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
   const message = formatDailyDigest(digestEntries, categorized, today);
 
   if (message) {
     try {
       await sendTelegramPlaintext(message);
-      console.log(`[digest] Sent daily digest with ${digestEntries.length} entries`);
+      const { markDailyDigestSent } =
+        await import("../../services/digestCatchUp.js");
+      await markDailyDigestSent();
+      console.log(
+        `[digest] Sent daily digest with ${digestEntries.length} entries`,
+      );
     } catch (error) {
       console.error("[digest] Failed to send daily digest:", error);
     }
@@ -547,7 +631,7 @@ export async function checkHealth(): Promise<void> {
 // --- Utilities ---
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // --- CLI ---
@@ -589,7 +673,9 @@ if (isMain) {
       console.log("Commands:");
       console.log("  import-seeds  Import seed accounts from CT.json");
       console.log("  track         Run tracking cycle (3 pages per seed)");
-      console.log("  track-full    Run full sync (all pages, detect unfollows)");
+      console.log(
+        "  track-full    Run full sync (all pages, detect unfollows)",
+      );
       console.log("  digest        Send daily digest");
       console.log("  health        Run health check");
       break;

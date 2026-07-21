@@ -31,6 +31,7 @@ export type TwitterAccountAvgAggregateOutputType = {
   followingCount: number | null
   tweetCount: number | null
   likeCount: number | null
+  followersAtDetect: number | null
 }
 
 export type TwitterAccountSumAggregateOutputType = {
@@ -38,6 +39,7 @@ export type TwitterAccountSumAggregateOutputType = {
   followingCount: number | null
   tweetCount: number | null
   likeCount: number | null
+  followersAtDetect: number | null
 }
 
 export type TwitterAccountMinAggregateOutputType = {
@@ -61,6 +63,11 @@ export type TwitterAccountMinAggregateOutputType = {
   huntStage: string | null
   huntNote: string | null
   huntUpdatedAt: Date | null
+  lastProfilePolledAt: Date | null
+  lastTweetId: string | null
+  previousUsername: string | null
+  usernameChangedAt: Date | null
+  followersAtDetect: number | null
 }
 
 export type TwitterAccountMaxAggregateOutputType = {
@@ -84,6 +91,11 @@ export type TwitterAccountMaxAggregateOutputType = {
   huntStage: string | null
   huntNote: string | null
   huntUpdatedAt: Date | null
+  lastProfilePolledAt: Date | null
+  lastTweetId: string | null
+  previousUsername: string | null
+  usernameChangedAt: Date | null
+  followersAtDetect: number | null
 }
 
 export type TwitterAccountCountAggregateOutputType = {
@@ -108,6 +120,11 @@ export type TwitterAccountCountAggregateOutputType = {
   huntStage: number
   huntNote: number
   huntUpdatedAt: number
+  lastProfilePolledAt: number
+  lastTweetId: number
+  previousUsername: number
+  usernameChangedAt: number
+  followersAtDetect: number
   _all: number
 }
 
@@ -117,6 +134,7 @@ export type TwitterAccountAvgAggregateInputType = {
   followingCount?: true
   tweetCount?: true
   likeCount?: true
+  followersAtDetect?: true
 }
 
 export type TwitterAccountSumAggregateInputType = {
@@ -124,6 +142,7 @@ export type TwitterAccountSumAggregateInputType = {
   followingCount?: true
   tweetCount?: true
   likeCount?: true
+  followersAtDetect?: true
 }
 
 export type TwitterAccountMinAggregateInputType = {
@@ -147,6 +166,11 @@ export type TwitterAccountMinAggregateInputType = {
   huntStage?: true
   huntNote?: true
   huntUpdatedAt?: true
+  lastProfilePolledAt?: true
+  lastTweetId?: true
+  previousUsername?: true
+  usernameChangedAt?: true
+  followersAtDetect?: true
 }
 
 export type TwitterAccountMaxAggregateInputType = {
@@ -170,6 +194,11 @@ export type TwitterAccountMaxAggregateInputType = {
   huntStage?: true
   huntNote?: true
   huntUpdatedAt?: true
+  lastProfilePolledAt?: true
+  lastTweetId?: true
+  previousUsername?: true
+  usernameChangedAt?: true
+  followersAtDetect?: true
 }
 
 export type TwitterAccountCountAggregateInputType = {
@@ -194,6 +223,11 @@ export type TwitterAccountCountAggregateInputType = {
   huntStage?: true
   huntNote?: true
   huntUpdatedAt?: true
+  lastProfilePolledAt?: true
+  lastTweetId?: true
+  previousUsername?: true
+  usernameChangedAt?: true
+  followersAtDetect?: true
   _all?: true
 }
 
@@ -305,6 +339,11 @@ export type TwitterAccountGroupByOutputType = {
   huntStage: string
   huntNote: string | null
   huntUpdatedAt: Date | null
+  lastProfilePolledAt: Date | null
+  lastTweetId: string | null
+  previousUsername: string | null
+  usernameChangedAt: Date | null
+  followersAtDetect: number | null
   _count: TwitterAccountCountAggregateOutputType | null
   _avg: TwitterAccountAvgAggregateOutputType | null
   _sum: TwitterAccountSumAggregateOutputType | null
@@ -352,9 +391,15 @@ export type TwitterAccountWhereInput = {
   huntStage?: Prisma.StringFilter<"TwitterAccount"> | string
   huntNote?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
   huntUpdatedAt?: Prisma.DateTimeNullableFilter<"TwitterAccount"> | Date | string | null
+  lastProfilePolledAt?: Prisma.DateTimeNullableFilter<"TwitterAccount"> | Date | string | null
+  lastTweetId?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
+  previousUsername?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
+  usernameChangedAt?: Prisma.DateTimeNullableFilter<"TwitterAccount"> | Date | string | null
+  followersAtDetect?: Prisma.IntNullableFilter<"TwitterAccount"> | number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeListRelationFilter
   alerts?: Prisma.AlertListRelationFilter
   listMemberships?: Prisma.ListMemberListRelationFilter
+  metricSnapshots?: Prisma.AccountMetricSnapshotListRelationFilter
 }
 
 export type TwitterAccountOrderByWithRelationInput = {
@@ -379,9 +424,15 @@ export type TwitterAccountOrderByWithRelationInput = {
   huntStage?: Prisma.SortOrder
   huntNote?: Prisma.SortOrderInput | Prisma.SortOrder
   huntUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastProfilePolledAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastTweetId?: Prisma.SortOrderInput | Prisma.SortOrder
+  previousUsername?: Prisma.SortOrderInput | Prisma.SortOrder
+  usernameChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  followersAtDetect?: Prisma.SortOrderInput | Prisma.SortOrder
   followEdgesAsFollowing?: Prisma.FollowEdgeOrderByRelationAggregateInput
   alerts?: Prisma.AlertOrderByRelationAggregateInput
   listMemberships?: Prisma.ListMemberOrderByRelationAggregateInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotOrderByRelationAggregateInput
 }
 
 export type TwitterAccountWhereUniqueInput = Prisma.AtLeast<{
@@ -409,9 +460,15 @@ export type TwitterAccountWhereUniqueInput = Prisma.AtLeast<{
   huntStage?: Prisma.StringFilter<"TwitterAccount"> | string
   huntNote?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
   huntUpdatedAt?: Prisma.DateTimeNullableFilter<"TwitterAccount"> | Date | string | null
+  lastProfilePolledAt?: Prisma.DateTimeNullableFilter<"TwitterAccount"> | Date | string | null
+  lastTweetId?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
+  previousUsername?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
+  usernameChangedAt?: Prisma.DateTimeNullableFilter<"TwitterAccount"> | Date | string | null
+  followersAtDetect?: Prisma.IntNullableFilter<"TwitterAccount"> | number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeListRelationFilter
   alerts?: Prisma.AlertListRelationFilter
   listMemberships?: Prisma.ListMemberListRelationFilter
+  metricSnapshots?: Prisma.AccountMetricSnapshotListRelationFilter
 }, "id" | "username">
 
 export type TwitterAccountOrderByWithAggregationInput = {
@@ -436,6 +493,11 @@ export type TwitterAccountOrderByWithAggregationInput = {
   huntStage?: Prisma.SortOrder
   huntNote?: Prisma.SortOrderInput | Prisma.SortOrder
   huntUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastProfilePolledAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastTweetId?: Prisma.SortOrderInput | Prisma.SortOrder
+  previousUsername?: Prisma.SortOrderInput | Prisma.SortOrder
+  usernameChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  followersAtDetect?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.TwitterAccountCountOrderByAggregateInput
   _avg?: Prisma.TwitterAccountAvgOrderByAggregateInput
   _max?: Prisma.TwitterAccountMaxOrderByAggregateInput
@@ -468,6 +530,11 @@ export type TwitterAccountScalarWhereWithAggregatesInput = {
   huntStage?: Prisma.StringWithAggregatesFilter<"TwitterAccount"> | string
   huntNote?: Prisma.StringNullableWithAggregatesFilter<"TwitterAccount"> | string | null
   huntUpdatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"TwitterAccount"> | Date | string | null
+  lastProfilePolledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"TwitterAccount"> | Date | string | null
+  lastTweetId?: Prisma.StringNullableWithAggregatesFilter<"TwitterAccount"> | string | null
+  previousUsername?: Prisma.StringNullableWithAggregatesFilter<"TwitterAccount"> | string | null
+  usernameChangedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"TwitterAccount"> | Date | string | null
+  followersAtDetect?: Prisma.IntNullableWithAggregatesFilter<"TwitterAccount"> | number | null
 }
 
 export type TwitterAccountCreateInput = {
@@ -492,9 +559,15 @@ export type TwitterAccountCreateInput = {
   huntStage?: string
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
+  lastProfilePolledAt?: Date | string | null
+  lastTweetId?: string | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
+  followersAtDetect?: number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeCreateNestedManyWithoutFollowingInput
   alerts?: Prisma.AlertCreateNestedManyWithoutFollowingInput
   listMemberships?: Prisma.ListMemberCreateNestedManyWithoutAccountInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotCreateNestedManyWithoutAccountInput
 }
 
 export type TwitterAccountUncheckedCreateInput = {
@@ -519,9 +592,15 @@ export type TwitterAccountUncheckedCreateInput = {
   huntStage?: string
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
+  lastProfilePolledAt?: Date | string | null
+  lastTweetId?: string | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
+  followersAtDetect?: number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeUncheckedCreateNestedManyWithoutFollowingInput
   alerts?: Prisma.AlertUncheckedCreateNestedManyWithoutFollowingInput
   listMemberships?: Prisma.ListMemberUncheckedCreateNestedManyWithoutAccountInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type TwitterAccountUpdateInput = {
@@ -546,9 +625,15 @@ export type TwitterAccountUpdateInput = {
   huntStage?: Prisma.StringFieldUpdateOperationsInput | string
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeUpdateManyWithoutFollowingNestedInput
   alerts?: Prisma.AlertUpdateManyWithoutFollowingNestedInput
   listMemberships?: Prisma.ListMemberUpdateManyWithoutAccountNestedInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotUpdateManyWithoutAccountNestedInput
 }
 
 export type TwitterAccountUncheckedUpdateInput = {
@@ -573,9 +658,15 @@ export type TwitterAccountUncheckedUpdateInput = {
   huntStage?: Prisma.StringFieldUpdateOperationsInput | string
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeUncheckedUpdateManyWithoutFollowingNestedInput
   alerts?: Prisma.AlertUncheckedUpdateManyWithoutFollowingNestedInput
   listMemberships?: Prisma.ListMemberUncheckedUpdateManyWithoutAccountNestedInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type TwitterAccountCreateManyInput = {
@@ -600,6 +691,11 @@ export type TwitterAccountCreateManyInput = {
   huntStage?: string
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
+  lastProfilePolledAt?: Date | string | null
+  lastTweetId?: string | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
+  followersAtDetect?: number | null
 }
 
 export type TwitterAccountUpdateManyMutationInput = {
@@ -624,6 +720,11 @@ export type TwitterAccountUpdateManyMutationInput = {
   huntStage?: Prisma.StringFieldUpdateOperationsInput | string
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type TwitterAccountUncheckedUpdateManyInput = {
@@ -648,6 +749,11 @@ export type TwitterAccountUncheckedUpdateManyInput = {
   huntStage?: Prisma.StringFieldUpdateOperationsInput | string
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type TwitterAccountCountOrderByAggregateInput = {
@@ -672,6 +778,11 @@ export type TwitterAccountCountOrderByAggregateInput = {
   huntStage?: Prisma.SortOrder
   huntNote?: Prisma.SortOrder
   huntUpdatedAt?: Prisma.SortOrder
+  lastProfilePolledAt?: Prisma.SortOrder
+  lastTweetId?: Prisma.SortOrder
+  previousUsername?: Prisma.SortOrder
+  usernameChangedAt?: Prisma.SortOrder
+  followersAtDetect?: Prisma.SortOrder
 }
 
 export type TwitterAccountAvgOrderByAggregateInput = {
@@ -679,6 +790,7 @@ export type TwitterAccountAvgOrderByAggregateInput = {
   followingCount?: Prisma.SortOrder
   tweetCount?: Prisma.SortOrder
   likeCount?: Prisma.SortOrder
+  followersAtDetect?: Prisma.SortOrder
 }
 
 export type TwitterAccountMaxOrderByAggregateInput = {
@@ -702,6 +814,11 @@ export type TwitterAccountMaxOrderByAggregateInput = {
   huntStage?: Prisma.SortOrder
   huntNote?: Prisma.SortOrder
   huntUpdatedAt?: Prisma.SortOrder
+  lastProfilePolledAt?: Prisma.SortOrder
+  lastTweetId?: Prisma.SortOrder
+  previousUsername?: Prisma.SortOrder
+  usernameChangedAt?: Prisma.SortOrder
+  followersAtDetect?: Prisma.SortOrder
 }
 
 export type TwitterAccountMinOrderByAggregateInput = {
@@ -725,6 +842,11 @@ export type TwitterAccountMinOrderByAggregateInput = {
   huntStage?: Prisma.SortOrder
   huntNote?: Prisma.SortOrder
   huntUpdatedAt?: Prisma.SortOrder
+  lastProfilePolledAt?: Prisma.SortOrder
+  lastTweetId?: Prisma.SortOrder
+  previousUsername?: Prisma.SortOrder
+  usernameChangedAt?: Prisma.SortOrder
+  followersAtDetect?: Prisma.SortOrder
 }
 
 export type TwitterAccountSumOrderByAggregateInput = {
@@ -732,6 +854,7 @@ export type TwitterAccountSumOrderByAggregateInput = {
   followingCount?: Prisma.SortOrder
   tweetCount?: Prisma.SortOrder
   likeCount?: Prisma.SortOrder
+  followersAtDetect?: Prisma.SortOrder
 }
 
 export type TwitterAccountScalarRelationFilter = {
@@ -762,6 +885,20 @@ export type NullableBoolFieldUpdateOperationsInput = {
 
 export type NullableDateTimeFieldUpdateOperationsInput = {
   set?: Date | string | null
+}
+
+export type TwitterAccountCreateNestedOneWithoutMetricSnapshotsInput = {
+  create?: Prisma.XOR<Prisma.TwitterAccountCreateWithoutMetricSnapshotsInput, Prisma.TwitterAccountUncheckedCreateWithoutMetricSnapshotsInput>
+  connectOrCreate?: Prisma.TwitterAccountCreateOrConnectWithoutMetricSnapshotsInput
+  connect?: Prisma.TwitterAccountWhereUniqueInput
+}
+
+export type TwitterAccountUpdateOneRequiredWithoutMetricSnapshotsNestedInput = {
+  create?: Prisma.XOR<Prisma.TwitterAccountCreateWithoutMetricSnapshotsInput, Prisma.TwitterAccountUncheckedCreateWithoutMetricSnapshotsInput>
+  connectOrCreate?: Prisma.TwitterAccountCreateOrConnectWithoutMetricSnapshotsInput
+  upsert?: Prisma.TwitterAccountUpsertWithoutMetricSnapshotsInput
+  connect?: Prisma.TwitterAccountWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TwitterAccountUpdateToOneWithWhereWithoutMetricSnapshotsInput, Prisma.TwitterAccountUpdateWithoutMetricSnapshotsInput>, Prisma.TwitterAccountUncheckedUpdateWithoutMetricSnapshotsInput>
 }
 
 export type TwitterAccountCreateNestedOneWithoutListMembershipsInput = {
@@ -806,6 +943,150 @@ export type TwitterAccountUpdateOneRequiredWithoutAlertsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TwitterAccountUpdateToOneWithWhereWithoutAlertsInput, Prisma.TwitterAccountUpdateWithoutAlertsInput>, Prisma.TwitterAccountUncheckedUpdateWithoutAlertsInput>
 }
 
+export type TwitterAccountCreateWithoutMetricSnapshotsInput = {
+  id: string
+  username: string
+  name?: string
+  description?: string | null
+  tags?: Prisma.TwitterAccountCreatetagsInput | string[]
+  followersCount?: number | null
+  followingCount?: number | null
+  tweetCount?: number | null
+  likeCount?: number | null
+  isBlueVerified?: boolean | null
+  profileImageUrl?: string | null
+  profileBannerUrl?: string | null
+  location?: string | null
+  createdAt?: Date | string | null
+  detectedAt?: Date | string
+  firstSeenAt?: Date | string
+  updatedAt?: Date | string
+  listsSyncedAt?: Date | string | null
+  huntStage?: string
+  huntNote?: string | null
+  huntUpdatedAt?: Date | string | null
+  lastProfilePolledAt?: Date | string | null
+  lastTweetId?: string | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
+  followersAtDetect?: number | null
+  followEdgesAsFollowing?: Prisma.FollowEdgeCreateNestedManyWithoutFollowingInput
+  alerts?: Prisma.AlertCreateNestedManyWithoutFollowingInput
+  listMemberships?: Prisma.ListMemberCreateNestedManyWithoutAccountInput
+}
+
+export type TwitterAccountUncheckedCreateWithoutMetricSnapshotsInput = {
+  id: string
+  username: string
+  name?: string
+  description?: string | null
+  tags?: Prisma.TwitterAccountCreatetagsInput | string[]
+  followersCount?: number | null
+  followingCount?: number | null
+  tweetCount?: number | null
+  likeCount?: number | null
+  isBlueVerified?: boolean | null
+  profileImageUrl?: string | null
+  profileBannerUrl?: string | null
+  location?: string | null
+  createdAt?: Date | string | null
+  detectedAt?: Date | string
+  firstSeenAt?: Date | string
+  updatedAt?: Date | string
+  listsSyncedAt?: Date | string | null
+  huntStage?: string
+  huntNote?: string | null
+  huntUpdatedAt?: Date | string | null
+  lastProfilePolledAt?: Date | string | null
+  lastTweetId?: string | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
+  followersAtDetect?: number | null
+  followEdgesAsFollowing?: Prisma.FollowEdgeUncheckedCreateNestedManyWithoutFollowingInput
+  alerts?: Prisma.AlertUncheckedCreateNestedManyWithoutFollowingInput
+  listMemberships?: Prisma.ListMemberUncheckedCreateNestedManyWithoutAccountInput
+}
+
+export type TwitterAccountCreateOrConnectWithoutMetricSnapshotsInput = {
+  where: Prisma.TwitterAccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.TwitterAccountCreateWithoutMetricSnapshotsInput, Prisma.TwitterAccountUncheckedCreateWithoutMetricSnapshotsInput>
+}
+
+export type TwitterAccountUpsertWithoutMetricSnapshotsInput = {
+  update: Prisma.XOR<Prisma.TwitterAccountUpdateWithoutMetricSnapshotsInput, Prisma.TwitterAccountUncheckedUpdateWithoutMetricSnapshotsInput>
+  create: Prisma.XOR<Prisma.TwitterAccountCreateWithoutMetricSnapshotsInput, Prisma.TwitterAccountUncheckedCreateWithoutMetricSnapshotsInput>
+  where?: Prisma.TwitterAccountWhereInput
+}
+
+export type TwitterAccountUpdateToOneWithWhereWithoutMetricSnapshotsInput = {
+  where?: Prisma.TwitterAccountWhereInput
+  data: Prisma.XOR<Prisma.TwitterAccountUpdateWithoutMetricSnapshotsInput, Prisma.TwitterAccountUncheckedUpdateWithoutMetricSnapshotsInput>
+}
+
+export type TwitterAccountUpdateWithoutMetricSnapshotsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tags?: Prisma.TwitterAccountUpdatetagsInput | string[]
+  followersCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  followingCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  likeCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  isBlueVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  profileImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileBannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  detectedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  firstSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  listsSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  huntStage?: Prisma.StringFieldUpdateOperationsInput | string
+  huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  followEdgesAsFollowing?: Prisma.FollowEdgeUpdateManyWithoutFollowingNestedInput
+  alerts?: Prisma.AlertUpdateManyWithoutFollowingNestedInput
+  listMemberships?: Prisma.ListMemberUpdateManyWithoutAccountNestedInput
+}
+
+export type TwitterAccountUncheckedUpdateWithoutMetricSnapshotsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tags?: Prisma.TwitterAccountUpdatetagsInput | string[]
+  followersCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  followingCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tweetCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  likeCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  isBlueVerified?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  profileImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileBannerUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  detectedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  firstSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  listsSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  huntStage?: Prisma.StringFieldUpdateOperationsInput | string
+  huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  followEdgesAsFollowing?: Prisma.FollowEdgeUncheckedUpdateManyWithoutFollowingNestedInput
+  alerts?: Prisma.AlertUncheckedUpdateManyWithoutFollowingNestedInput
+  listMemberships?: Prisma.ListMemberUncheckedUpdateManyWithoutAccountNestedInput
+}
+
 export type TwitterAccountCreateWithoutListMembershipsInput = {
   id: string
   username: string
@@ -828,8 +1109,14 @@ export type TwitterAccountCreateWithoutListMembershipsInput = {
   huntStage?: string
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
+  lastProfilePolledAt?: Date | string | null
+  lastTweetId?: string | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
+  followersAtDetect?: number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeCreateNestedManyWithoutFollowingInput
   alerts?: Prisma.AlertCreateNestedManyWithoutFollowingInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotCreateNestedManyWithoutAccountInput
 }
 
 export type TwitterAccountUncheckedCreateWithoutListMembershipsInput = {
@@ -854,8 +1141,14 @@ export type TwitterAccountUncheckedCreateWithoutListMembershipsInput = {
   huntStage?: string
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
+  lastProfilePolledAt?: Date | string | null
+  lastTweetId?: string | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
+  followersAtDetect?: number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeUncheckedCreateNestedManyWithoutFollowingInput
   alerts?: Prisma.AlertUncheckedCreateNestedManyWithoutFollowingInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type TwitterAccountCreateOrConnectWithoutListMembershipsInput = {
@@ -896,8 +1189,14 @@ export type TwitterAccountUpdateWithoutListMembershipsInput = {
   huntStage?: Prisma.StringFieldUpdateOperationsInput | string
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeUpdateManyWithoutFollowingNestedInput
   alerts?: Prisma.AlertUpdateManyWithoutFollowingNestedInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotUpdateManyWithoutAccountNestedInput
 }
 
 export type TwitterAccountUncheckedUpdateWithoutListMembershipsInput = {
@@ -922,8 +1221,14 @@ export type TwitterAccountUncheckedUpdateWithoutListMembershipsInput = {
   huntStage?: Prisma.StringFieldUpdateOperationsInput | string
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeUncheckedUpdateManyWithoutFollowingNestedInput
   alerts?: Prisma.AlertUncheckedUpdateManyWithoutFollowingNestedInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type TwitterAccountCreateWithoutFollowEdgesAsFollowingInput = {
@@ -948,8 +1253,14 @@ export type TwitterAccountCreateWithoutFollowEdgesAsFollowingInput = {
   huntStage?: string
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
+  lastProfilePolledAt?: Date | string | null
+  lastTweetId?: string | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
+  followersAtDetect?: number | null
   alerts?: Prisma.AlertCreateNestedManyWithoutFollowingInput
   listMemberships?: Prisma.ListMemberCreateNestedManyWithoutAccountInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotCreateNestedManyWithoutAccountInput
 }
 
 export type TwitterAccountUncheckedCreateWithoutFollowEdgesAsFollowingInput = {
@@ -974,8 +1285,14 @@ export type TwitterAccountUncheckedCreateWithoutFollowEdgesAsFollowingInput = {
   huntStage?: string
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
+  lastProfilePolledAt?: Date | string | null
+  lastTweetId?: string | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
+  followersAtDetect?: number | null
   alerts?: Prisma.AlertUncheckedCreateNestedManyWithoutFollowingInput
   listMemberships?: Prisma.ListMemberUncheckedCreateNestedManyWithoutAccountInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type TwitterAccountCreateOrConnectWithoutFollowEdgesAsFollowingInput = {
@@ -1016,8 +1333,14 @@ export type TwitterAccountUpdateWithoutFollowEdgesAsFollowingInput = {
   huntStage?: Prisma.StringFieldUpdateOperationsInput | string
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   alerts?: Prisma.AlertUpdateManyWithoutFollowingNestedInput
   listMemberships?: Prisma.ListMemberUpdateManyWithoutAccountNestedInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotUpdateManyWithoutAccountNestedInput
 }
 
 export type TwitterAccountUncheckedUpdateWithoutFollowEdgesAsFollowingInput = {
@@ -1042,8 +1365,14 @@ export type TwitterAccountUncheckedUpdateWithoutFollowEdgesAsFollowingInput = {
   huntStage?: Prisma.StringFieldUpdateOperationsInput | string
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   alerts?: Prisma.AlertUncheckedUpdateManyWithoutFollowingNestedInput
   listMemberships?: Prisma.ListMemberUncheckedUpdateManyWithoutAccountNestedInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type TwitterAccountCreateWithoutAlertsInput = {
@@ -1068,8 +1397,14 @@ export type TwitterAccountCreateWithoutAlertsInput = {
   huntStage?: string
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
+  lastProfilePolledAt?: Date | string | null
+  lastTweetId?: string | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
+  followersAtDetect?: number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeCreateNestedManyWithoutFollowingInput
   listMemberships?: Prisma.ListMemberCreateNestedManyWithoutAccountInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotCreateNestedManyWithoutAccountInput
 }
 
 export type TwitterAccountUncheckedCreateWithoutAlertsInput = {
@@ -1094,8 +1429,14 @@ export type TwitterAccountUncheckedCreateWithoutAlertsInput = {
   huntStage?: string
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
+  lastProfilePolledAt?: Date | string | null
+  lastTweetId?: string | null
+  previousUsername?: string | null
+  usernameChangedAt?: Date | string | null
+  followersAtDetect?: number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeUncheckedCreateNestedManyWithoutFollowingInput
   listMemberships?: Prisma.ListMemberUncheckedCreateNestedManyWithoutAccountInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type TwitterAccountCreateOrConnectWithoutAlertsInput = {
@@ -1136,8 +1477,14 @@ export type TwitterAccountUpdateWithoutAlertsInput = {
   huntStage?: Prisma.StringFieldUpdateOperationsInput | string
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeUpdateManyWithoutFollowingNestedInput
   listMemberships?: Prisma.ListMemberUpdateManyWithoutAccountNestedInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotUpdateManyWithoutAccountNestedInput
 }
 
 export type TwitterAccountUncheckedUpdateWithoutAlertsInput = {
@@ -1162,8 +1509,14 @@ export type TwitterAccountUncheckedUpdateWithoutAlertsInput = {
   huntStage?: Prisma.StringFieldUpdateOperationsInput | string
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   followEdgesAsFollowing?: Prisma.FollowEdgeUncheckedUpdateManyWithoutFollowingNestedInput
   listMemberships?: Prisma.ListMemberUncheckedUpdateManyWithoutAccountNestedInput
+  metricSnapshots?: Prisma.AccountMetricSnapshotUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 
@@ -1175,12 +1528,14 @@ export type TwitterAccountCountOutputType = {
   followEdgesAsFollowing: number
   alerts: number
   listMemberships: number
+  metricSnapshots: number
 }
 
 export type TwitterAccountCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   followEdgesAsFollowing?: boolean | TwitterAccountCountOutputTypeCountFollowEdgesAsFollowingArgs
   alerts?: boolean | TwitterAccountCountOutputTypeCountAlertsArgs
   listMemberships?: boolean | TwitterAccountCountOutputTypeCountListMembershipsArgs
+  metricSnapshots?: boolean | TwitterAccountCountOutputTypeCountMetricSnapshotsArgs
 }
 
 /**
@@ -1214,6 +1569,13 @@ export type TwitterAccountCountOutputTypeCountListMembershipsArgs<ExtArgs extend
   where?: Prisma.ListMemberWhereInput
 }
 
+/**
+ * TwitterAccountCountOutputType without action
+ */
+export type TwitterAccountCountOutputTypeCountMetricSnapshotsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AccountMetricSnapshotWhereInput
+}
+
 
 export type TwitterAccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1237,9 +1599,15 @@ export type TwitterAccountSelect<ExtArgs extends runtime.Types.Extensions.Intern
   huntStage?: boolean
   huntNote?: boolean
   huntUpdatedAt?: boolean
+  lastProfilePolledAt?: boolean
+  lastTweetId?: boolean
+  previousUsername?: boolean
+  usernameChangedAt?: boolean
+  followersAtDetect?: boolean
   followEdgesAsFollowing?: boolean | Prisma.TwitterAccount$followEdgesAsFollowingArgs<ExtArgs>
   alerts?: boolean | Prisma.TwitterAccount$alertsArgs<ExtArgs>
   listMemberships?: boolean | Prisma.TwitterAccount$listMembershipsArgs<ExtArgs>
+  metricSnapshots?: boolean | Prisma.TwitterAccount$metricSnapshotsArgs<ExtArgs>
   _count?: boolean | Prisma.TwitterAccountCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["twitterAccount"]>
 
@@ -1265,6 +1633,11 @@ export type TwitterAccountSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   huntStage?: boolean
   huntNote?: boolean
   huntUpdatedAt?: boolean
+  lastProfilePolledAt?: boolean
+  lastTweetId?: boolean
+  previousUsername?: boolean
+  usernameChangedAt?: boolean
+  followersAtDetect?: boolean
 }, ExtArgs["result"]["twitterAccount"]>
 
 export type TwitterAccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1289,6 +1662,11 @@ export type TwitterAccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   huntStage?: boolean
   huntNote?: boolean
   huntUpdatedAt?: boolean
+  lastProfilePolledAt?: boolean
+  lastTweetId?: boolean
+  previousUsername?: boolean
+  usernameChangedAt?: boolean
+  followersAtDetect?: boolean
 }, ExtArgs["result"]["twitterAccount"]>
 
 export type TwitterAccountSelectScalar = {
@@ -1313,13 +1691,19 @@ export type TwitterAccountSelectScalar = {
   huntStage?: boolean
   huntNote?: boolean
   huntUpdatedAt?: boolean
+  lastProfilePolledAt?: boolean
+  lastTweetId?: boolean
+  previousUsername?: boolean
+  usernameChangedAt?: boolean
+  followersAtDetect?: boolean
 }
 
-export type TwitterAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "name" | "description" | "tags" | "followersCount" | "followingCount" | "tweetCount" | "likeCount" | "isBlueVerified" | "profileImageUrl" | "profileBannerUrl" | "location" | "createdAt" | "detectedAt" | "firstSeenAt" | "updatedAt" | "listsSyncedAt" | "huntStage" | "huntNote" | "huntUpdatedAt", ExtArgs["result"]["twitterAccount"]>
+export type TwitterAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "name" | "description" | "tags" | "followersCount" | "followingCount" | "tweetCount" | "likeCount" | "isBlueVerified" | "profileImageUrl" | "profileBannerUrl" | "location" | "createdAt" | "detectedAt" | "firstSeenAt" | "updatedAt" | "listsSyncedAt" | "huntStage" | "huntNote" | "huntUpdatedAt" | "lastProfilePolledAt" | "lastTweetId" | "previousUsername" | "usernameChangedAt" | "followersAtDetect", ExtArgs["result"]["twitterAccount"]>
 export type TwitterAccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   followEdgesAsFollowing?: boolean | Prisma.TwitterAccount$followEdgesAsFollowingArgs<ExtArgs>
   alerts?: boolean | Prisma.TwitterAccount$alertsArgs<ExtArgs>
   listMemberships?: boolean | Prisma.TwitterAccount$listMembershipsArgs<ExtArgs>
+  metricSnapshots?: boolean | Prisma.TwitterAccount$metricSnapshotsArgs<ExtArgs>
   _count?: boolean | Prisma.TwitterAccountCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TwitterAccountIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1331,6 +1715,7 @@ export type $TwitterAccountPayload<ExtArgs extends runtime.Types.Extensions.Inte
     followEdgesAsFollowing: Prisma.$FollowEdgePayload<ExtArgs>[]
     alerts: Prisma.$AlertPayload<ExtArgs>[]
     listMemberships: Prisma.$ListMemberPayload<ExtArgs>[]
+    metricSnapshots: Prisma.$AccountMetricSnapshotPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1357,6 +1742,23 @@ export type $TwitterAccountPayload<ExtArgs extends runtime.Types.Extensions.Inte
     huntStage: string
     huntNote: string | null
     huntUpdatedAt: Date | null
+    /**
+     * Early-project profile poller (usersByIds) watermark
+     */
+    lastProfilePolledAt: Date | null
+    /**
+     * Snowflake watermark for new tweets discovered via tweetCount delta
+     */
+    lastTweetId: string | null
+    /**
+     * Prior handle when rename detected
+     */
+    previousUsername: string | null
+    usernameChangedAt: Date | null
+    /**
+     * Followers at firstSeen (growth baseline if no snapshot yet)
+     */
+    followersAtDetect: number | null
   }, ExtArgs["result"]["twitterAccount"]>
   composites: {}
 }
@@ -1754,6 +2156,7 @@ export interface Prisma__TwitterAccountClient<T, Null = never, ExtArgs extends r
   followEdgesAsFollowing<T extends Prisma.TwitterAccount$followEdgesAsFollowingArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TwitterAccount$followEdgesAsFollowingArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FollowEdgePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   alerts<T extends Prisma.TwitterAccount$alertsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TwitterAccount$alertsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AlertPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   listMemberships<T extends Prisma.TwitterAccount$listMembershipsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TwitterAccount$listMembershipsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ListMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  metricSnapshots<T extends Prisma.TwitterAccount$metricSnapshotsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TwitterAccount$metricSnapshotsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountMetricSnapshotPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1804,6 +2207,11 @@ export interface TwitterAccountFieldRefs {
   readonly huntStage: Prisma.FieldRef<"TwitterAccount", 'String'>
   readonly huntNote: Prisma.FieldRef<"TwitterAccount", 'String'>
   readonly huntUpdatedAt: Prisma.FieldRef<"TwitterAccount", 'DateTime'>
+  readonly lastProfilePolledAt: Prisma.FieldRef<"TwitterAccount", 'DateTime'>
+  readonly lastTweetId: Prisma.FieldRef<"TwitterAccount", 'String'>
+  readonly previousUsername: Prisma.FieldRef<"TwitterAccount", 'String'>
+  readonly usernameChangedAt: Prisma.FieldRef<"TwitterAccount", 'DateTime'>
+  readonly followersAtDetect: Prisma.FieldRef<"TwitterAccount", 'Int'>
 }
     
 
@@ -2266,6 +2674,30 @@ export type TwitterAccount$listMembershipsArgs<ExtArgs extends runtime.Types.Ext
   take?: number
   skip?: number
   distinct?: Prisma.ListMemberScalarFieldEnum | Prisma.ListMemberScalarFieldEnum[]
+}
+
+/**
+ * TwitterAccount.metricSnapshots
+ */
+export type TwitterAccount$metricSnapshotsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AccountMetricSnapshot
+   */
+  select?: Prisma.AccountMetricSnapshotSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AccountMetricSnapshot
+   */
+  omit?: Prisma.AccountMetricSnapshotOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AccountMetricSnapshotInclude<ExtArgs> | null
+  where?: Prisma.AccountMetricSnapshotWhereInput
+  orderBy?: Prisma.AccountMetricSnapshotOrderByWithRelationInput | Prisma.AccountMetricSnapshotOrderByWithRelationInput[]
+  cursor?: Prisma.AccountMetricSnapshotWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AccountMetricSnapshotScalarFieldEnum | Prisma.AccountMetricSnapshotScalarFieldEnum[]
 }
 
 /**

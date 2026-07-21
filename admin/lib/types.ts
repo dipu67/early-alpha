@@ -90,16 +90,6 @@ export interface AuthListsScanResult {
   }[];
 }
 
-export interface WatchEntry {
-  id: string;
-  username: string;
-  twitterUserId: string;
-  isActive: boolean;
-  lastSnapshotAt: string | null;
-  alertCount: number;
-  createdAt: string;
-}
-
 export interface AuthAccount {
   id: string;
   username: string;
@@ -121,12 +111,129 @@ export interface Paged<T> {
 export interface Overview {
   projects: number;
   taggedProjects: number;
-  activeWatch: number;
+  activeSeeds: number;
+  inactiveSeeds: number;
+  edgesActive: number;
+  newEdges24h: number;
+  convergence24h: number;
+  hotProjects: number;
   lists: number;
   listMembers: number;
   signals24h: number;
   authActive: number;
   authRateLimited: number;
+  lastSeedRun?: {
+    id: string;
+    status: string;
+    startedAt: string;
+    finishedAt: string | null;
+    seedsProcessed: number;
+    newFollowEdges: number;
+  } | null;
+}
+
+export interface SeedAccount {
+  id: string;
+  username: string;
+  twitterId: string | null;
+  category: string;
+  label: string | null;
+  active: boolean;
+  edgeCount: number;
+  lastEdgeAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EarlyProjectStats {
+  poolSize: number;
+  dueNow: number;
+  polled24h: number;
+  renames7d: number;
+  snapshots7d: number;
+  hot: number;
+  soft: number;
+  lastPoll: {
+    candidates?: number;
+    checked?: number;
+    renames?: number;
+    bioChanges?: number;
+    followerJumps?: number;
+    timelines?: number;
+    signalAlerts?: number;
+    snapshots?: number;
+    missing?: number;
+    errors?: number;
+    usersByIdsReqs?: number;
+    finishedAt?: string;
+  } | null;
+  lastGrowthReport: {
+    sent?: boolean;
+    count?: number;
+    finishedAt?: string;
+  } | null;
+  config: {
+    staleMs: number;
+    maxAgeMs: number;
+    maxFollowers: number;
+    batchSize: number;
+    maxBatches: number;
+    maxAccountsPerCycle: number;
+    maxTimelines: number;
+    pollEveryLabel: string;
+  };
+}
+
+export interface EarlyProjectRow {
+  id: string;
+  username: string;
+  name: string;
+  tags: string[];
+  followersCount: number | null;
+  followersAtDetect: number | null;
+  tweetCount: number | null;
+  huntStage: string;
+  firstSeenAt: string;
+  lastProfilePolledAt: string | null;
+  lastTweetId: string | null;
+  previousUsername: string | null;
+  usernameChangedAt: string | null;
+  description: string | null;
+  growthFromDetect: number | null;
+  dueForPoll: boolean;
+}
+
+export interface GrowthBoardRow {
+  accountId: string;
+  username: string;
+  name: string;
+  tags: string[];
+  followersNow: number;
+  followersBefore: number;
+  absGain: number;
+  pctGain: number;
+  firstSeenAt: string;
+  huntStage: string;
+}
+
+export interface SeedStats {
+  total: number;
+  active: number;
+  inactive: number;
+  missingTwitterId: number;
+  edgesActive: number;
+  newEdges24h: number;
+  convergence24h: number;
+  lastRun: {
+    id: string;
+    status: string;
+    startedAt: string;
+    finishedAt: string | null;
+    seedsProcessed: number;
+    accountsSeen: number;
+    newFollowEdges: number;
+    error: string | null;
+  } | null;
 }
 
 export interface TimePoint {
@@ -135,11 +242,14 @@ export interface TimePoint {
 }
 
 export interface ActivityItem {
-  type: "signal" | "follow";
+  type: "signal" | "follow" | "convergence";
   id: string;
   username: string | null;
   slug?: string;
   signals?: string[];
+  seed?: string;
+  seeds?: string[];
+  score?: number;
   at: string;
 }
 

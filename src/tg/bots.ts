@@ -2,7 +2,6 @@ import { Bot } from "grammy";
 import "dotenv/config";
 import { prisma } from "../db/prisma.js";
 import { getTwitterClient, markRateLimited } from "../twitter/getClient.js";
-import { addWatchJob, removeWatchJob } from "../services/queue.js";
 import type { UserData } from "../TwitterClient/types.js";
 import { TwitterClient } from "../TwitterClient/TwitterClient.js";
 import { classifyAccount } from "../services/projectTagger.js";
@@ -20,9 +19,12 @@ function wireMainBot(bot: Bot): void {
 bot.api.setMyCommands([
   { command: "start", description: "Start the bot" },
   { command: "chat_id", description: "Get your chat ID" },
-  { command: "watch", description: "Add a Twitter account to watch list" },
-  { command: "unwatch", description: "Remove from watch list" },
-  { command: "list", description: "Show all watched accounts" },
+  { command: "seed", description: "Add a seed account (smart-follow graph)" },
+  { command: "unseed", description: "Deactivate a seed account" },
+  { command: "seeds", description: "List active seed accounts" },
+  { command: "watch", description: "Alias for /seed" },
+  { command: "unwatch", description: "Alias for /unseed" },
+  { command: "list", description: "Alias for /seeds" },
   { command: "addauth", description: "Add a Twitter auth account" },
   { command: "group_info", description: "Get group chat ID and title" },
   { command: "register_group", description: "Register this group in admin catalog" },
@@ -75,9 +77,10 @@ bot.command("help", (ctx) => {
 Available commands:
 /start - Start the bot
 /chat_id - Get your chat ID
-/watch @username - Add a Twitter account to watch list
-/unwatch @username - Remove from watch list
-/list - Show all watched accounts
+/seed @username [category] - Add seed (default category CT)
+/unseed @username - Deactivate seed
+/seeds - List active seeds
+(/watch /unwatch /list are aliases)
 /addauth <auth_token> <ct0> [label] - Add a Twitter auth account
 /group_info - Group + topic IDs
 /register_group - Save this group for admin UI
@@ -90,66 +93,51 @@ Available commands:
   ctx.reply(helpMessage);
 });
 
-bot.command("watch", async (ctx) => {
-  if (!(await isAdmin(ctx.from?.id))) {
-    return ctx.reply("You are not authorized to use this command.");
+async function addSeedFromTelegram(
+  // grammy CommandContext is wide; keep ops surface minimal
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: any,
+  rawUsername: string | undefined,
+  categoryRaw?: string,
+): Promise<void> {
+  if (!(await isAdmin(ctx.from?.id as number | undefined))) {
+    await ctx.reply("You are not authorized to use this command.");
+    return;
   }
-
-  const text = ctx.message?.text ?? "";
-  const parts = text.split(/\s+/);
-  const rawUsername = parts[1];
-
   if (!rawUsername) {
-    return ctx.reply("Usage: /watch @username");
+    await ctx.reply("Usage: /seed @username [category]");
+    return;
   }
-
   const screenName = rawUsername.replace(/^@/, "");
-
   if (!/^[A-Za-z0-9_]{1,15}$/.test(screenName)) {
-    return ctx.reply("Invalid Twitter username.");
+    await ctx.reply("Invalid Twitter username.");
+    return;
   }
+  const category = (categoryRaw?.trim() || "CT").slice(0, 64);
 
   try {
-    const existing = await prisma.watchList.findUnique({
+    const existing = await prisma.seedAccount.findUnique({
       where: { username: screenName.toLowerCase() },
     });
-
-    if (existing?.isActive) {
-      return ctx.reply(`@${screenName} is already being watched.`);
+    if (existing?.active) {
+      await ctx.reply(`@${screenName} is already an active seed.`);
+      return;
     }
 
     await ctx.reply(`Fetching profile for @${screenName}...`);
-
     const { client, accountId } = await getTwitterClient();
     const result = await client.getUserByScreenName(screenName);
-    
-
     if (result.rateLimit && result.rateLimit.remaining === 0) {
       await markRateLimited(accountId, result.rateLimit.reset);
     }
-
     if (!result.success || !result.user) {
-      return ctx.reply(
+      await ctx.reply(
         `Failed to fetch @${screenName}: ${result.error ?? "User not found"}`,
       );
+      return;
     }
 
     const user: UserData = result.user;
-    console.log(user.id);
-
-    const watchEntry = existing
-      ? await prisma.watchList.update({
-          where: { id: existing.id },
-          data: { isActive: true, twitterUserId: user.id },
-        })
-      : await prisma.watchList.create({
-          data: {
-            twitterUserId: user.id,
-            username: user.username.toLowerCase(),
-            addedBy: ctx.from?.id?.toString() ?? null,
-          },
-        });
-
     const tags = await classifyAccount(user);
     await prisma.twitterAccount.upsert({
       where: { id: user.id },
@@ -164,6 +152,7 @@ bot.command("watch", async (ctx) => {
         isBlueVerified: user.isBlueVerified ?? null,
         profileImageUrl: user.profileImageUrl ?? null,
         createdAt: user.createdAt ? new Date(user.createdAt) : null,
+        followersAtDetect: user.followersCount ?? null,
       },
       update: {
         username: user.username,
@@ -177,85 +166,138 @@ bot.command("watch", async (ctx) => {
       },
     });
 
-    await addWatchJob(watchEntry.id, user.username);
+    await prisma.seedAccount.upsert({
+      where: { username: user.username.toLowerCase() },
+      create: {
+        twitterId: user.id,
+        username: user.username.toLowerCase(),
+        category,
+        label: null,
+        active: true,
+      },
+      update: {
+        twitterId: user.id,
+        category,
+        active: true,
+      },
+    });
 
-    const summary = [
-      `✅ Now watching @${user.username}`,
-      ``,
-      `Name: ${user.name}`,
-      `Followers: ${user.followersCount?.toLocaleString() ?? "N/A"}`,
-      `Following: ${user.followingCount?.toLocaleString() ?? "N/A"}`,
-      ``,
-      `Will check for new follows every 5 minutes.`,
-    ].join("\n");
-
-    return ctx.reply(summary);
+    await ctx.reply(
+      [
+        `✅ Seed active @${user.username}`,
+        `Category: ${category}`,
+        `Name: ${user.name}`,
+        `Followers: ${user.followersCount?.toLocaleString() ?? "N/A"}`,
+        ``,
+        `Following graph is tracked by seed-tracker (see Seeds in admin).`,
+      ].join("\n"),
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return ctx.reply(`Error: ${message}`);
+    await ctx.reply(`Error: ${message}`);
   }
+}
+
+bot.command("seed", async (ctx) => {
+  const parts = (ctx.message?.text ?? "").split(/\s+/);
+  await addSeedFromTelegram(ctx, parts[1], parts[2]);
+});
+bot.command("watch", async (ctx) => {
+  const parts = (ctx.message?.text ?? "").split(/\s+/);
+  await addSeedFromTelegram(ctx, parts[1], parts[2] ?? "CT");
 });
 
-bot.command("unwatch", async (ctx) => {
+bot.command("unseed", async (ctx) => {
   if (!(await isAdmin(ctx.from?.id))) {
     return ctx.reply("You are not authorized to use this command.");
   }
-
-  const text = ctx.message?.text ?? "";
-  const parts = text.split(/\s+/);
-  const rawUsername = parts[1];
-
-  if (!rawUsername) {
-    return ctx.reply("Usage: /unwatch @username");
-  }
-
+  const rawUsername = (ctx.message?.text ?? "").split(/\s+/)[1];
+  if (!rawUsername) return ctx.reply("Usage: /unseed @username");
   const screenName = rawUsername.replace(/^@/, "").toLowerCase();
-
   try {
-    const entry = await prisma.watchList.findUnique({
+    const entry = await prisma.seedAccount.findUnique({
       where: { username: screenName },
     });
-
-    if (!entry || !entry.isActive) {
-      return ctx.reply(`@${screenName} is not being watched.`);
+    if (!entry || !entry.active) {
+      return ctx.reply(`@${screenName} is not an active seed.`);
     }
-
-    await prisma.watchList.update({
+    await prisma.seedAccount.update({
       where: { id: entry.id },
-      data: { isActive: false },
+      data: { active: false },
     });
-
-    await removeWatchJob(entry.id);
-
-    return ctx.reply(`✅ Stopped watching @${screenName}`);
+    return ctx.reply(`✅ Seed deactivated @${screenName}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return ctx.reply(`Error: ${message}`);
+  }
+});
+bot.command("unwatch", async (ctx) => {
+  // alias
+  const text = ctx.message?.text?.replace(/^\/unwatch/, "/unseed") ?? "/unseed";
+  // reuse unseed logic
+  const rawUsername = text.split(/\s+/)[1];
+  if (!(await isAdmin(ctx.from?.id))) {
+    return ctx.reply("You are not authorized to use this command.");
+  }
+  if (!rawUsername) return ctx.reply("Usage: /unseed @username");
+  const screenName = rawUsername.replace(/^@/, "").toLowerCase();
+  try {
+    const entry = await prisma.seedAccount.findUnique({
+      where: { username: screenName },
+    });
+    if (!entry || !entry.active) {
+      return ctx.reply(`@${screenName} is not an active seed.`);
+    }
+    await prisma.seedAccount.update({
+      where: { id: entry.id },
+      data: { active: false },
+    });
+    return ctx.reply(`✅ Seed deactivated @${screenName}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return ctx.reply(`Error: ${message}`);
   }
 });
 
-bot.command("list", async (ctx) => {
+bot.command("seeds", async (ctx) => {
   if (!(await isAdmin(ctx.from?.id))) {
     return ctx.reply("You are not authorized to use this command.");
   }
-
   try {
-    const entries = await prisma.watchList.findMany({
-      where: { isActive: true },
-      orderBy: { createdAt: "asc" },
+    const entries = await prisma.seedAccount.findMany({
+      where: { active: true },
+      orderBy: [{ category: "asc" }, { username: "asc" }],
     });
-
     if (entries.length === 0) {
-      return ctx.reply(
-        "No accounts being watched. Use /watch @username to add one.",
-      );
+      return ctx.reply("No active seeds. Use /seed @username [category].");
     }
-
-    const lines = [`📋 Watch List (${entries.length} accounts)`, ``];
-    for (const entry of entries) {
-      lines.push(`• @${entry.username}`);
+    const lines = [`🌱 Seeds (${entries.length})`, ``];
+    for (const e of entries) {
+      lines.push(`• @${e.username} · ${e.category}`);
     }
-
+    return ctx.reply(lines.join("\n"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return ctx.reply(`Error: ${message}`);
+  }
+});
+bot.command("list", async (ctx) => {
+  // alias → seeds
+  if (!(await isAdmin(ctx.from?.id))) {
+    return ctx.reply("You are not authorized to use this command.");
+  }
+  try {
+    const entries = await prisma.seedAccount.findMany({
+      where: { active: true },
+      orderBy: [{ category: "asc" }, { username: "asc" }],
+    });
+    if (entries.length === 0) {
+      return ctx.reply("No active seeds. Use /seed @username [category].");
+    }
+    const lines = [`🌱 Seeds (${entries.length})`, ``];
+    for (const e of entries) {
+      lines.push(`• @${e.username} · ${e.category}`);
+    }
     return ctx.reply(lines.join("\n"));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

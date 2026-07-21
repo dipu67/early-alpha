@@ -12,12 +12,10 @@ export const connection = new Redis(process.env.REDIS_URL as string, {
   maxRetriesPerRequest: null,
 });
 
-export const followTrackerQueue = new Queue("follow-tracker", { connection });
 export const seedTrackerQueue = new Queue("seed-tracker", { connection });
 export const listTrackerQueue = new Queue("list-tracker", { connection });
 
 const QUEUES = {
-  "follow-tracker": followTrackerQueue,
   "seed-tracker": seedTrackerQueue,
   "list-tracker": listTrackerQueue,
 } as const;
@@ -160,6 +158,24 @@ export const SCHEDULERS: SchedulerDef[] = [
     defaultEvery: 2 * 60 * 1000,
     label: "HomeLatest signal scans",
   },
+  {
+    key: "early-project-poll",
+    queue: "list-tracker",
+    schedulerId: "early-project-poll",
+    jobName: "poll-early-projects",
+    data: {},
+    defaultEvery: 60 * 60 * 1000,
+    label: "Early projects usersByIds (1h)",
+  },
+  {
+    key: "growth-report",
+    queue: "list-tracker",
+    schedulerId: "growth-report",
+    jobName: "growth-report",
+    data: {},
+    defaultCron: "0 10 * * 1",
+    label: "Weekly top growing projects (Mon 10:00 UTC)",
+  },
 ];
 
 export function getScheduler(key: string): SchedulerDef | undefined {
@@ -251,21 +267,4 @@ export async function registerAllSchedulers(): Promise<void> {
   }
 }
 
-// ── Per-watch dynamic schedulers (driven by the WatchList) ──
 
-/** How often each watched account is polled for new follows. */
-export const FOLLOW_TRACKER_EVERY_MS = 10 * 60 * 1000; // 10 minutes
-
-export async function addWatchJob(watchListId: bigint, username: string): Promise<void> {
-  const jobId = `watch-${watchListId.toString()}`;
-  await followTrackerQueue.upsertJobScheduler(
-    jobId,
-    { every: FOLLOW_TRACKER_EVERY_MS },
-    { name: "check-following", data: { watchListId: watchListId.toString(), username } },
-  );
-}
-
-export async function removeWatchJob(watchListId: bigint): Promise<void> {
-  const jobId = `watch-${watchListId.toString()}`;
-  await followTrackerQueue.removeJobScheduler(jobId);
-}

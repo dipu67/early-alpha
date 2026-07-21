@@ -389,6 +389,7 @@ export const ModelName = {
   Setting: 'Setting',
   TelegramBot: 'TelegramBot',
   TwitterAccount: 'TwitterAccount',
+  AccountMetricSnapshot: 'AccountMetricSnapshot',
   ProjectList: 'ProjectList',
   ListMember: 'ListMember',
   PostAlert: 'PostAlert',
@@ -404,9 +405,6 @@ export const ModelName = {
   SearchHit: 'SearchHit',
   ListMonitor: 'ListMonitor',
   ListMonitorHit: 'ListMonitorHit',
-  WatchList: 'WatchList',
-  FollowSnapshot: 'FollowSnapshot',
-  AlertLog: 'AlertLog',
   GrokConversation: 'GrokConversation',
   GrokMessage: 'GrokMessage',
   GrokResearchPrompt: 'GrokResearchPrompt',
@@ -432,7 +430,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "projectTag" | "adminUser" | "setting" | "telegramBot" | "twitterAccount" | "projectList" | "listMember" | "postAlert" | "seedAccount" | "trackingRun" | "followEdge" | "alert" | "twitterAuthAccount" | "signalScan" | "signalRule" | "authFollow" | "searchQuery" | "searchHit" | "listMonitor" | "listMonitorHit" | "watchList" | "followSnapshot" | "alertLog" | "grokConversation" | "grokMessage" | "grokResearchPrompt" | "grokResearchRun" | "telegramGroup" | "telegramTopic" | "projectMonitor" | "projectMonitorTagRule" | "githubRepoMonitor" | "githubRepoCommit"
+    modelProps: "projectTag" | "adminUser" | "setting" | "telegramBot" | "twitterAccount" | "accountMetricSnapshot" | "projectList" | "listMember" | "postAlert" | "seedAccount" | "trackingRun" | "followEdge" | "alert" | "twitterAuthAccount" | "signalScan" | "signalRule" | "authFollow" | "searchQuery" | "searchHit" | "listMonitor" | "listMonitorHit" | "grokConversation" | "grokMessage" | "grokResearchPrompt" | "grokResearchRun" | "telegramGroup" | "telegramTopic" | "projectMonitor" | "projectMonitorTagRule" | "githubRepoMonitor" | "githubRepoCommit"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -803,6 +801,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.TwitterAccountCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.TwitterAccountCountAggregateOutputType> | number
+        }
+      }
+    }
+    AccountMetricSnapshot: {
+      payload: Prisma.$AccountMetricSnapshotPayload<ExtArgs>
+      fields: Prisma.AccountMetricSnapshotFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AccountMetricSnapshotFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountMetricSnapshotPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AccountMetricSnapshotFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountMetricSnapshotPayload>
+        }
+        findFirst: {
+          args: Prisma.AccountMetricSnapshotFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountMetricSnapshotPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AccountMetricSnapshotFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountMetricSnapshotPayload>
+        }
+        findMany: {
+          args: Prisma.AccountMetricSnapshotFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountMetricSnapshotPayload>[]
+        }
+        create: {
+          args: Prisma.AccountMetricSnapshotCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountMetricSnapshotPayload>
+        }
+        createMany: {
+          args: Prisma.AccountMetricSnapshotCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AccountMetricSnapshotCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountMetricSnapshotPayload>[]
+        }
+        delete: {
+          args: Prisma.AccountMetricSnapshotDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountMetricSnapshotPayload>
+        }
+        update: {
+          args: Prisma.AccountMetricSnapshotUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountMetricSnapshotPayload>
+        }
+        deleteMany: {
+          args: Prisma.AccountMetricSnapshotDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AccountMetricSnapshotUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AccountMetricSnapshotUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountMetricSnapshotPayload>[]
+        }
+        upsert: {
+          args: Prisma.AccountMetricSnapshotUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AccountMetricSnapshotPayload>
+        }
+        aggregate: {
+          args: Prisma.AccountMetricSnapshotAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAccountMetricSnapshot>
+        }
+        groupBy: {
+          args: Prisma.AccountMetricSnapshotGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AccountMetricSnapshotGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AccountMetricSnapshotCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AccountMetricSnapshotCountAggregateOutputType> | number
         }
       }
     }
@@ -1916,228 +1988,6 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    WatchList: {
-      payload: Prisma.$WatchListPayload<ExtArgs>
-      fields: Prisma.WatchListFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.WatchListFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WatchListPayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.WatchListFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WatchListPayload>
-        }
-        findFirst: {
-          args: Prisma.WatchListFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WatchListPayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.WatchListFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WatchListPayload>
-        }
-        findMany: {
-          args: Prisma.WatchListFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WatchListPayload>[]
-        }
-        create: {
-          args: Prisma.WatchListCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WatchListPayload>
-        }
-        createMany: {
-          args: Prisma.WatchListCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        createManyAndReturn: {
-          args: Prisma.WatchListCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WatchListPayload>[]
-        }
-        delete: {
-          args: Prisma.WatchListDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WatchListPayload>
-        }
-        update: {
-          args: Prisma.WatchListUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WatchListPayload>
-        }
-        deleteMany: {
-          args: Prisma.WatchListDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.WatchListUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateManyAndReturn: {
-          args: Prisma.WatchListUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WatchListPayload>[]
-        }
-        upsert: {
-          args: Prisma.WatchListUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WatchListPayload>
-        }
-        aggregate: {
-          args: Prisma.WatchListAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateWatchList>
-        }
-        groupBy: {
-          args: Prisma.WatchListGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.WatchListGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.WatchListCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.WatchListCountAggregateOutputType> | number
-        }
-      }
-    }
-    FollowSnapshot: {
-      payload: Prisma.$FollowSnapshotPayload<ExtArgs>
-      fields: Prisma.FollowSnapshotFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.FollowSnapshotFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FollowSnapshotPayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.FollowSnapshotFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FollowSnapshotPayload>
-        }
-        findFirst: {
-          args: Prisma.FollowSnapshotFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FollowSnapshotPayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.FollowSnapshotFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FollowSnapshotPayload>
-        }
-        findMany: {
-          args: Prisma.FollowSnapshotFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FollowSnapshotPayload>[]
-        }
-        create: {
-          args: Prisma.FollowSnapshotCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FollowSnapshotPayload>
-        }
-        createMany: {
-          args: Prisma.FollowSnapshotCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        createManyAndReturn: {
-          args: Prisma.FollowSnapshotCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FollowSnapshotPayload>[]
-        }
-        delete: {
-          args: Prisma.FollowSnapshotDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FollowSnapshotPayload>
-        }
-        update: {
-          args: Prisma.FollowSnapshotUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FollowSnapshotPayload>
-        }
-        deleteMany: {
-          args: Prisma.FollowSnapshotDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.FollowSnapshotUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateManyAndReturn: {
-          args: Prisma.FollowSnapshotUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FollowSnapshotPayload>[]
-        }
-        upsert: {
-          args: Prisma.FollowSnapshotUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$FollowSnapshotPayload>
-        }
-        aggregate: {
-          args: Prisma.FollowSnapshotAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateFollowSnapshot>
-        }
-        groupBy: {
-          args: Prisma.FollowSnapshotGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.FollowSnapshotGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.FollowSnapshotCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.FollowSnapshotCountAggregateOutputType> | number
-        }
-      }
-    }
-    AlertLog: {
-      payload: Prisma.$AlertLogPayload<ExtArgs>
-      fields: Prisma.AlertLogFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.AlertLogFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$AlertLogPayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.AlertLogFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$AlertLogPayload>
-        }
-        findFirst: {
-          args: Prisma.AlertLogFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$AlertLogPayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.AlertLogFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$AlertLogPayload>
-        }
-        findMany: {
-          args: Prisma.AlertLogFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$AlertLogPayload>[]
-        }
-        create: {
-          args: Prisma.AlertLogCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$AlertLogPayload>
-        }
-        createMany: {
-          args: Prisma.AlertLogCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        createManyAndReturn: {
-          args: Prisma.AlertLogCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$AlertLogPayload>[]
-        }
-        delete: {
-          args: Prisma.AlertLogDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$AlertLogPayload>
-        }
-        update: {
-          args: Prisma.AlertLogUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$AlertLogPayload>
-        }
-        deleteMany: {
-          args: Prisma.AlertLogDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.AlertLogUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateManyAndReturn: {
-          args: Prisma.AlertLogUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$AlertLogPayload>[]
-        }
-        upsert: {
-          args: Prisma.AlertLogUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$AlertLogPayload>
-        }
-        aggregate: {
-          args: Prisma.AlertLogAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateAlertLog>
-        }
-        groupBy: {
-          args: Prisma.AlertLogGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AlertLogGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.AlertLogCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AlertLogCountAggregateOutputType> | number
-        }
-      }
-    }
     GrokConversation: {
       payload: Prisma.$GrokConversationPayload<ExtArgs>
       fields: Prisma.GrokConversationFieldRefs
@@ -2989,10 +2839,28 @@ export const TwitterAccountScalarFieldEnum = {
   listsSyncedAt: 'listsSyncedAt',
   huntStage: 'huntStage',
   huntNote: 'huntNote',
-  huntUpdatedAt: 'huntUpdatedAt'
+  huntUpdatedAt: 'huntUpdatedAt',
+  lastProfilePolledAt: 'lastProfilePolledAt',
+  lastTweetId: 'lastTweetId',
+  previousUsername: 'previousUsername',
+  usernameChangedAt: 'usernameChangedAt',
+  followersAtDetect: 'followersAtDetect'
 } as const
 
 export type TwitterAccountScalarFieldEnum = (typeof TwitterAccountScalarFieldEnum)[keyof typeof TwitterAccountScalarFieldEnum]
+
+
+export const AccountMetricSnapshotScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  followersCount: 'followersCount',
+  followingCount: 'followingCount',
+  tweetCount: 'tweetCount',
+  source: 'source',
+  recordedAt: 'recordedAt'
+} as const
+
+export type AccountMetricSnapshotScalarFieldEnum = (typeof AccountMetricSnapshotScalarFieldEnum)[keyof typeof AccountMetricSnapshotScalarFieldEnum]
 
 
 export const ProjectListScalarFieldEnum = {
@@ -3220,41 +3088,6 @@ export const ListMonitorHitScalarFieldEnum = {
 } as const
 
 export type ListMonitorHitScalarFieldEnum = (typeof ListMonitorHitScalarFieldEnum)[keyof typeof ListMonitorHitScalarFieldEnum]
-
-
-export const WatchListScalarFieldEnum = {
-  id: 'id',
-  twitterUserId: 'twitterUserId',
-  username: 'username',
-  isActive: 'isActive',
-  addedBy: 'addedBy',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type WatchListScalarFieldEnum = (typeof WatchListScalarFieldEnum)[keyof typeof WatchListScalarFieldEnum]
-
-
-export const FollowSnapshotScalarFieldEnum = {
-  id: 'id',
-  watchListId: 'watchListId',
-  userIds: 'userIds',
-  takenAt: 'takenAt'
-} as const
-
-export type FollowSnapshotScalarFieldEnum = (typeof FollowSnapshotScalarFieldEnum)[keyof typeof FollowSnapshotScalarFieldEnum]
-
-
-export const AlertLogScalarFieldEnum = {
-  id: 'id',
-  watchListId: 'watchListId',
-  newFollowId: 'newFollowId',
-  newFollowUsername: 'newFollowUsername',
-  analysis: 'analysis',
-  sentAt: 'sentAt'
-} as const
-
-export type AlertLogScalarFieldEnum = (typeof AlertLogScalarFieldEnum)[keyof typeof AlertLogScalarFieldEnum]
 
 
 export const GrokConversationScalarFieldEnum = {
@@ -3663,6 +3496,7 @@ export type GlobalOmitConfig = {
   setting?: Prisma.SettingOmit
   telegramBot?: Prisma.TelegramBotOmit
   twitterAccount?: Prisma.TwitterAccountOmit
+  accountMetricSnapshot?: Prisma.AccountMetricSnapshotOmit
   projectList?: Prisma.ProjectListOmit
   listMember?: Prisma.ListMemberOmit
   postAlert?: Prisma.PostAlertOmit
@@ -3678,9 +3512,6 @@ export type GlobalOmitConfig = {
   searchHit?: Prisma.SearchHitOmit
   listMonitor?: Prisma.ListMonitorOmit
   listMonitorHit?: Prisma.ListMonitorHitOmit
-  watchList?: Prisma.WatchListOmit
-  followSnapshot?: Prisma.FollowSnapshotOmit
-  alertLog?: Prisma.AlertLogOmit
   grokConversation?: Prisma.GrokConversationOmit
   grokMessage?: Prisma.GrokMessageOmit
   grokResearchPrompt?: Prisma.GrokResearchPromptOmit

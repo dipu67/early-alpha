@@ -19,7 +19,6 @@ export type BackupTableKey =
   | "twitterAccount"
   | "seedAccount"
   | "trackingRun"
-  | "watchList"
   | "projectList"
   | "searchQuery"
   | "listMonitor"
@@ -30,8 +29,6 @@ export type BackupTableKey =
   | "followEdge"
   | "alert"
   | "searchHit"
-  | "followSnapshot"
-  | "alertLog"
   | "grokMessage"
   | "grokResearchRun"
   | "telegramGroup"
@@ -108,12 +105,6 @@ export const BACKUP_TABLES: BackupTableDef[] = [
     dates: ["startedAt", "finishedAt"],
   },
   {
-    key: "watchList",
-    table: "watch_list",
-    bigints: ["id"],
-    dates: ["createdAt", "updatedAt"],
-  },
-  {
     key: "projectList",
     table: "project_lists",
     bigints: ["id", "authAccountId"],
@@ -172,18 +163,6 @@ export const BACKUP_TABLES: BackupTableDef[] = [
     table: "search_hits",
     bigints: ["id", "queryId"],
     dates: ["postedAt", "createdAt"],
-  },
-  {
-    key: "followSnapshot",
-    table: "follow_snapshots",
-    bigints: ["id", "watchListId"],
-    dates: ["takenAt"],
-  },
-  {
-    key: "alertLog",
-    table: "alert_logs",
-    bigints: ["id", "watchListId"],
-    dates: ["sentAt"],
   },
   {
     key: "grokMessage",
@@ -318,7 +297,6 @@ const PAGE_CURSOR: Partial<Record<BackupTableKey, string>> = {
   twitterAccount: "id",
   seedAccount: "id",
   trackingRun: "id",
-  watchList: "id",
   projectList: "id",
   searchQuery: "id",
   listMonitor: "id",
@@ -328,8 +306,6 @@ const PAGE_CURSOR: Partial<Record<BackupTableKey, string>> = {
   // followEdge: composite PK — no cursor
   alert: "id",
   searchHit: "id",
-  followSnapshot: "id",
-  alertLog: "id",
   grokMessage: "id",
   grokResearchRun: "id",
   telegramGroup: "id",
@@ -338,7 +314,7 @@ const PAGE_CURSOR: Partial<Record<BackupTableKey, string>> = {
 
 /**
  * Load a table in ordered pages so we never materialize a multi‑GB Prisma
- * result set in one round-trip (follow_snapshots was the killer).
+ * result set in one round-trip.
  */
 async function loadTablePaged(
   def: BackupTableDef,
@@ -403,50 +379,17 @@ async function loadTablePaged(
   return out;
 }
 
-/**
- * Latest follow_snapshot per watch_list only — enough to resume tracking after
- * restore without shipping tens of thousands of multi‑MB historical rows.
- */
-async function loadLatestFollowSnapshots(): Promise<Record<string, unknown>[]> {
-  const watches = await prisma.watchList.findMany({
-    select: { id: true },
-    orderBy: { id: "asc" },
-  });
-  const out: Record<string, unknown>[] = [];
-  for (const w of watches) {
-    const latest = await prisma.followSnapshot.findFirst({
-      where: { watchListId: w.id },
-      orderBy: [{ takenAt: "desc" }, { id: "desc" }],
-    });
-    if (latest) out.push(serializeRow(latest as unknown as Record<string, unknown>));
-  }
-  return out;
-}
-
 export async function exportDatabase(
   opts: ExportDatabaseOpts = {},
 ): Promise<DbBackupFile & { compact: boolean; warnings: string[] }> {
-  const fullSnapshots = opts.fullSnapshots === true;
   const tables: Record<string, unknown[]> = {};
   const counts: Record<string, number> = {};
   const warnings: string[] = [];
+  void opts;
 
   for (const def of BACKUP_TABLES) {
     const t0 = Date.now();
-    let rows: Record<string, unknown>[];
-
-    if (def.key === "followSnapshot" && !fullSnapshots) {
-      rows = await loadLatestFollowSnapshots();
-      const total = await prisma.followSnapshot.count();
-      if (total > rows.length) {
-        warnings.push(
-          `follow_snapshots: exported ${rows.length} latest (of ${total} total). ` +
-            `Pass full=1 for full history (risk of OOM).`,
-        );
-      }
-    } else {
-      rows = await loadTablePaged(def);
-    }
+    const rows = await loadTablePaged(def);
 
     tables[def.table] = rows;
     counts[def.table] = rows.length;
@@ -462,7 +405,7 @@ export async function exportDatabase(
     app: "early-alpha",
     tables,
     counts,
-    compact: !fullSnapshots,
+    compact: true,
     warnings,
   };
 }
@@ -504,43 +447,6 @@ function asBigInt(v: unknown): bigint | null {
   } catch {
     return null;
   }
-}
-
-/**
- * After parents land, remap child FKs.
- * Merge often keeps existing watch_list rows (unique username) with **different**
- * ids than the backup — follow_snapshots / alert_logs then violate FKs.
- */
-async function buildWatchListIdMap(
-  backupRows: Record<string, unknown>[],
-): Promise<IdMap> {
-  const map: IdMap = new Map();
-  if (backupRows.length === 0) return map;
-
-  const live = await prisma.watchList.findMany({
-    select: { id: true, username: true, twitterUserId: true },
-  });
-  const byUsername = new Map(
-    live.map((w) => [w.username.toLowerCase(), w.id] as const),
-  );
-  const byTwitter = new Map(
-    live.map((w) => [w.twitterUserId, w.id] as const),
-  );
-
-  for (const row of backupRows) {
-    const backupId = asBigInt(row.id);
-    if (backupId == null) continue;
-    const username =
-      typeof row.username === "string" ? row.username.toLowerCase() : "";
-    const twitterUserId =
-      typeof row.twitterUserId === "string" ? row.twitterUserId : "";
-    const liveId =
-      (username && byUsername.get(username)) ||
-      (twitterUserId && byTwitter.get(twitterUserId)) ||
-      null;
-    if (liveId != null) map.set(String(backupId), liveId);
-  }
-  return map;
 }
 
 async function buildAuthAccountIdMap(
@@ -606,7 +512,6 @@ function prepareImportRow(
   raw: Record<string, unknown>,
   mode: BackupMode,
   maps: {
-    watchList: IdMap;
     authAccount: IdMap;
     searchQuery: IdMap;
   },
@@ -614,22 +519,6 @@ function prepareImportRow(
   const row = reviveRow(def, raw);
 
   // ── FK remaps ────────────────────────────────────────────────────────
-  if (def.key === "followSnapshot" || def.key === "alertLog") {
-    const old = asBigInt(row.watchListId);
-    if (old == null) return { row: null, skipReason: "missing watchListId" };
-    const mapped = maps.watchList.get(String(old));
-    if (mapped != null) {
-      row.watchListId = mapped;
-    } else if (mode === "merge") {
-      // Parent may not exist under this id after merge-skip.
-      return {
-        row: null,
-        skipReason: `no watch_list for backup id ${old}`,
-      };
-    }
-    // replace: keep backup id; parent should have been inserted with same id
-  }
-
   if (
     def.key === "projectList" ||
     def.key === "searchQuery" ||
@@ -694,7 +583,6 @@ export async function importDatabase(
   }
 
   const maps = {
-    watchList: new Map<string, bigint>() as IdMap,
     authAccount: new Map<string, bigint>() as IdMap,
     searchQuery: new Map<string, bigint>() as IdMap,
   };
@@ -704,11 +592,6 @@ export async function importDatabase(
     if (!Array.isArray(rows) || rows.length === 0) {
       imported[def.table] = 0;
       continue;
-    }
-
-    // Parents first in BACKUP_TABLES — rebuild maps after each parent table.
-    if (def.key === "watchList") {
-      // import first, then map (below after insert)
     }
 
     let ok = 0;
@@ -769,14 +652,6 @@ export async function importDatabase(
     if (skip > 0) skipped[def.table] = skip;
 
     // Refresh id maps after parent tables land
-    if (def.key === "watchList") {
-      maps.watchList = await buildWatchListIdMap(
-        rows as Record<string, unknown>[],
-      );
-      console.log(
-        `[backup:import] watch_list id map size=${maps.watchList.size}`,
-      );
-    }
     if (def.key === "twitterAuthAccount") {
       maps.authAccount = await buildAuthAccountIdMap(
         rows as Record<string, unknown>[],

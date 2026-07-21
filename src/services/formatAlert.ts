@@ -15,22 +15,154 @@ export interface SignalAlertInput {
   signals: string[];
   text: string;
   tweetId: string;
+  /** Optional NFT/lifecycle intelligence (score, stages, extracted fields). */
+  importance?: {
+    tier: "soft" | "standard" | "critical";
+    score: number;
+    headline: string;
+    stages: string[];
+    fields: {
+      datetimeRaws?: string[] | undefined;
+      timezone?: string | undefined;
+      relative?: string | undefined;
+      relativeAmount?: number | undefined;
+      priceRaw?: string | undefined;
+      supply?: number | undefined;
+      maxPerWallet?: number | undefined;
+      mintLinks?: string[] | undefined;
+      formLinks?: string[] | undefined;
+      claimLinks?: string[] | undefined;
+      appLinks?: string[] | undefined;
+      docsLinks?: string[] | undefined;
+      bridgeLinks?: string[] | undefined;
+      tradeLinks?: string[] | undefined;
+      chainId?: string | undefined;
+      rpcUrl?: string | undefined;
+      explorerUrl?: string | undefined;
+      contractAddress?: string | undefined;
+      ticker?: string | undefined;
+      hasTba?: boolean | undefined;
+      phases?: { name: string }[] | undefined;
+    };
+    vertical?: string | undefined;
+  } | undefined;
 }
 
-/** A signal post alert (🚨) — a list member posted mint/launch/TGE-type news. */
+function signalEmoji(tier?: string): string {
+  if (tier === "critical") return "🔴";
+  if (tier === "soft") return "🟡";
+  return "🚨";
+}
+
+/** Human labels only (strip stage:/tier:/score: meta). */
+function cleanSignalLabels(signals: string[]): string[] {
+  return signals.filter(
+    (s) =>
+      !s.startsWith("stage:") &&
+      !s.startsWith("tier:") &&
+      !s.startsWith("score:"),
+  );
+}
+
+function formatImportanceBlock(
+  imp: NonNullable<SignalAlertInput["importance"]>,
+): string {
+  const f = imp.fields;
+  const lines: string[] = [];
+  lines.push(`📌 *${escapeMarkdown(imp.headline)}* \\(score ${escapeMarkdown(String(imp.score))}\\)`);
+  if (imp.vertical) {
+    lines.push(`🏷 vertical: \`${escapeMarkdown(imp.vertical)}\``);
+  }
+  if (imp.stages.length) {
+    lines.push(`🧭 stage: \`${escapeMarkdown(imp.stages.join(", "))}\``);
+  }
+  if (f.datetimeRaws?.length) {
+    const tz = f.timezone ? ` ${f.timezone}` : "";
+    lines.push(
+      `🗓 ${escapeMarkdown(f.datetimeRaws.slice(0, 3).join(" · "))}${escapeMarkdown(tz)}`,
+    );
+  }
+  if (f.relative === "hours" && f.relativeAmount != null) {
+    lines.push(`⏱ in ~${escapeMarkdown(String(f.relativeAmount))}h`);
+  } else if (f.relative === "minutes" && f.relativeAmount != null) {
+    lines.push(`⏱ in ~${escapeMarkdown(String(f.relativeAmount))}m`);
+  } else if (f.relative) {
+    lines.push(`⏱ ${escapeMarkdown(f.relative)}`);
+  }
+  const econ: string[] = [];
+  if (f.priceRaw) econ.push(f.priceRaw);
+  if (f.supply != null) econ.push(`supply ${f.supply}`);
+  if (f.maxPerWallet != null) econ.push(`${f.maxPerWallet}/wallet`);
+  if (econ.length) lines.push(`💰 ${escapeMarkdown(econ.join(" · "))}`);
+  if (f.hasTba) lines.push(`⚠️ TBA fields present`);
+  if (f.phases?.length) {
+    lines.push(
+      `📋 ${escapeMarkdown(f.phases.slice(0, 3).map((p) => p.name).join(" | "))}`,
+    );
+  }
+  if (f.chainId) {
+    lines.push(`⛓ chain id: \`${escapeMarkdown(f.chainId)}\``);
+  }
+  if (f.rpcUrl) {
+    lines.push(`📡 [RPC](${f.rpcUrl})`);
+  }
+  if (f.explorerUrl) {
+    lines.push(`🔎 [Explorer](${f.explorerUrl})`);
+  }
+  if (f.contractAddress) {
+    lines.push(`📜 CA: \`${escapeMarkdown(f.contractAddress)}\``);
+  }
+  if (f.ticker) {
+    lines.push(`💱 $${escapeMarkdown(f.ticker)}`);
+  }
+  for (const link of (f.mintLinks ?? []).slice(0, 2)) {
+    lines.push(`🖼 [Mint link](${link})`);
+  }
+  for (const link of (f.claimLinks ?? []).slice(0, 2)) {
+    lines.push(`🎁 [Claim](${link})`);
+  }
+  for (const link of (f.appLinks ?? []).slice(0, 2)) {
+    lines.push(`📱 [App](${link})`);
+  }
+  for (const link of (f.docsLinks ?? []).slice(0, 2)) {
+    lines.push(`📘 [Docs](${link})`);
+  }
+  for (const link of (f.bridgeLinks ?? []).slice(0, 2)) {
+    lines.push(`🌉 [Bridge](${link})`);
+  }
+  for (const link of (f.tradeLinks ?? []).slice(0, 2)) {
+    lines.push(`📈 [Trade](${link})`);
+  }
+  for (const link of (f.formLinks ?? []).slice(0, 2)) {
+    lines.push(`📝 [WL form](${link})`);
+  }
+  return lines.length ? lines.join("\n") + "\n" : "";
+}
+
+/** A signal post alert — mint/WL/TGE-type news with optional structured intel. */
 export function formatSignalAlert(
   input: SignalAlertInput,
 ): { text: string; user: UserData } {
   const postUrl = `https://x.com/${input.username}/status/${input.tweetId}`;
-  const signalLine = input.signals.length
-    ? `🏷️ ${escapeMarkdown(input.signals.join(" · "))}\n`
+  const labels = cleanSignalLabels(input.signals);
+  const signalLine = labels.length
+    ? `🏷️ ${escapeMarkdown(labels.slice(0, 8).join(" · "))}\n`
     : "";
+  const emoji = signalEmoji(input.importance?.tier);
+  const tierTag =
+    input.importance?.tier === "critical"
+      ? " CRITICAL"
+      : input.importance?.tier === "soft"
+        ? " soft"
+        : "";
+  const intel = input.importance ? formatImportanceBlock(input.importance) : "";
 
   const text =
-    `🚨 *Signal · ${escapeMarkdown(tagLabel(input.slug))}*\n` +
+    `${emoji} *Signal${escapeMarkdown(tierTag)} · ${escapeMarkdown(tagLabel(input.slug))}*\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
     `👤 *${escapeMarkdown(input.name)}*  [@${escapeMarkdown(input.username)}](https://x.com/${input.username})\n` +
     signalLine +
+    intel +
     `\n${escapeMarkdown(excerpt(input.text))}\n\n` +
     `🔗 [View post](${postUrl})\n` +
     `━━━━━━━━━━━━━━━━━━\n`;
@@ -336,6 +468,7 @@ export interface MonitorAlertInput {
   text: string;
   tweetId: string;
   alertMode: "all" | "signals";
+  importance?: SignalAlertInput["importance"];
 }
 
 /** Live per-user timeline alert — watched account posted (not list poll). */
@@ -343,17 +476,26 @@ export function formatMonitorAlert(
   input: MonitorAlertInput,
 ): { text: string; user: UserData } {
   const postUrl = `https://x.com/${input.username}/status/${input.tweetId}`;
+  const labels = cleanSignalLabels(input.signals);
   const signalLine =
-    input.signals.length && !(input.signals.length === 1 && input.signals[0] === "post")
-      ? `🏷️ ${escapeMarkdown(input.signals.join(" · "))}\n`
+    labels.length && !(labels.length === 1 && labels[0] === "post")
+      ? `🏷️ ${escapeMarkdown(labels.slice(0, 8).join(" · "))}\n`
       : "";
   const modeLabel = input.alertMode === "signals" ? "signal" : "new post";
+  const emoji =
+    input.importance?.tier === "critical"
+      ? "🔴"
+      : input.importance?.tier === "soft"
+        ? "🟡"
+        : "📡";
+  const intel = input.importance ? formatImportanceBlock(input.importance) : "";
 
   const text =
-    `📡 *User monitor · ${modeLabel}*\n` +
+    `${emoji} *User monitor · ${escapeMarkdown(modeLabel)}*\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
     `👤 *${escapeMarkdown(input.name)}*  [@${escapeMarkdown(input.username)}](https://x.com/${input.username})\n` +
     signalLine +
+    intel +
     `\n${escapeMarkdown(excerpt(input.text))}\n\n` +
     `🔗 [View post](${postUrl})\n` +
     `━━━━━━━━━━━━━━━━━━\n`;
@@ -366,6 +508,98 @@ export function formatMonitorAlert(
       name: input.name,
     } as UserData,
   };
+}
+
+export interface ProfileChangeAlertInput {
+  accountId: string;
+  username: string;
+  name: string;
+  previousUsername: string | null;
+  bioChanged: boolean;
+  oldBio: string | null;
+  newBio: string | null;
+  followersCount: number | null;
+  tags: string[];
+}
+
+/** Username rename and/or bio update on an early project. */
+export function formatProfileChangeAlert(
+  input: ProfileChangeAlertInput,
+): { text: string; user: UserData } {
+  const lines: string[] = [
+    `📝 *Profile change · early project*`,
+    `━━━━━━━━━━━━━━━━━━`,
+  ];
+  if (input.previousUsername) {
+    lines.push(
+      `🔄 @${escapeMarkdown(input.previousUsername)} → [@${escapeMarkdown(input.username)}](https://x.com/${input.username})`,
+    );
+  } else {
+    lines.push(
+      `👤 *${escapeMarkdown(input.name)}* [@${escapeMarkdown(input.username)}](https://x.com/${input.username})`,
+    );
+  }
+  if (input.followersCount != null) {
+    lines.push(`👥 followers: \`${formatNumber(input.followersCount)}\``);
+  }
+  if (input.tags?.length) {
+    lines.push(`🏷️ ${escapeMarkdown(input.tags.filter((t) => t !== "unknown").join(" · ") || "—")}`);
+  }
+  if (input.bioChanged) {
+    lines.push(``);
+    lines.push(`*Bio updated*`);
+    if (input.newBio) {
+      lines.push(escapeMarkdown(excerpt(input.newBio, 280)));
+    } else {
+      lines.push(`_\\(bio cleared\\)_`);
+    }
+  }
+  lines.push(`━━━━━━━━━━━━━━━━━━`);
+
+  return {
+    text: lines.join("\n") + "\n",
+    user: {
+      id: input.accountId,
+      username: input.username,
+      name: input.name,
+    } as UserData,
+  };
+}
+
+export interface GrowthReportRow {
+  username: string;
+  name: string;
+  tags: string[];
+  followersNow: number;
+  followersBefore: number;
+  absGain: number;
+  pctGain: number;
+  huntStage: string;
+}
+
+export function formatGrowthReport(input: {
+  days: number;
+  rows: GrowthReportRow[];
+}): string {
+  const lines: string[] = [
+    `📈 *Top growing early projects \\(${input.days}d\\)*`,
+    `━━━━━━━━━━━━━━━━━━`,
+  ];
+  input.rows.forEach((r, i) => {
+    const pct = r.pctGain >= 10 ? r.pctGain.toFixed(0) : r.pctGain.toFixed(1);
+    const tags = r.tags.filter((t) => t !== "unknown" && t !== "other").slice(0, 3);
+    const tagStr = tags.length ? ` · ${tags.join(",")}` : "";
+    const stage = r.huntStage !== "noise" ? ` · ${r.huntStage}` : "";
+    lines.push(
+      `${i + 1}\\. [@${escapeMarkdown(r.username)}](https://x.com/${r.username})` +
+        ` \\+${escapeMarkdown(formatNumber(r.absGain))} \\(${escapeMarkdown(pct)}%\\)` +
+        `\n    ${escapeMarkdown(formatNumber(r.followersBefore))} → ${escapeMarkdown(formatNumber(r.followersNow))}` +
+        escapeMarkdown(tagStr + stage),
+    );
+  });
+  lines.push(`━━━━━━━━━━━━━━━━━━`);
+  lines.push(`_Baseline: snapshot ~${input.days}d ago or detect\\-time followers_`);
+  return lines.join("\n");
 }
 
 export interface ConvergenceAlertData {

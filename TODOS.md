@@ -1,12 +1,13 @@
 # TODOS
 
-## Post-Validation (after 2-week run)
+## Done (Wave 1)
 
-### Daily Digest Catch-Up
-- **What:** On process start, check if yesterday's digest was sent. If not, send it immediately.
-- **Why:** Prevents silent digest loss during outages. Currently if the process is down at 09:00 UTC, that day's digest is silently skipped.
-- **Depends on:** Daily digest (Step 5) built and working.
-- **Context:** Query AlertLog or a new digest-sent marker for the last 24h. If missing, collect events from the missed window and send.
+### Daily Digest Catch-Up — DONE
+- Markers `digest.daily.lastSentAt` / `digest.early.lastSentAt` on successful send.
+- `catchUpMissedDigests()` on API boot (baseline on first run; resend only if a slot was missed after a prior send).
+- Seeds API + admin UI; Overview metrics on Seed/FollowEdge/Alert; Watchlist marked legacy.
+
+## Post-Validation (after 2-week run)
 
 ### Bio Category Re-Evaluation
 - **What:** Periodically re-fetch Twitter bios for tracked targets and re-evaluate category tags.
@@ -19,8 +20,6 @@
 - **Why:** Unbounded FollowEdge growth. ~250 new rows/day = ~90K rows/year. Most are stale.
 - **Context:** Acceptable for 2-week validation. Implement before scaling beyond 50 seeds.
 
-### WatchList Deprecation
-- **What:** Migrate remaining WatchList users to SeedAccount system, then remove WatchList/FollowSnapshot/AlertLog models.
-- **Why:** Two parallel data models is technical debt. SeedAccount/FollowEdge is the canonical system now.
-- **Depends on:** 2-week validation confirms SeedAccount system works.
-- **Context:** The /watch, /unwatch, /list bot commands currently operate on WatchList. They'd need to be updated or removed.
+### WatchList Deprecation — DONE
+- Removed WatchList / FollowSnapshot / AlertLog models, follow-tracker worker, admin UI.
+- Bot `/watch` → `/seed` (aliases kept).

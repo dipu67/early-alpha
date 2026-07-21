@@ -1,6 +1,5 @@
 // Heuristic: is this follow worth keeping in the project DB?
-// Watchlist still *alerts* on every new follow; only early-looking accounts
-// are upserted to TwitterAccount / AlertLog.
+// Only early-looking accounts are upserted for hunter / digests / lists.
 
 import type { UserData } from "../TwitterClient/types.js";
 

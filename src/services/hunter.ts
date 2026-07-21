@@ -84,8 +84,8 @@ export async function getHotBoard(opts: {
   const since = hoursAgo(hours);
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 100);
 
-  // Parallel signal pulls
-  const [edgeDetails, logs, convAlerts, hitGroups, newAccounts] =
+  // Parallel signal pulls (seeds only — legacy WatchList removed)
+  const [edgeDetails, convAlerts, hitGroups, newAccounts] =
     await Promise.all([
       prisma.followEdge.findMany({
         where: { active: true, firstSeenAt: { gte: since } },
@@ -93,14 +93,6 @@ export async function getHotBoard(opts: {
           followingId: true,
           firstSeenAt: true,
           seed: { select: { username: true } },
-        },
-      }),
-      prisma.alertLog.findMany({
-        where: { sentAt: { gte: since }, newFollowId: { not: "" } },
-        select: {
-          newFollowId: true,
-          sentAt: true,
-          watchList: { select: { username: true } },
         },
       }),
       prisma.alert.findMany({
@@ -125,7 +117,6 @@ export async function getHotBoard(opts: {
 
   const idSet = new Set<string>();
   for (const e of edgeDetails) idSet.add(e.followingId);
-  for (const l of logs) if (l.newFollowId) idSet.add(l.newFollowId);
   for (const a of convAlerts) idSet.add(a.followingId);
   for (const h of hitGroups) {
     if (h._max.authorId) idSet.add(h._max.authorId);
@@ -161,17 +152,6 @@ export async function getHotBoard(opts: {
     if (e.firstSeenAt < bucket.first) bucket.first = e.firstSeenAt;
   }
 
-  const watchersByTarget = new Map<string, { usernames: Set<string>; last: Date }>();
-  for (const l of logs) {
-    let bucket = watchersByTarget.get(l.newFollowId);
-    if (!bucket) {
-      bucket = { usernames: new Set(), last: l.sentAt };
-      watchersByTarget.set(l.newFollowId, bucket);
-    }
-    bucket.usernames.add(l.watchList.username);
-    if (l.sentAt > bucket.last) bucket.last = l.sentAt;
-  }
-
   const hitsByUser = new Map(
     hitGroups.map((h) => [
       h.username.toLowerCase(),
@@ -188,7 +168,6 @@ export async function getHotBoard(opts: {
 
   for (const acc of accounts) {
     const seeds = seedsByTarget.get(acc.id);
-    const watchers = watchersByTarget.get(acc.id);
     const hits = hitsByUser.get(acc.username.toLowerCase());
     const conv = convById.get(acc.id);
 
@@ -199,8 +178,8 @@ export async function getHotBoard(opts: {
         ...(conv?.seedUsernames ?? []),
       ]),
     ];
-    const watcherCount = watchers?.usernames.size ?? 0;
-    const watcherUsernames = watchers ? [...watchers.usernames] : [];
+    const watcherCount = 0;
+    const watcherUsernames: string[] = [];
     const searchHits = hits?.count ?? 0;
     const isNew = acc.firstSeenAt >= since;
 
@@ -210,11 +189,10 @@ export async function getHotBoard(opts: {
     }
 
     // Need signal: multi-source OR new project OR any follow/search
-    if (seedCount + watcherCount + searchHits === 0 && !isNew) continue;
+    if (seedCount + searchHits === 0 && !isNew) continue;
 
     const lastEvent = [
       seeds?.first,
-      watchers?.last,
       hits?.last ?? null,
       conv?.createdAt,
       isNew ? acc.firstSeenAt : null,
@@ -229,8 +207,6 @@ export async function getHotBoard(opts: {
     const sources: string[] = [];
     if (seedCount >= 2) sources.push("seed-convergence");
     else if (seedCount === 1) sources.push("seed-follow");
-    if (watcherCount >= 2) sources.push("watch-convergence");
-    else if (watcherCount === 1) sources.push("watch-follow");
     if (searchHits > 0) sources.push("search");
     if (conv) sources.push("alert");
     if (isNew) sources.push("first-seen");
@@ -288,18 +264,12 @@ export async function getEntity(accountId: string) {
   });
   if (!account) return null;
 
-  const [seedEdges, alertLogs, searchHits, researchRuns] = await Promise.all([
+  const [seedEdges, searchHits, researchRuns] = await Promise.all([
     prisma.followEdge.findMany({
       where: { followingId: accountId, active: true },
       orderBy: { firstSeenAt: "desc" },
       take: 30,
       include: { seed: { select: { username: true, category: true, label: true } } },
-    }),
-    prisma.alertLog.findMany({
-      where: { newFollowId: accountId },
-      orderBy: { sentAt: "desc" },
-      take: 30,
-      include: { watchList: { select: { username: true } } },
     }),
     prisma.searchHit.findMany({
       where: {
@@ -358,11 +328,7 @@ export async function getEntity(accountId: string) {
       firstSeenAt: e.firstSeenAt,
       lastSeenAt: e.lastSeenAt,
     })),
-    watchFollows: alertLogs.map((l) => ({
-      watcher: l.watchList.username,
-      sentAt: l.sentAt,
-      analysis: l.analysis,
-    })),
+    watchFollows: [] as { watcher: string; sentAt: Date; analysis: string | null }[],
     convergenceAlerts: account.alerts.map((a) => ({
       type: a.alertType,
       score: a.score,

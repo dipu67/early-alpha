@@ -2,8 +2,6 @@ import {
   LayoutDashboard,
   Radio,
   Tag,
-  List,
-  Eye,
   KeyRound,
   Settings,
   ListChecks,
@@ -17,6 +15,8 @@ import {
   ClipboardList,
   Link2,
   Github,
+  Sprout,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "./rbac";
@@ -31,6 +31,8 @@ export interface NavItem {
 
 export const NAV: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/seeds", label: "Seeds", icon: Sprout },
+  { href: "/dashboard/early-projects", label: "Early Monitor", icon: Activity },
   { href: "/dashboard/hunter", label: "Hunter", icon: Crosshair },
   { href: "/dashboard/monitors", label: "User Monitor", icon: Radar },
   { href: "/dashboard/signals", label: "Signals", icon: Radio },
@@ -40,8 +42,6 @@ export const NAV: NavItem[] = [
   { href: "/dashboard/github", label: "GitHub Repos", icon: Github },
   { href: "/dashboard/projects", label: "Projects & Tags", icon: Tag },
   { href: "/dashboard/keywords", label: "Keywords", icon: Hash },
-  { href: "/dashboard/lists", label: "Lists", icon: List },
-  { href: "/dashboard/watchlist", label: "Watchlist", icon: Eye },
   { href: "/dashboard/auth-accounts", label: "Auth Pool", icon: KeyRound },
   { href: "/dashboard/queues", label: "Queues", icon: ListChecks, minRole: "admin" },
   { href: "/dashboard/telegram", label: "Telegram", icon: Send, minRole: "admin" },
@@ -53,6 +53,8 @@ export const NAV: NavItem[] = [
 /** Human labels for breadcrumbs, keyed by path segment. */
 export const SEGMENT_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
+  seeds: "Seeds",
+  "early-projects": "Early Monitor",
   hunter: "Hunter",
   monitors: "User Monitor",
   signals: "Signals",
@@ -62,8 +64,6 @@ export const SEGMENT_LABELS: Record<string, string> = {
   github: "GitHub Repos",
   projects: "Projects & Tags",
   keywords: "Keywords",
-  lists: "Lists",
-  watchlist: "Watchlist",
   "auth-accounts": "Auth Pool",
   queues: "Queues",
   telegram: "Telegram",

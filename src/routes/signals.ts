@@ -239,21 +239,29 @@ signalsRouter.post(
 
 const followsQuery = paginationSchema.extend({ since: z.string().optional() });
 
+/** Recent seed follow edges (replaces legacy WatchList alert_logs). */
 signalsRouter.get(
   "/follows",
   asyncHandler(async (req, res) => {
     const q = followsQuery.parse(req.query);
     const since = parseSince(q.since);
-    const where = since ? { sentAt: { gte: since } } : {};
+    const where = {
+      active: true,
+      ...(since ? { firstSeenAt: { gte: since } } : {}),
+    };
 
     const [items, total] = await Promise.all([
-      prisma.alertLog.findMany({
+      prisma.followEdge.findMany({
         where,
-        orderBy: { sentAt: "desc" },
+        orderBy: { firstSeenAt: "desc" },
         take: q.limit,
         skip: q.offset,
+        include: {
+          seed: { select: { username: true, category: true } },
+          following: { select: { username: true, followersCount: true } },
+        },
       }),
-      prisma.alertLog.count({ where }),
+      prisma.followEdge.count({ where }),
     ]);
 
     res.json({ total, limit: q.limit, offset: q.offset, items: jsonSafe(items) });

@@ -43,6 +43,11 @@ export type TelegramBot = Prisma.TelegramBotModel
  */
 export type TwitterAccount = Prisma.TwitterAccountModel
 /**
+ * Model AccountMetricSnapshot
+ * Time-series metrics for early projects (growth reports, velocity).
+ */
+export type AccountMetricSnapshot = Prisma.AccountMetricSnapshotModel
+/**
  * Model ProjectList
  * 
  */
@@ -121,21 +126,6 @@ export type ListMonitor = Prisma.ListMonitorModel
  * 
  */
 export type ListMonitorHit = Prisma.ListMonitorHitModel
-/**
- * Model WatchList
- * 
- */
-export type WatchList = Prisma.WatchListModel
-/**
- * Model FollowSnapshot
- * 
- */
-export type FollowSnapshot = Prisma.FollowSnapshotModel
-/**
- * Model AlertLog
- * 
- */
-export type AlertLog = Prisma.AlertLogModel
 /**
  * Model GrokConversation
  * Grok (X) chat session bound to a Telegram chat. Replaces conversationId.json.

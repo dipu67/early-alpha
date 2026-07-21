@@ -83,10 +83,40 @@ early-alpha/
 │   └── Tools/            # CLI utilities (track, tags, backup, …)
 ├── admin/                # Next.js operator UI
 ├── data/                 # Chainlist snapshots, etc.
-└── docker-compose.yml    # Postgres + Redis
+├── docker-compose.yml    # Full stack (or postgres+redis only)
+├── Dockerfile.api
+├── Dockerfile.admin
+└── docker.env.example
 ```
 
 ## Setup
+
+### Option A — Full stack with Docker
+
+Runs **Postgres + Redis + API** (workers, bots, schedulers) **+ Admin UI**.
+
+```sh
+cp docker.env.example .env    # set ADMIN_API_KEY + SESSION_SECRET
+docker compose up -d --build
+
+# Wait until API is healthy, then create first admin user:
+docker compose exec api node dist/src/Tools/createUser.js
+```
+
+| Service | URL |
+|---|---|
+| Admin UI | http://localhost:3000 |
+| API health | http://localhost:4000/health |
+
+```sh
+docker compose logs -f api admin   # follow logs
+docker compose down                # stop (keeps DB volumes)
+docker compose down -v             # stop + wipe volumes
+```
+
+npm shortcuts: `npm run docker:up` · `docker:down` · `docker:logs` · `docker:infra`
+
+### Option B — Local Node + Docker infra only
 
 ### Prerequisites
 
@@ -99,7 +129,7 @@ early-alpha/
 ```sh
 cp .env.example .env          # fill in required vars
 cp admin/.env.example admin/.env
-docker compose up -d
+docker compose up -d postgres redis   # infra only
 npm run install:all           # root API + admin UI
 npx prisma migrate deploy
 npm run user:create           # create first AdminUser (email/password)
@@ -207,8 +237,7 @@ Open `http://localhost:3000` after both processes are up. Login with an `AdminUs
 | GitHub Repos | Repo commit monitors |
 | Projects & Tags | Detected accounts, reclassify |
 | Keywords | Tag keyword / handle rules |
-| Lists | Project list membership |
-| Watchlist | Per-account follow watch |
+| Seeds | Smart-follow graph seeds |
 | Auth Pool | Twitter credential pool |
 | Queues | BullMQ / scheduler controls (admin) |
 | Telegram | Bots, groups, topics (admin) |

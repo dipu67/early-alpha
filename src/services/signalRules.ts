@@ -142,18 +142,53 @@ export const DEFAULT_SIGNAL_RULES: SignalRuleSeed[] = [
   // ── Waitlist / signup ──
   g("wl", "waitlist"),
   g("wl", "wait list"),
-  g("other", "sign up"),
-  g("other", "register now"),
+  g("wl", "waitlist open"),
+  g("wl", "waitlist is open"),
+  g("wl", "waitlist live"),
   g("other", "campaign live"),
   g("other", "points program"),
 
-  // ── NFT tag extras (also run when scan tag is nft) ──
-  t("nft", "mint", "mint"),
-  t("nft", "mint", "minting"),
-  t("nft", "mint", "reveal"),
-  t("nft", "wl", "wl"),
-  t("nft", "wl", "whitelist"),
-  t("nft", "wl", "allowlist"),
+  // ── NFT tag extras — precision only (no bare mint/wl tokens) ──
+  t("nft", "mint", "mint is live"),
+  t("nft", "mint", "minting is live"),
+  t("nft", "mint", "minting is open"),
+  t("nft", "mint", "public mint is live"),
+  t("nft", "mint", "wl mint is live"),
+  t("nft", "mint", "you can mint now"),
+  t("nft", "mint", "mint page is live"),
+  t("nft", "mint", "mint portal is live"),
+  t("nft", "mint", "reveal live"),
+  t("nft", "mint", "reveal soon"),
+  t("nft", "mint", "metadata reveal"),
+
+  // Waitlist / allowlist (precision)
+  t("nft", "wl", "wl open"),
+  t("nft", "wl", "wl is open"),
+  t("nft", "wl", "wl live"),
+  t("nft", "wl", "whitelist open"),
+  t("nft", "wl", "allowlist open"),
+  t("nft", "wl", "allowlist is live"),
+  t("nft", "wl", "allowlist is open"),
+  t("nft", "wl", "al is open"),
+  t("nft", "wl", "gtd wl"),
+  t("nft", "wl", "gwl open"),
+  t("nft", "wl", "raffle open"),
+  t("nft", "wl", "raffle is live"),
+  t("nft", "wl", "premint live"),
+  t("nft", "wl", "wl form is live"),
+  t("nft", "wl", "applications are open"),
+  t("nft", "wl", "holder wl"),
+  t("nft", "wl", "collab wl"),
+  t("nft", "wl", "wl closes"),
+  t("nft", "wl", "last chance for wl"),
+
+  // Mint live extras (generic also has many)
+  t("nft", "mint", "now minting"),
+  t("nft", "mint", "minting now"),
+  t("nft", "mint", "public mint"),
+  t("nft", "mint", "free mint"),
+  t("nft", "mint", "whitelist mint"),
+  t("nft", "mint", "wl mint"),
 
   // ── NFT mint date detection (phrases + structured dates) ──
   t("nft", "mint_date", "mint date"),
@@ -174,6 +209,8 @@ export const DEFAULT_SIGNAL_RULES: SignalRuleSeed[] = [
   t("nft", "mint_date", "mint schedule"),
   t("nft", "mint_date", "minting schedule"),
   t("nft", "mint_date", "mint window"),
+  t("nft", "mint_date", "mint timeline"),
+  t("nft", "mint_date", "full mint schedule"),
   t("nft", "mint_date", "mint starts on"),
   t("nft", "mint_date", "mint opens on"),
   t("nft", "mint_date", "minting on"),
@@ -181,6 +218,54 @@ export const DEFAULT_SIGNAL_RULES: SignalRuleSeed[] = [
   t("nft", "mint_date", "we mint on"),
   t("nft", "mint_date", "mint goes live on"),
   t("nft", "mint_date", "minting goes live on"),
+  t("nft", "mint_date", "phase 1 mint"),
+  t("nft", "mint_date", "og mint"),
+  t("nft", "mint_date", "holder mint"),
+
+  // Urgency
+  t("nft", "mint_time", "mint in 1 hour"),
+  t("nft", "mint_time", "mint in 2 hours"),
+  t("nft", "mint_time", "mint starts in"),
+  t("nft", "mint_time", "minting in"),
+  tr(
+    "nft",
+    "mint_time",
+    "mint in N hours/mins",
+    `mint(?:ing)?\\s+(?:in|starts?\\s+in|opens?\\s+in)\\s+\\d+\\s*(?:minutes?|mins?|hours?|hrs?|h|m)\\b`,
+  ),
+
+  // Economics / field cards (need co-signal via scorer)
+  t("nft", "mint_params", "per wallet"),
+  t("nft", "mint_params", "max 1 per wallet"),
+  t("nft", "mint_params", "max 2 per wallet"),
+  t("nft", "mint_params", "mint price"),
+  t("nft", "mint_params", "mint price:"),
+  t("nft", "mint_params", "supply:"),
+  t("nft", "mint_params", "total supply"),
+  tr(
+    "nft",
+    "tba",
+    "mint field TBA",
+    `mint\\s*(?:date|price|time|schedule)\\s*[:\\-]?\\s*(?:tba|tbd)\\b`,
+  ),
+  tr(
+    "nft",
+    "mint_params",
+    "mint field card",
+    `(?:^|\\n)\\s*(?:•|\\*|●|-)?\\s*(?:mint\\s*date|mint\\s*price|supply|total\\s*supply|blockchain|chain)\\s*[:\\-]`,
+  ),
+  tr(
+    "nft",
+    "mint_date",
+    "phase line",
+    `phase\\s*[123]\\s*[:\\-].{0,40}(?:mint|wl|public|fcfs|guaranteed)`,
+  ),
+  tr(
+    "nft",
+    "mint_date",
+    "wl public mint pair",
+    `wl\\s*mint\\s*[:\\-].{0,40}public\\s*mint|public\\s*mint\\s*[:\\-].{0,40}wl\\s*mint`,
+  ),
 
   // mint date: March 15 / mint date is 15 March / mint date 03/15
   tr(
@@ -210,37 +295,224 @@ export const DEFAULT_SIGNAL_RULES: SignalRuleSeed[] = [
     "mint date emoji",
     `(?:🗓️|📅|🗓).{0,40}mint|(?:mint(?:ing)?\\s*date).{0,20}(?:🗓️|📅|🗓)`,
   ),
-  // mint @ 2pm / mint at 18:00 UTC with a nearby date word
+  // mint @ 2pm / mint at 18:00 UTC
+  tr(
+    "nft",
+    "mint_time",
+    "mint time slot",
+    `mint(?:ing)?\\s*(?:@|at)\\s*\\d{1,2}(?::\\d{2})?\\s*(?:am|pm|utc|est|et|gmt|pst|pt)?`,
+  ),
+  // ISO date near mint
   tr(
     "nft",
     "mint_date",
-    "mint time slot",
-    `mint(?:ing)?\\s*(?:@|at)\\s*\\d{1,2}(?::\\d{2})?\\s*(?:am|pm|utc|est|et|gmt|pst|pt)?`,
+    "mint ISO date",
+    `mint(?:ing)?[^\\n]{0,30}\\d{4}-\\d{2}-\\d{2}|\\d{4}-\\d{2}-\\d{2}[^\\n]{0,30}mint`,
   ),
 
   // ── GameFi ──
   t("gamefi", "launch", "game live"),
+  t("gamefi", "launch", "game is live"),
   t("gamefi", "launch", "open beta"),
   t("gamefi", "launch", "closed beta"),
   t("gamefi", "launch", "playtest"),
   t("gamefi", "launch", "alpha test"),
   t("gamefi", "launch", "play now"),
+  t("gamefi", "launch", "season 1 live"),
+  t("gamefi", "launch", "tournament live"),
+  t("gamefi", "launch", "download now"),
 
-  // ── New chain / L1–L2 (practical combo layer 1 — social) ──
+  // ── Token / TGE (generic precision extras) ──
+  g("tge", "tge is live"),
+  g("tge", "claim portal"),
+  g("tge", "claim portal live"),
+  g("tge", "eligibility checker"),
+  g("tge", "checker live"),
+  g("tge", "token is live"),
+  g("tge", "snapshot tomorrow"),
+  g("tge", "snapshot at"),
+  g("sale", "spot listing"),
+  g("sale", "futures listing"),
+  g("sale", "listed on binance"),
+  g("sale", "listed on bybit"),
+  g("sale", "listed on okx"),
+  g("sale", "listed on upbit"),
+
+  // ── Chain generic ──
   g("chain", "mainnet live"),
   g("chain", "mainnet is live"),
   g("chain", "public mainnet"),
   g("chain", "chain is live"),
   g("chain", "sequencer live"),
   g("chain", "genesis block"),
+  g("chain", "genesis live"),
+  g("chain", "network launch"),
   g("chain", "new L2"),
   g("chain", "new rollup"),
   g("chain", "appchain live"),
   g("chain", "testnet to mainnet"),
-  t("l2", "chain", "mainnet live"),
-  t("l2", "chain", "sequencer live"),
-  t("l1", "chain", "mainnet live"),
-  t("l1", "chain", "genesis"),
+  g("chain", "public testnet"),
+  g("chain", "testnet is live"),
+  g("chain", "devnet live"),
+  g("chain", "faucet live"),
+  g("chain", "incentivized testnet"),
+  g("chain", "bridge live"),
+  g("chain", "native bridge"),
+  g("chain", "deposits open"),
+  g("chain", "withdrawals live"),
+  g("chain", "staking is live"),
+  g("chain", "delegation open"),
+  g("chain", "validator applications"),
+
+  // ── L1 tag ──
+  t("l1", "mainnet", "mainnet is live"),
+  t("l1", "mainnet", "mainnet live"),
+  t("l1", "mainnet", "public mainnet"),
+  t("l1", "mainnet", "mainnet launch"),
+  t("l1", "testnet", "public testnet"),
+  t("l1", "testnet", "testnet is live"),
+  t("l1", "testnet", "devnet live"),
+  t("l1", "testnet", "faucet live"),
+  t("l1", "testnet", "incentivized testnet"),
+  t("l1", "testnet", "testnet rewards"),
+  t("l1", "genesis", "genesis block"),
+  t("l1", "genesis", "genesis live"),
+  t("l1", "genesis", "network launch"),
+  t("l1", "validator", "validator applications"),
+  t("l1", "validator", "staking is live"),
+  t("l1", "validator", "delegation open"),
+  tr(
+    "l1",
+    "mainnet",
+    "chain id field",
+    `chain\\s*id\\s*[:\\-]?\\s*\\d{1,10}`,
+  ),
+  tr(
+    "l1",
+    "mainnet",
+    "rpc field",
+    `rpc(?:\\s*url)?\\s*[:\\-]?\\s*https?:\\/\\/`,
+  ),
+
+  // ── L2 tag ──
+  t("l2", "mainnet", "mainnet is live"),
+  t("l2", "mainnet", "mainnet live"),
+  t("l2", "mainnet", "public mainnet"),
+  t("l2", "bridge", "bridge live"),
+  t("l2", "bridge", "native bridge"),
+  t("l2", "bridge", "deposits open"),
+  t("l2", "bridge", "withdrawals live"),
+  t("l2", "bridge", "sequencer live"),
+  t("l2", "testnet", "public testnet"),
+  t("l2", "testnet", "testnet is live"),
+  t("l2", "testnet", "incentivized testnet"),
+  t("l2", "stack", "op stack mainnet"),
+  t("l2", "stack", "orbit mainnet"),
+  t("l2", "stack", "cdk mainnet"),
+  t("l2", "stack", "zk stack mainnet"),
+  t("l2", "decentralize", "fraud proofs live"),
+  t("l2", "decentralize", "validity proofs live"),
+  t("l2", "decentralize", "stage 1"),
+  t("l2", "decentralize", "stage 2"),
+  tr(
+    "l2",
+    "mainnet",
+    "chain id field",
+    `chain\\s*id\\s*[:\\-]?\\s*\\d{1,10}`,
+  ),
+
+  // ── AI ──
+  t("ai", "waitlist", "waitlist is open"),
+  t("ai", "waitlist", "join the waitlist"),
+  t("ai", "waitlist", "waitlist open"),
+  t("ai", "beta", "closed beta"),
+  t("ai", "beta", "open beta"),
+  t("ai", "beta", "beta is live"),
+  t("ai", "beta", "beta live"),
+  t("ai", "beta", "beta access"),
+  t("ai", "api", "api is live"),
+  t("ai", "api", "api live"),
+  t("ai", "api", "api access open"),
+  t("ai", "api", "developer api"),
+  t("ai", "api", "inference live"),
+  t("ai", "model", "model is live"),
+  t("ai", "model", "model live"),
+  t("ai", "model", "weights released"),
+  t("ai", "app", "app is live"),
+  t("ai", "app", "app live"),
+  t("ai", "app", "product is live"),
+  t("ai", "app", "product launch"),
+
+  // ── AI agents ──
+  t("ai-agents", "agent", "agent is live"),
+  t("ai-agents", "agent", "agent live"),
+  t("ai-agents", "agent", "agents live"),
+  t("ai-agents", "agent", "agent live now"),
+  t("ai-agents", "launch", "framework release"),
+  t("ai-agents", "launch", "sdk live"),
+  t("ai-agents", "launch", "agent launchpad live"),
+  t("ai-agents", "token", "bonding complete"),
+  t("ai-agents", "token", "graduated"),
+  tr(
+    "ai-agents",
+    "token",
+    "contract address",
+    `(?:\\bca\\b|contract(?:\\s*address)?)\\s*[:\\-]?\\s*(?:0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})`,
+  ),
+
+  // ── DeFi / DEX / lending ──
+  t("defi", "vault", "vault is live"),
+  t("defi", "vault", "vault live"),
+  t("defi", "vault", "markets are live"),
+  t("defi", "vault", "markets live"),
+  t("defi", "vault", "pool is live"),
+  t("defi", "vault", "pool live"),
+  t("defi", "points", "points are live"),
+  t("defi", "points", "points live"),
+  t("defi", "points", "points program"),
+  t("defi", "points", "season 1 is live"),
+  t("defi", "points", "season 1 live"),
+  t("defi", "stake", "staking is live"),
+  t("defi", "stake", "staking live"),
+  t("defi", "stake", "farming live"),
+  t("dex", "trade", "trading is live"),
+  t("dex", "trade", "trading live"),
+  t("dex", "trade", "swap live"),
+  t("dex", "trade", "swap is live"),
+  t("dex", "trade", "now trading"),
+  t("dex", "trade", "liquidity live"),
+  t("lending-yield", "market", "market live"),
+  t("lending-yield", "market", "markets live"),
+  t("lending-yield", "vault", "vault live"),
+  t("lending-yield", "vault", "yield live"),
+
+  // ── DePIN ──
+  t("depin", "sale", "node sale live"),
+  t("depin", "sale", "node sale"),
+  t("depin", "sale", "license sale"),
+  t("depin", "live", "network live"),
+  t("depin", "live", "rewards live"),
+  t("depin", "live", "mining live"),
+  t("depin", "live", "onboarding live"),
+  t("depin", "live", "device onboarding"),
+
+  // ── Launchpad ──
+  t("launchpad", "sale", "ido live"),
+  t("launchpad", "sale", "sale is live"),
+  t("launchpad", "sale", "sale live"),
+  t("launchpad", "sale", "presale live"),
+  t("launchpad", "sale", "public sale"),
+  t("launchpad", "sale", "fair launch"),
+  t("launchpad", "sale", "bonding curve live"),
+
+  // ── SocialFi / tools ──
+  t("socialfi", "app", "app live"),
+  t("socialfi", "app", "app is live"),
+  t("socialfi", "app", "beta live"),
+  t("socialfi", "app", "invite codes"),
+  t("tools", "launch", "product launch"),
+  t("tools", "launch", "bot live"),
+  t("tools", "launch", "api key open"),
 ];
 
 function escapeRegExp(s: string): string {
@@ -337,16 +609,28 @@ export async function detectSignalsWithRules(
   return [...matched];
 }
 
+/** Legacy bare NFT tokens — too noisy; disable if still present from older seeds. */
+const LEGACY_BARE_NFT_PATTERNS = new Set([
+  "mint",
+  "minting",
+  "wl",
+  "whitelist",
+  "allowlist",
+  "reveal",
+]);
+
 /**
  * Seed defaults when empty, or insert any missing default patterns.
+ * Also disables legacy bare NFT tokens (mint/wl alone).
  * Safe to call on every poll cycle.
  */
 export async function seedDefaultSignalRules(): Promise<{
   inserted: number;
+  disabledLegacy: number;
   total: number;
 }> {
   const existing = await prisma.signalRule.findMany({
-    select: { slug: true, pattern: true },
+    select: { id: true, slug: true, pattern: true, enabled: true },
   });
   const have = new Set(
     existing.map((r) => `${r.slug ?? ""}::${r.pattern.toLowerCase()}`),
@@ -367,9 +651,31 @@ export async function seedDefaultSignalRules(): Promise<{
         enabled: true,
       })),
     });
+  }
+
+  // Demote legacy single-token NFT rules (scoring also demotes, but stop matching first)
+  const legacyIds = existing
+    .filter(
+      (r) =>
+        r.enabled &&
+        r.slug === "nft" &&
+        LEGACY_BARE_NFT_PATTERNS.has(r.pattern.toLowerCase().trim()),
+    )
+    .map((r) => r.id);
+
+  let disabledLegacy = 0;
+  if (legacyIds.length > 0) {
+    const res = await prisma.signalRule.updateMany({
+      where: { id: { in: legacyIds } },
+      data: { enabled: false },
+    });
+    disabledLegacy = res.count;
+  }
+
+  if (toInsert.length > 0 || disabledLegacy > 0) {
     invalidateSignalRuleCache();
   }
 
   const total = await prisma.signalRule.count();
-  return { inserted: toInsert.length, total };
+  return { inserted: toInsert.length, disabledLegacy, total };
 }

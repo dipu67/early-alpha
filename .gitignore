@@ -4,6 +4,8 @@ build
 
 .env
 .env.*
+!.env.example
+!docker.env.example
 /generated/prisma
 .DS_Store
 *.log

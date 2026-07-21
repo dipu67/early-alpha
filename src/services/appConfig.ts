@@ -42,7 +42,9 @@ export type AlertType =
   | "monitor"
   | "listMonitor"
   | "chainlist"
-  | "githubRepo";
+  | "githubRepo"
+  | "profileChange"
+  | "growthReport";
 
 /** All alert types, for iteration (API config listing, routing, etc.). */
 export const ALERT_TYPES: AlertType[] = [
@@ -56,6 +58,8 @@ export const ALERT_TYPES: AlertType[] = [
   "listMonitor",
   "chainlist",
   "githubRepo",
+  "profileChange",
+  "growthReport",
 ];
 
 export function alertEnabledKey(type: AlertType): string {

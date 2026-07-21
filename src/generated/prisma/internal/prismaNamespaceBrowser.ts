@@ -56,6 +56,7 @@ export const ModelName = {
   Setting: 'Setting',
   TelegramBot: 'TelegramBot',
   TwitterAccount: 'TwitterAccount',
+  AccountMetricSnapshot: 'AccountMetricSnapshot',
   ProjectList: 'ProjectList',
   ListMember: 'ListMember',
   PostAlert: 'PostAlert',
@@ -71,9 +72,6 @@ export const ModelName = {
   SearchHit: 'SearchHit',
   ListMonitor: 'ListMonitor',
   ListMonitorHit: 'ListMonitorHit',
-  WatchList: 'WatchList',
-  FollowSnapshot: 'FollowSnapshot',
-  AlertLog: 'AlertLog',
   GrokConversation: 'GrokConversation',
   GrokMessage: 'GrokMessage',
   GrokResearchPrompt: 'GrokResearchPrompt',
@@ -174,10 +172,28 @@ export const TwitterAccountScalarFieldEnum = {
   listsSyncedAt: 'listsSyncedAt',
   huntStage: 'huntStage',
   huntNote: 'huntNote',
-  huntUpdatedAt: 'huntUpdatedAt'
+  huntUpdatedAt: 'huntUpdatedAt',
+  lastProfilePolledAt: 'lastProfilePolledAt',
+  lastTweetId: 'lastTweetId',
+  previousUsername: 'previousUsername',
+  usernameChangedAt: 'usernameChangedAt',
+  followersAtDetect: 'followersAtDetect'
 } as const
 
 export type TwitterAccountScalarFieldEnum = (typeof TwitterAccountScalarFieldEnum)[keyof typeof TwitterAccountScalarFieldEnum]
+
+
+export const AccountMetricSnapshotScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  followersCount: 'followersCount',
+  followingCount: 'followingCount',
+  tweetCount: 'tweetCount',
+  source: 'source',
+  recordedAt: 'recordedAt'
+} as const
+
+export type AccountMetricSnapshotScalarFieldEnum = (typeof AccountMetricSnapshotScalarFieldEnum)[keyof typeof AccountMetricSnapshotScalarFieldEnum]
 
 
 export const ProjectListScalarFieldEnum = {
@@ -405,41 +421,6 @@ export const ListMonitorHitScalarFieldEnum = {
 } as const
 
 export type ListMonitorHitScalarFieldEnum = (typeof ListMonitorHitScalarFieldEnum)[keyof typeof ListMonitorHitScalarFieldEnum]
-
-
-export const WatchListScalarFieldEnum = {
-  id: 'id',
-  twitterUserId: 'twitterUserId',
-  username: 'username',
-  isActive: 'isActive',
-  addedBy: 'addedBy',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type WatchListScalarFieldEnum = (typeof WatchListScalarFieldEnum)[keyof typeof WatchListScalarFieldEnum]
-
-
-export const FollowSnapshotScalarFieldEnum = {
-  id: 'id',
-  watchListId: 'watchListId',
-  userIds: 'userIds',
-  takenAt: 'takenAt'
-} as const
-
-export type FollowSnapshotScalarFieldEnum = (typeof FollowSnapshotScalarFieldEnum)[keyof typeof FollowSnapshotScalarFieldEnum]
-
-
-export const AlertLogScalarFieldEnum = {
-  id: 'id',
-  watchListId: 'watchListId',
-  newFollowId: 'newFollowId',
-  newFollowUsername: 'newFollowUsername',
-  analysis: 'analysis',
-  sentAt: 'sentAt'
-} as const
-
-export type AlertLogScalarFieldEnum = (typeof AlertLogScalarFieldEnum)[keyof typeof AlertLogScalarFieldEnum]
 
 
 export const GrokConversationScalarFieldEnum = {

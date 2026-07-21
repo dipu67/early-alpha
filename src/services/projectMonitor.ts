@@ -23,6 +23,14 @@ import {
 import { isTwitterAuthError } from "../TwitterClient/TwitterClient.js";
 import { classifyAccount, DEFAULT_SLUG } from "./projectTagger.js";
 import { detectSignals } from "./postSignals.js";
+import { detectSignalsWithRules } from "./signalRules.js";
+import {
+  evaluateSignalImportance,
+  shouldPersistSignal,
+  shouldTelegramSignal,
+  toAlertImportanceView,
+  type SignalImportance,
+} from "./signalIntel.js";
 import { formatMonitorAlert } from "./formatAlert.js";
 import { sendTelegramAlert, isAlertEnabled } from "../tg/sendAlert.js";
 import { getHotBoard } from "./hunter.js";
@@ -741,10 +749,33 @@ async function handleMonitorTweet(
       ? row.primaryTag
       : row.tags.find((t) => t !== "unknown") ?? undefined;
 
-  const signals = detectSignals(tweet.text, tagHint);
+  let signals = await detectSignalsWithRules(tweet.text, tagHint ?? null);
+  if (signals.length === 0) {
+    signals = detectSignals(tweet.text, tagHint);
+  }
   const mode = row.alertMode === "signals" ? "signals" : "all";
 
   if (mode === "signals" && signals.length === 0) return false;
+
+  let imp: SignalImportance | null = null;
+  let storeSignals = signals;
+  if (signals.length > 0) {
+    imp = evaluateSignalImportance({
+      text: tweet.text,
+      signals,
+      tagSlug: tagHint ?? null,
+      isOfficialAuthor: true,
+    });
+    if (mode === "signals" && !shouldPersistSignal(imp)) {
+      console.log(
+        `[monitor] drop @${row.username} score=${imp.score} labels=${signals.join(",")}`,
+      );
+      return false;
+    }
+    if (shouldPersistSignal(imp)) {
+      storeSignals = imp.displayLabels;
+    }
+  }
 
   const feedSlug = `user:@${row.username}`;
   try {
@@ -754,7 +785,7 @@ async function handleMonitorTweet(
         accountId: row.twitterUserId,
         username: tweet.author.username || row.username,
         slug: feedSlug,
-        signals: signals.length > 0 ? signals : mode === "all" ? ["post"] : [],
+        signals: storeSignals.length > 0 ? storeSignals : mode === "all" ? ["post"] : [],
         text: tweet.text,
         postedAt: postedAt(tweet),
       },
@@ -770,16 +801,18 @@ async function handleMonitorTweet(
 
   if (!row.alertEnabled) return false;
   if (!(await isAlertEnabled("monitor"))) return false;
+  if (imp && mode === "signals" && !shouldTelegramSignal(imp)) return true;
 
   const msg = formatMonitorAlert({
     accountId: row.twitterUserId,
     username: tweet.author.username || row.username,
     name: tweet.author.name || row.name || row.username,
     slug: tagHint ?? "user",
-    signals,
+    signals: storeSignals,
     text: tweet.text,
     tweetId: tweet.id,
     alertMode: mode,
+    importance: imp ? toAlertImportanceView(imp) : undefined,
   });
 
   const thread = row.topicId != null ? row.topicId : undefined;
@@ -935,6 +968,10 @@ export async function pollAllMonitors(): Promise<{
 
       // Keep TwitterAccount in sync (username + counts)
       try {
+        const { freeUsernameIfHeldByOther } = await import(
+          "./earlyProjectPoller.js"
+        );
+        await freeUsernameIfHeldByOther(m.twitterUserId, liveUsername);
         await prisma.twitterAccount.update({
           where: { id: m.twitterUserId },
           data: {
@@ -950,7 +987,7 @@ export async function pollAllMonitors(): Promise<{
           },
         });
       } catch {
-        /* account row may not exist */
+        /* account row may not exist or rare race */
       }
 
       const prevCount = m.lastTweetCount;

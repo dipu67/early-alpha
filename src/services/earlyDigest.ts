@@ -130,6 +130,9 @@ function buildDigestMessage(opts: {
 export async function sendEarlyProjectDigest(): Promise<number> {
   if (!(await isAlertEnabled("earlyDigest"))) {
     console.log("[early-digest] disabled via config");
+    // Mark so catch-up does not retry a deliberately disabled slot forever.
+    const { markEarlyDigestSent } = await import("./digestCatchUp.js");
+    await markEarlyDigestSent();
     return 0;
   }
   const since = new Date(Date.now() - WINDOW_HOURS * 60 * 60 * 1000);
@@ -142,6 +145,8 @@ export async function sendEarlyProjectDigest(): Promise<number> {
 
   if (accounts.length === 0) {
     console.log("[early-digest] no new projects in the last 12h");
+    const { markEarlyDigestSent } = await import("./digestCatchUp.js");
+    await markEarlyDigestSent();
     return 0;
   }
 
@@ -194,6 +199,9 @@ export async function sendEarlyProjectDigest(): Promise<number> {
       );
     }
   }
+
+  const { markEarlyDigestSent } = await import("./digestCatchUp.js");
+  await markEarlyDigestSent();
 
   console.log(
     `[early-digest] sent ${accounts.length} projects · ${buckets.size} topic(s) · ${messages} message(s)`,

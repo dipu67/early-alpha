@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 const root = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
+  // Smaller production image for Docker (Dockerfile.admin copies standalone).
+  output: "standalone",
   // Keep Turbopack rooted on admin/ so it doesn't walk the monorepo parent
   // (which confuses Tailwind content detection and emits bad CSS selectors).
   turbopack: {
@@ -12,7 +14,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ["admin.dipu.app", "localhost:4000"],
+      allowedOrigins: ["admin.dipu.app", "localhost:4000", "localhost:3000"],
     },
   },
   // Do NOT rewrite /api/* to the Express backend.

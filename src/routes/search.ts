@@ -17,16 +17,16 @@ searchRouter.get(
     const { q } = query.parse(req.query);
     const ci = { contains: q, mode: "insensitive" as const };
 
-    const [projects, watches, signals] = await Promise.all([
+    const [projects, seeds, signals] = await Promise.all([
       prisma.twitterAccount.findMany({
         where: { OR: [{ username: ci }, { name: ci }] },
         take: 8,
         select: { id: true, username: true, name: true, tags: true },
       }),
-      prisma.watchList.findMany({
+      prisma.seedAccount.findMany({
         where: { username: ci },
         take: 5,
-        select: { id: true, username: true, isActive: true },
+        select: { id: true, username: true, active: true, category: true },
       }),
       prisma.postAlert.findMany({
         where: { OR: [{ username: ci }, { text: ci }] },
@@ -39,7 +39,9 @@ searchRouter.get(
     res.json(
       jsonSafe({
         projects,
-        watches,
+        seeds,
+        /** @deprecated empty — use seeds */
+        watches: [],
         signals,
       }),
     );

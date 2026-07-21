@@ -136,6 +136,22 @@ const worker = new Worker(
       const { seedDefaultSignalRules } = await import("./signalRules.js");
       await seedDefaultSignalRules();
       await pollAllSignalScans();
+    } else if (job.name === "poll-early-projects") {
+      const { pollEarlyProjects } = await import("./earlyProjectPoller.js");
+      const { setConfig } = await import("./appConfig.js");
+      const r = await pollEarlyProjects();
+      await setConfig("earlyPoll.lastResult", {
+        ...r,
+        finishedAt: new Date().toISOString(),
+      });
+    } else if (job.name === "growth-report") {
+      const { sendWeeklyGrowthReport } = await import("./growthReport.js");
+      const { setConfig } = await import("./appConfig.js");
+      const r = await sendWeeklyGrowthReport();
+      await setConfig("earlyPoll.lastGrowthReport", {
+        ...r,
+        finishedAt: new Date().toISOString(),
+      });
     } else if (job.name === "tag-seed") {
       const { seedKeywordsFromLexicon } = await import("./tagTools.js");
       const r = await seedKeywordsFromLexicon();

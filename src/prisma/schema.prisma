@@ -80,13 +80,43 @@ model TwitterAccount {
   huntNote        String?   @map("hunt_note")
   huntUpdatedAt   DateTime? @map("hunt_updated_at") @db.Timestamptz
 
+  /// Early-project profile poller (usersByIds) watermark
+  lastProfilePolledAt DateTime? @map("last_profile_polled_at") @db.Timestamptz
+  /// Snowflake watermark for new tweets discovered via tweetCount delta
+  lastTweetId         String?   @map("last_tweet_id")
+  /// Prior handle when rename detected
+  previousUsername    String?   @map("previous_username")
+  usernameChangedAt   DateTime? @map("username_changed_at") @db.Timestamptz
+  /// Followers at firstSeen (growth baseline if no snapshot yet)
+  followersAtDetect   Int?      @map("followers_at_detect")
+
   followEdgesAsFollowing FollowEdge[] @relation("following")
   alerts                 Alert[]
   listMemberships        ListMember[]
+  metricSnapshots        AccountMetricSnapshot[]
 
   @@index([huntStage])
   @@index([firstSeenAt(sort: Desc)])
+  @@index([lastProfilePolledAt])
   @@map("twitter_accounts")
+}
+
+/// Time-series metrics for early projects (growth reports, velocity).
+model AccountMetricSnapshot {
+  id             BigInt   @id @default(autoincrement())
+  accountId      String   @map("account_id")
+  followersCount Int?     @map("followers_count")
+  followingCount Int?     @map("following_count")
+  tweetCount     Int?     @map("tweet_count")
+  /// daily | hourly | weekly — how this row was produced
+  source         String   @default("poll")
+  recordedAt     DateTime @default(now()) @map("recorded_at") @db.Timestamptz
+
+  account TwitterAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, recordedAt(sort: Desc)])
+  @@index([recordedAt(sort: Desc)])
+  @@map("account_metric_snapshots")
 }
 
 model ProjectList {
@@ -398,47 +428,6 @@ model ListMonitorHit {
   @@index([createdAt(sort: Desc)])
   @@index([monitorId, createdAt(sort: Desc)])
   @@map("list_monitor_hits")
-}
-
-model WatchList {
-  id             BigInt   @id @default(autoincrement())
-  twitterUserId  String   @map("twitter_user_id")
-  username       String   @unique
-  isActive       Boolean  @default(true) @map("is_active")
-  addedBy        String?  @map("added_by")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-
-  snapshots FollowSnapshot[]
-  alertLogs AlertLog[]
-
-  @@map("watch_list")
-}
-
-model FollowSnapshot {
-  id          BigInt   @id @default(autoincrement())
-  watchListId BigInt   @map("watch_list_id")
-  userIds     String[] @map("user_ids")
-  takenAt     DateTime @default(now()) @map("taken_at") @db.Timestamptz
-
-  watchList WatchList @relation(fields: [watchListId], references: [id], onDelete: Cascade)
-
-  @@index([watchListId, takenAt(sort: Desc)])
-  @@map("follow_snapshots")
-}
-
-model AlertLog {
-  id               BigInt   @id @default(autoincrement())
-  watchListId      BigInt   @map("watch_list_id")
-  newFollowId      String   @map("new_follow_id")
-  newFollowUsername String?  @map("new_follow_username")
-  analysis         String?
-  sentAt           DateTime @default(now()) @map("sent_at") @db.Timestamptz
-
-  watchList WatchList @relation(fields: [watchListId], references: [id], onDelete: Cascade)
-
-  @@index([watchListId, sentAt(sort: Desc)])
-  @@map("alert_logs")
 }
 
 /// Grok (X) chat session bound to a Telegram chat. Replaces conversationId.json.

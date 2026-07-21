@@ -12,7 +12,7 @@ export const connection = new Redis(env.redisUrl, {
 });
 
 /** Queue names, mirroring early-alpha's services/queue.ts. */
-export type QueueName = "follow-tracker" | "seed-tracker" | "list-tracker";
+export type QueueName = "seed-tracker" | "list-tracker";
 
 const queues = new Map<QueueName, Queue>();
 

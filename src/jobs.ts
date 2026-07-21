@@ -70,20 +70,6 @@ export const JOBS = {
     existing: true,
   }),
 
-  // ── follow-tracker (services/worker.ts) ──
-  // "track a watched account NOW" == the same job the 5-min scheduler enqueues.
-  "track-now": def({
-    queue: "follow-tracker",
-    jobName: "check-following",
-    schema: z
-      .object({
-        watchListId: z.string().min(1),
-        username: z.string().min(1),
-      })
-      .strict(),
-    existing: true,
-  }),
-
   // ── new jobs (need handlers added in early-alpha — premise 3) ──
   "list-delete": def({
     queue: "list-tracker",
@@ -135,6 +121,18 @@ export const JOBS = {
   "poll-home-signals": def({
     queue: "list-tracker",
     jobName: "poll-home-signals",
+    schema: z.object({}).strict(),
+    existing: true,
+  }),
+  "poll-early-projects": def({
+    queue: "list-tracker",
+    jobName: "poll-early-projects",
+    schema: z.object({}).strict(),
+    existing: true,
+  }),
+  "growth-report": def({
+    queue: "list-tracker",
+    jobName: "growth-report",
     schema: z.object({}).strict(),
     existing: true,
   }),
