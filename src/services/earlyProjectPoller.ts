@@ -463,6 +463,15 @@ export type EarlyPollResult = {
   deleted: number;
   errors: number;
   usersByIdsReqs: number;
+  /**
+   * First-time lastTweetId seed (no alerts by design — avoids backlog flood).
+   * Next poll only alerts on tweets newer than this watermark.
+   */
+  watermarkSeeded: number;
+  /** Tweets with id > lastTweetId that were examined this run. */
+  freshTweets: number;
+  /** Fresh tweets that matched no signal and raw path was off / skipped. */
+  noAlert: number;
 };
 
 /**
@@ -717,6 +726,10 @@ async function processNewTweets(opts: {
   rateLimited: boolean;
   rateLimitWaitMs?: number;
   deleted?: boolean;
+  watermarkSeeded?: boolean;
+  freshTweets?: number;
+  noAlert?: number;
+  reason?: string;
 }> {
   const claim = await claimTweetRequest(opts.cfg.tweetReqBudget);
   if (!claim.ok) {
@@ -726,6 +739,7 @@ async function processNewTweets(opts: {
       newestId: opts.lastTweetId,
       rateLimited: true,
       rateLimitWaitMs: claim.waitMs,
+      reason: "tweet_budget",
     };
   }
 
@@ -742,6 +756,7 @@ async function processNewTweets(opts: {
       newestId: opts.lastTweetId,
       rateLimited: true,
       rateLimitWaitMs: resetMs,
+      reason: "rate_limited",
     };
   }
   if (!res.success) {
@@ -755,6 +770,7 @@ async function processNewTweets(opts: {
         newestId: opts.lastTweetId,
         rateLimited: false,
         deleted: true,
+        reason: "user_gone",
       };
     }
     console.warn(`[early-poll] tweets @${opts.username}: ${msg}`);
@@ -763,19 +779,26 @@ async function processNewTweets(opts: {
       rawAlerts: 0,
       newestId: opts.lastTweetId,
       rateLimited: false,
+      reason: "tweets_failed",
     };
   }
 
   const tweets = res.tweets ?? [];
   const newest = maxTweetId(tweets);
 
-  // First seed: set watermark only (no backlog flood)
+  // First seed: set watermark only (no backlog flood of old posts).
   if (!opts.lastTweetId) {
+    console.log(
+      `[early-poll] @${opts.username}: first timeline seed watermark=${newest ?? "none"} tweets=${tweets.length} (no alerts until next new post)`,
+    );
     return {
       signalAlerts: 0,
       rawAlerts: 0,
       newestId: newest ?? opts.lastTweetId,
       rateLimited: false,
+      watermarkSeeded: true,
+      freshTweets: 0,
+      reason: "watermark_seed",
     };
   }
 
@@ -784,8 +807,23 @@ async function processNewTweets(opts: {
     .filter((t) => toId(t.id) > cutoff)
     .sort((a, b) => (toId(a.id) < toId(b.id) ? -1 : 1));
 
+  if (fresh.length === 0) {
+    console.log(
+      `[early-poll] @${opts.username}: no fresh tweets above watermark ${opts.lastTweetId} (api returned ${tweets.length})`,
+    );
+    return {
+      signalAlerts: 0,
+      rawAlerts: 0,
+      newestId: opts.lastTweetId,
+      rateLimited: false,
+      freshTweets: 0,
+      reason: "no_fresh",
+    };
+  }
+
   let signalAlerts = 0;
   let rawAlerts = 0;
+  let noAlert = 0;
   const tagSlugs = opts.tags.filter(
     (t) => t && t !== "unknown" && t !== "other" && t !== "alpha" && t !== "noise",
   );
@@ -803,7 +841,13 @@ async function processNewTweets(opts: {
     });
     if (r === "signal") signalAlerts++;
     else if (r === "raw") rawAlerts++;
+    else noAlert++;
   }
+
+  console.log(
+    `[early-poll] @${opts.username}: fresh=${fresh.length} signals=${signalAlerts} raw=${rawAlerts} noAlert=${noAlert}` +
+      (opts.cfg.sendRawPosts ? "" : " (raw posts OFF)"),
+  );
 
   const advanced =
     newest && toId(newest) > cutoff ? newest : opts.lastTweetId;
@@ -812,6 +856,14 @@ async function processNewTweets(opts: {
     rawAlerts,
     newestId: advanced,
     rateLimited: false,
+    freshTweets: fresh.length,
+    noAlert,
+    reason:
+      signalAlerts + rawAlerts > 0
+        ? "ok"
+        : opts.cfg.sendRawPosts
+          ? "seen_or_filtered"
+          : "no_signal_raw_off",
   };
 }
 
@@ -1108,6 +1160,9 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
     deleted: 0,
     errors: 0,
     usersByIdsReqs: 0,
+    watermarkSeeded: 0,
+    freshTweets: 0,
+    noAlert: 0,
   };
 
   const cfg = await resolveEarlyPollConfig();
@@ -1361,6 +1416,9 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
         }
         result.signalAlerts += r.signalAlerts;
         result.rawAlerts += r.rawAlerts;
+        if (r.watermarkSeeded) result.watermarkSeeded++;
+        result.freshTweets += r.freshTweets ?? 0;
+        result.noAlert += r.noAlert ?? 0;
         if (r.newestId) {
           await prisma.twitterAccount.update({
             where: { id: need.id },
@@ -1397,8 +1455,20 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
       `renames=${result.renames} bio=${result.bioChanges} jumps=${result.followerJumps} ` +
       `timelines=${result.timelines} queued=${result.timelinesQueued} ` +
       `signals=${result.signalAlerts} raw=${result.rawAlerts} ` +
+      `seeded=${result.watermarkSeeded} fresh=${result.freshTweets} noAlert=${result.noAlert} ` +
       `snaps=${result.snapshots} missing=${result.missing} deleted=${result.deleted} ` +
-      `errors=${result.errors} usersByIds=${result.usersByIdsReqs}`,
+      `errors=${result.errors} usersByIds=${result.usersByIdsReqs}` +
+      (result.timelines > 0 &&
+      result.signalAlerts === 0 &&
+      result.rawAlerts === 0
+        ? result.watermarkSeeded === result.timelines
+          ? " | note: all timelines were first-seed watermarks (alerts start on next new posts)"
+          : result.freshTweets === 0
+            ? " | note: no tweets newer than lastTweetId watermark"
+            : !cfg.sendRawPosts
+              ? " | note: fresh tweets had no signal match and sendRawPosts is OFF"
+              : " | note: fresh tweets skipped (already seen or filtered)"
+        : ""),
   );
 
   return result;

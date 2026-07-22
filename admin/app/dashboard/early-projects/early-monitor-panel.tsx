@@ -356,6 +356,9 @@ export function EarlyMonitorPanel({
                 <span>queued {last.timelinesQueued ?? "—"}</span>
                 <span>signals {last.signalAlerts ?? "—"}</span>
                 <span>raw {last.rawAlerts ?? "—"}</span>
+                <span>seeded {last.watermarkSeeded ?? "—"}</span>
+                <span>fresh {last.freshTweets ?? "—"}</span>
+                <span>noAlert {last.noAlert ?? "—"}</span>
                 <span>snaps {last.snapshots ?? "—"}</span>
                 <span>missing {last.missing ?? "—"}</span>
                 <span>deleted {last.deleted ?? "—"}</span>
@@ -363,6 +366,20 @@ export function EarlyMonitorPanel({
                 <span>errors {last.errors ?? "—"}</span>
                 <span>usersByIds {last.usersByIdsReqs ?? "—"}</span>
               </div>
+              {last.timelines &&
+              (last.signalAlerts ?? 0) === 0 &&
+              (last.rawAlerts ?? 0) === 0 ? (
+                <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                  {(last.watermarkSeeded ?? 0) > 0 &&
+                  (last.watermarkSeeded ?? 0) >= (last.timelines ?? 0)
+                    ? "No TG alerts: all timelines were first-time watermark seeds (avoids flooding old tweets). Alerts fire only on posts newer than the watermark on the next poll."
+                    : (last.freshTweets ?? 0) === 0
+                      ? "No TG alerts: no tweets newer than each account’s lastTweetId watermark (tweetCount may still tick for other reasons)."
+                      : !(cfg.sendRawPosts ?? false)
+                        ? "No TG alerts: fresh tweets had no signal keyword match, and “Send non-signal posts” is off."
+                        : "No TG alerts: fresh tweets were already stored or filtered (score/tier)."}
+                </p>
+              ) : null}
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">

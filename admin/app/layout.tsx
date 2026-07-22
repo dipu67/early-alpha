@@ -24,7 +24,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning className="h-full overflow-hidden antialiased">
-      <body className="h-full overflow-hidden">
+      {/* suppressHydrationWarning: browser extensions (Bitwarden, etc.) inject
+          attrs like bis_register / __processed_* onto <body> before React hydrates. */}
+      <body className="h-full overflow-hidden" suppressHydrationWarning>
         <ThemeProvider>
           {children}
           <Toaster richColors position="top-center" closeButton />

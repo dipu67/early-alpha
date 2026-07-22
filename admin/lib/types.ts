@@ -157,6 +157,9 @@ export interface EarlyProjectStats {
     deleted?: number;
     errors?: number;
     usersByIdsReqs?: number;
+    watermarkSeeded?: number;
+    freshTweets?: number;
+    noAlert?: number;
     finishedAt?: string;
   } | null;
   lastGrowthReport: {
