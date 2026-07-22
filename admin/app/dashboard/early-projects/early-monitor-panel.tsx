@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -15,8 +16,10 @@ import {
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/empty-state";
 import { LocalTime } from "@/components/local-time";
-import { ActionButton } from "@/components/action-button";
+import { TopicPicker } from "@/components/topic-picker";
 import { useCan } from "@/components/role-context";
+import { proxy } from "@/lib/client";
+import { toast } from "@/components/ui/sonner";
 import {
   fmtNum,
   type EarlyProjectRow,
@@ -57,6 +60,28 @@ function stageBadge(stage: string) {
   return <Badge variant="secondary">{stage}</Badge>;
 }
 
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+        {label}
+      </label>
+      {children}
+      {hint ? (
+        <p className="text-[10px] text-muted-foreground">{hint}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function EarlyMonitorPanel({
   stats,
   initialItems,
@@ -74,6 +99,49 @@ export function EarlyMonitorPanel({
   const canWrite = useCan("editor");
   const [filter, setFilter] = useState("");
   const [staleOnly, setStaleOnly] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const cfg = stats.config;
+
+  // Growth report one-shot topic
+  const [growthTopicId, setGrowthTopicId] = useState("");
+
+  // Detection rules
+  const [maxFollowers, setMaxFollowers] = useState(String(cfg.maxFollowers));
+  const [maxFollowing, setMaxFollowing] = useState(
+    String(cfg.maxFollowing ?? 50_000),
+  );
+  const [maxAgeDays, setMaxAgeDays] = useState(
+    String(cfg.maxAgeDays ?? Math.round((cfg.maxAgeMs ?? 365 * 86400_000) / 86400_000)),
+  );
+  const [firstSeenDays, setFirstSeenDays] = useState(
+    String(cfg.firstSeenDays ?? 90),
+  );
+  const [includeSoftHot, setIncludeSoftHot] = useState(cfg.includeSoftHot ?? true);
+  const [strictEarlyOnly, setStrictEarlyOnly] = useState(
+    cfg.strictEarlyOnly ?? true,
+  );
+
+  // Topics + raw
+  const [signalTopicId, setSignalTopicId] = useState(
+    cfg.signalTopicId != null ? String(cfg.signalTopicId) : "",
+  );
+  const [rawTopicId, setRawTopicId] = useState(
+    cfg.rawTopicId != null ? String(cfg.rawTopicId) : "",
+  );
+  const [sendRawPosts, setSendRawPosts] = useState(cfg.sendRawPosts ?? false);
+
+  // Poller / rate limit
+  const [batchSize, setBatchSize] = useState(String(cfg.batchSize));
+  const [maxBatches, setMaxBatches] = useState(String(cfg.maxBatches));
+  const [maxTimelines, setMaxTimelines] = useState(String(cfg.maxTimelines));
+  const [tweetReqBudget, setTweetReqBudget] = useState(
+    String(cfg.tweetReqBudget ?? 45),
+  );
+  const [delayMs, setDelayMs] = useState(String(cfg.delayMs ?? 400));
+  const [staleMsMin, setStaleMsMin] = useState(
+    String(Math.round((cfg.staleMs ?? 55 * 60 * 1000) / 60_000)),
+  );
 
   const filtered = useMemo(() => {
     let rows = initialItems;
@@ -90,12 +158,160 @@ export function EarlyMonitorPanel({
   }, [initialItems, filter, staleOnly]);
 
   const last = stats.lastPoll;
-  const cfg = stats.config;
+
+  async function pollNow() {
+    if (!canWrite) return;
+    setBusy(true);
+    const res = await proxy("/api/early-projects/poll", { method: "POST" });
+    setBusy(false);
+    if (res.ok) {
+      const b = res.body as { jobId?: string };
+      toast.success(
+        b.jobId
+          ? `Poll enqueued (job ${b.jobId}) — profiles now; tweets via queue`
+          : "Poll enqueued",
+      );
+      router.refresh();
+    } else {
+      const b = res.body as { error?: string; message?: string } | null;
+      toast.error(b?.error ?? b?.message ?? `Error ${res.status}`);
+    }
+  }
+
+  async function sendGrowthReport() {
+    if (!canWrite) return;
+    const topic =
+      growthTopicId.trim() === "" ? null : Number(growthTopicId.trim());
+    if (growthTopicId.trim() !== "" && !Number.isFinite(topic)) {
+      toast.error("Topic id must be a number");
+      return;
+    }
+    setBusy(true);
+    const res = await proxy("/api/early-projects/growth-report", {
+      method: "POST",
+      body: { topicId: topic },
+    });
+    setBusy(false);
+    if (res.ok) {
+      toast.success(
+        topic != null
+          ? `Growth report enqueued → topic ${topic}`
+          : "Growth report enqueued",
+      );
+      router.refresh();
+    } else {
+      const b = res.body as { error?: string; message?: string } | null;
+      toast.error(b?.error ?? b?.message ?? `Error ${res.status}`);
+    }
+  }
+
+  function parseTopic(s: string): number | null {
+    if (s.trim() === "") return null;
+    const n = Number(s.trim());
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  async function saveAll() {
+    if (!canWrite) return;
+    const body: Record<string, number | boolean | null> = {};
+
+    const bs = Number(batchSize);
+    const mb = Number(maxBatches);
+    const mt = Number(maxTimelines);
+    const d = Number(delayMs);
+    const sm = Number(staleMsMin);
+    const mf = Number(maxFollowers);
+    const mfol = Number(maxFollowing);
+    const mad = Number(maxAgeDays);
+    const fsd = Number(firstSeenDays);
+    const trb = Number(tweetReqBudget);
+    const sigT = parseTopic(signalTopicId);
+    const rawT = parseTopic(rawTopicId);
+
+    if (!Number.isFinite(bs) || bs < 10 || bs > 100) {
+      toast.error("Batch size must be 10–100");
+      return;
+    }
+    if (!Number.isFinite(mb) || mb < 1 || mb > 50) {
+      toast.error("Max batches must be 1–50");
+      return;
+    }
+    if (!Number.isFinite(mt) || mt < 0 || mt > 500) {
+      toast.error("Inline timelines must be 0–500");
+      return;
+    }
+    if (!Number.isFinite(trb) || trb < 5 || trb > 50) {
+      toast.error("Tweet budget must be 5–50 (Twitter ~50/15m)");
+      return;
+    }
+    if (!Number.isFinite(d) || d < 0 || d > 10_000) {
+      toast.error("Delay must be 0–10000 ms");
+      return;
+    }
+    if (!Number.isFinite(sm) || sm < 1) {
+      toast.error("Stale minutes must be ≥ 1");
+      return;
+    }
+    if (!Number.isFinite(mf) || mf < 100) {
+      toast.error("Max followers must be ≥ 100");
+      return;
+    }
+    if (!Number.isFinite(mfol) || mfol < 100) {
+      toast.error("Max following must be ≥ 100");
+      return;
+    }
+    if (!Number.isFinite(mad) || mad < 7) {
+      toast.error("Max account age (days) must be ≥ 7");
+      return;
+    }
+    if (!Number.isFinite(fsd) || fsd < 1) {
+      toast.error("First-seen window (days) must be ≥ 1");
+      return;
+    }
+    if (Number.isNaN(sigT as number)) {
+      toast.error("Signal topic must be a number or empty");
+      return;
+    }
+    if (Number.isNaN(rawT as number)) {
+      toast.error("Raw topic must be a number or empty");
+      return;
+    }
+
+    body.batchSize = Math.floor(bs);
+    body.maxBatches = Math.floor(mb);
+    body.maxTimelines = Math.floor(mt);
+    body.tweetReqBudget = Math.floor(trb);
+    body.delayMs = Math.floor(d);
+    body.staleMs = Math.floor(sm) * 60_000;
+    body.maxFollowers = Math.floor(mf);
+    body.maxFollowing = Math.floor(mfol);
+    body.maxAgeDays = Math.floor(mad);
+    body.firstSeenDays = Math.floor(fsd);
+    body.includeSoftHot = includeSoftHot;
+    body.strictEarlyOnly = strictEarlyOnly;
+    body.signalTopicId = sigT;
+    body.rawTopicId = rawT;
+    body.sendRawPosts = sendRawPosts;
+
+    setBusy(true);
+    const res = await proxy("/api/early-projects/config", {
+      method: "PATCH",
+      body,
+    });
+    setBusy(false);
+    if (res.ok) {
+      toast.success("Early detection rules + poller saved");
+      router.refresh();
+    } else {
+      const b = res.body as { error?: string; message?: string } | null;
+      toast.error(b?.error ?? b?.message ?? `Error ${res.status}`);
+    }
+  }
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Kpi label="Pool size" value={fmtNum(stats.poolSize)} hint="In early set" />
+        <Kpi label="Pool size" value={fmtNum(stats.poolSize)} hint="Early only" />
         <Kpi label="Due now" value={fmtNum(stats.dueNow)} hint="Stale for poll" />
         <Kpi label="Polled 24h" value={fmtNum(stats.polled24h)} />
         <Kpi
@@ -109,15 +325,16 @@ export function EarlyMonitorPanel({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Poller (usersByIds)</CardTitle>
+          <CardTitle className="text-base">Poller · usersByIds + tweet queue</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p className="text-muted-foreground">
-            Every {cfg.pollEveryLabel}: batch{" "}
-            <code className="text-xs">{cfg.batchSize}</code> via{" "}
-            <code className="text-xs">getUsersByIds</code> (max{" "}
-            {cfg.maxAccountsPerCycle}/cycle). tweetCount ↑ → getUserTweets (max{" "}
-            {cfg.maxTimelines}). Max followers {fmtNum(cfg.maxFollowers)}.
+            Profiles: <code className="text-xs">getUsersByIds</code> ×{" "}
+            {cfg.batchSize} (max {cfg.maxAccountsPerCycle}/cycle). TweetCount ↑ →{" "}
+            <code className="text-xs">early-timeline</code> queue (
+            <code className="text-xs">getUserTweets</code> ~{cfg.tweetReqBudget ?? 45}
+            /15m). Inline cap {cfg.maxTimelines}; rest drain via worker so 1k+ pools
+            don&apos;t burn the rate limit.
           </p>
           {last?.finishedAt ? (
             <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs">
@@ -126,41 +343,49 @@ export function EarlyMonitorPanel({
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground">
                 <span>checked {last.checked ?? "—"}</span>
-                <span>renames {last.renames ?? "—"}</span>
-                <span>bio {last.bioChanges ?? "—"}</span>
                 <span>timelines {last.timelines ?? "—"}</span>
+                <span>queued {last.timelinesQueued ?? "—"}</span>
                 <span>signals {last.signalAlerts ?? "—"}</span>
+                <span>raw {last.rawAlerts ?? "—"}</span>
                 <span>snaps {last.snapshots ?? "—"}</span>
-                <span>jumps {last.followerJumps ?? "—"}</span>
+                <span>missing {last.missing ?? "—"}</span>
+                <span>deleted {last.deleted ?? "—"}</span>
+                <span>renames {last.renames ?? "—"}</span>
                 <span>errors {last.errors ?? "—"}</span>
                 <span>usersByIds {last.usersByIdsReqs ?? "—"}</span>
               </div>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              No poll result stored yet. Run <strong>Poll now</strong> or wait for
-              the hourly scheduler.
+              No poll result yet. Run <strong>Poll now</strong> or wait for the hourly job.
             </p>
           )}
           {canWrite ? (
-            <div className="flex flex-wrap gap-2">
-              <ActionButton
-                label="Poll now"
-                pendingLabel="Enqueueing…"
-                path="/api/early-projects/poll"
-                size="sm"
-                onDone={() => router.refresh()}
-              />
-              <ActionButton
-                label="Send growth report"
-                pendingLabel="Enqueueing…"
-                path="/api/early-projects/growth-report"
+            <div className="flex flex-wrap items-end gap-3">
+              <Button size="sm" disabled={busy} onClick={() => void pollNow()}>
+                {busy ? "Working…" : "Poll now"}
+              </Button>
+              <div className="min-w-[12rem] flex-1 space-y-1">
+                <label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Growth report topic
+                </label>
+                <TopicPicker
+                  value={growthTopicId}
+                  onChange={(v) => setGrowthTopicId(v)}
+                  emptyLabel="Default (alert.topic.growthReport)"
+                  compact
+                  showMeta={false}
+                  disabled={busy}
+                />
+              </div>
+              <Button
                 size="sm"
                 variant="outline"
-                confirmTitle="Send weekly growth report?"
-                confirm="Computes top growers and posts to Telegram (growthReport alert type)."
-                onDone={() => router.refresh()}
-              />
+                disabled={busy}
+                onClick={() => void sendGrowthReport()}
+              >
+                Send growth report
+              </Button>
             </div>
           ) : null}
           {stats.lastGrowthReport?.finishedAt ? (
@@ -174,6 +399,199 @@ export function EarlyMonitorPanel({
           ) : null}
         </CardContent>
       </Card>
+
+      {canWrite ? (
+        <>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Early detection rules</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Only accounts matching these rules enter the early pool (profiles + tweet
+                queue). Soft/hot hunter stages can be included; strict mode still applies
+                age / followers caps to them.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label="Max followers" hint="Over this → leave pool">
+                  <Input
+                    value={maxFollowers}
+                    onChange={(e) => setMaxFollowers(e.target.value)}
+                    inputMode="numeric"
+                    className="font-mono text-xs"
+                  />
+                </Field>
+                <Field label="Max following" hint="Mass-follow accounts out">
+                  <Input
+                    value={maxFollowing}
+                    onChange={(e) => setMaxFollowing(e.target.value)}
+                    inputMode="numeric"
+                    className="font-mono text-xs"
+                  />
+                </Field>
+                <Field label="Max account age (days)" hint="Twitter createdAt">
+                  <Input
+                    value={maxAgeDays}
+                    onChange={(e) => setMaxAgeDays(e.target.value)}
+                    inputMode="numeric"
+                    className="font-mono text-xs"
+                  />
+                </Field>
+                <Field
+                  label="First-seen window (days)"
+                  hint="Recently discovered projects"
+                >
+                  <Input
+                    value={firstSeenDays}
+                    onChange={(e) => setFirstSeenDays(e.target.value)}
+                    inputMode="numeric"
+                    className="font-mono text-xs"
+                  />
+                </Field>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={includeSoftHot}
+                    onChange={(e) => setIncludeSoftHot(e.target.checked)}
+                  />
+                  Include soft / hot hunt stages
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={strictEarlyOnly}
+                    onChange={(e) => setStrictEarlyOnly(e.target.checked)}
+                  />
+                  Strict early only (caps apply to soft/hot too)
+                </label>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Telegram topics · signal &amp; raw</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Signal posts use the signal topic (or tag map / default if empty). Non-signal
+                posts can stream as <strong>raw</strong> to a separate topic — useful when
+                keywords miss mint language but you still want early project chatter.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field
+                  label="Signal topic"
+                  hint="Empty → Telegram signal map / default"
+                >
+                  <TopicPicker
+                    value={signalTopicId}
+                    onChange={(v) => setSignalTopicId(v)}
+                    emptyLabel="Use signal routing default"
+                    compact
+                    showMeta={false}
+                    disabled={busy}
+                  />
+                </Field>
+                <Field
+                  label="Raw (non-signal) topic"
+                  hint="Only if raw posts enabled"
+                >
+                  <TopicPicker
+                    value={rawTopicId}
+                    onChange={(v) => setRawTopicId(v)}
+                    emptyLabel="Fall back to signal topic"
+                    compact
+                    showMeta={false}
+                    disabled={busy || !sendRawPosts}
+                  />
+                </Field>
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={sendRawPosts}
+                  onChange={(e) => setSendRawPosts(e.target.checked)}
+                />
+                Send non-signal posts to Telegram (raw stream)
+              </label>
+              <p className="text-[11px] text-muted-foreground">
+                Keyword rules live under{" "}
+                <a href="/dashboard/signals" className="text-primary hover:underline">
+                  Signals
+                </a>
+                . Early monitor always uses early detection mode + structural fallback.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Poller knobs · rate limit</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label="Batch size (ids / getUsersByIds)" hint="Max 100">
+                  <Input
+                    value={batchSize}
+                    onChange={(e) => setBatchSize(e.target.value)}
+                    inputMode="numeric"
+                    className="font-mono text-xs"
+                  />
+                </Field>
+                <Field label="Max batches / cycle">
+                  <Input
+                    value={maxBatches}
+                    onChange={(e) => setMaxBatches(e.target.value)}
+                    inputMode="numeric"
+                    className="font-mono text-xs"
+                  />
+                </Field>
+                <Field
+                  label="Inline timelines / poll"
+                  hint="Then rest → queue"
+                >
+                  <Input
+                    value={maxTimelines}
+                    onChange={(e) => setMaxTimelines(e.target.value)}
+                    inputMode="numeric"
+                    className="font-mono text-xs"
+                  />
+                </Field>
+                <Field
+                  label="getUserTweets budget / 15m"
+                  hint="Twitter ~50; leave headroom"
+                >
+                  <Input
+                    value={tweetReqBudget}
+                    onChange={(e) => setTweetReqBudget(e.target.value)}
+                    inputMode="numeric"
+                    className="font-mono text-xs"
+                  />
+                </Field>
+                <Field label="Delay between calls (ms)">
+                  <Input
+                    value={delayMs}
+                    onChange={(e) => setDelayMs(e.target.value)}
+                    inputMode="numeric"
+                    className="font-mono text-xs"
+                  />
+                </Field>
+                <Field label="Stale after (minutes)">
+                  <Input
+                    value={staleMsMin}
+                    onChange={(e) => setStaleMsMin(e.target.value)}
+                    inputMode="numeric"
+                    className="font-mono text-xs"
+                  />
+                </Field>
+              </div>
+              <Button size="sm" disabled={busy} onClick={() => void saveAll()}>
+                Save all early settings
+              </Button>
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -215,27 +633,13 @@ export function EarlyMonitorPanel({
                         </a>
                         <div className="text-[10px] text-muted-foreground">
                           {g.huntStage}
-                          {g.tags.filter((t) => t !== "unknown").length
-                            ? ` · ${g.tags
-                                .filter((t) => t !== "unknown")
-                                .slice(0, 2)
-                                .join(",")}`
-                            : ""}
                         </div>
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-emerald-400">
                         +{fmtNum(g.absGain)}
-                        <div className="text-[10px] text-muted-foreground">
-                          {g.pctGain >= 10
-                            ? `${g.pctGain.toFixed(0)}%`
-                            : `${g.pctGain.toFixed(1)}%`}
-                        </div>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {fmtNum(g.followersNow)}
-                        <div className="text-[10px] text-muted-foreground">
-                          from {fmtNum(g.followersBefore)}
-                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -251,21 +655,17 @@ export function EarlyMonitorPanel({
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
             <ol className="list-decimal space-y-1 pl-4">
-              <li>Select early accounts (soft/hot, recent, or &lt; max followers).</li>
+              <li>Select pool by detection rules (age, followers, soft/hot).</li>
               <li>
-                <code className="text-xs">getUsersByIds</code> × 100 — cheap bulk
-                profile pull.
+                <code className="text-xs">getUsersByIds</code> bulk profiles (cheap).
               </li>
-              <li>Detect rename, bio change, follower jump, tweetCount ↑.</li>
               <li>
-                On new tweets only: fetch timeline → signal rules → Telegram.
+                tweetCount ↑ → enqueue <code className="text-xs">early-timeline</code>{" "}
+                (≤ budget / 15m for getUserTweets).
               </li>
-              <li>Store metric snapshots for 7d growth ranking.</li>
+              <li>Signals → signal topic; optional raw posts → raw topic.</li>
+              <li>Metric snapshots for 7d growth board.</li>
             </ol>
-            <p className="text-xs">
-              Different from <strong>User Monitor</strong> (manual VIP, faster). This
-              covers the automatic early pool.
-            </p>
           </CardContent>
         </Card>
       </div>
@@ -297,7 +697,7 @@ export function EarlyMonitorPanel({
         <EmptyState
           icon={Activity}
           title="No early projects in pool"
-          description="Detect projects via seeds / hunter first. They appear here when still early."
+          description="Adjust detection rules or wait for hunter/seeds to find early accounts."
         />
       ) : (
         <div className="max-w-full rounded-lg border border-border bg-card">

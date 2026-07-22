@@ -35,11 +35,22 @@ export default async function EarlyProjectsPage() {
           config: {
             staleMs: 55 * 60 * 1000,
             maxAgeMs: 365 * 86400 * 1000,
+            maxAgeDays: 365,
             maxFollowers: 50_000,
+            maxFollowing: 50_000,
+            firstSeenDays: 90,
+            includeSoftHot: true,
+            strictEarlyOnly: true,
             batchSize: 100,
             maxBatches: 10,
             maxAccountsPerCycle: 1000,
             maxTimelines: 40,
+            delayMs: 400,
+            snapshotMinMs: 6 * 3600 * 1000,
+            signalTopicId: null,
+            rawTopicId: null,
+            sendRawPosts: false,
+            tweetReqBudget: 45,
             pollEveryLabel: "1h",
           },
         }
@@ -57,7 +68,7 @@ export default async function EarlyProjectsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Early Monitor"
-        description="Hourly usersByIds refresh for early projects: profile diffs, tweetCount → signals, follower snapshots, weekly growth board."
+        description="Early-only pool: detection rules (age/followers), usersByIds profiles, queued getUserTweets (~50/15m), signal + optional raw Telegram topics."
       />
       {!statsRes.ok ? (
         <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">

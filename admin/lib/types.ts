@@ -1,16 +1,5 @@
 // Shapes returned by the early-alpha backend (jsonSafe stringifies BigInt ids).
 
-export interface SignalPost {
-  tweetId: string;
-  accountId: string;
-  username: string;
-  slug: string;
-  signals: string[];
-  text: string;
-  postedAt: string | null;
-  createdAt: string;
-}
-
 export interface Project {
   id: string;
   username: string;
@@ -160,9 +149,12 @@ export interface EarlyProjectStats {
     bioChanges?: number;
     followerJumps?: number;
     timelines?: number;
+    timelinesQueued?: number;
     signalAlerts?: number;
+    rawAlerts?: number;
     snapshots?: number;
     missing?: number;
+    deleted?: number;
     errors?: number;
     usersByIdsReqs?: number;
     finishedAt?: string;
@@ -172,16 +164,30 @@ export interface EarlyProjectStats {
     count?: number;
     finishedAt?: string;
   } | null;
-  config: {
-    staleMs: number;
-    maxAgeMs: number;
-    maxFollowers: number;
-    batchSize: number;
-    maxBatches: number;
-    maxAccountsPerCycle: number;
-    maxTimelines: number;
-    pollEveryLabel: string;
-  };
+  config: EarlyPollConfig;
+}
+
+/** Live early-monitor poller + detection rules (PATCH /early-projects/config). */
+export interface EarlyPollConfig {
+  batchSize: number;
+  maxBatches: number;
+  maxTimelines: number;
+  delayMs: number;
+  staleMs: number;
+  maxAgeMs: number;
+  maxAgeDays: number;
+  maxFollowers: number;
+  maxFollowing: number;
+  firstSeenDays: number;
+  includeSoftHot: boolean;
+  strictEarlyOnly: boolean;
+  snapshotMinMs: number;
+  maxAccountsPerCycle: number;
+  signalTopicId: number | null;
+  rawTopicId: number | null;
+  sendRawPosts: boolean;
+  tweetReqBudget: number;
+  pollEveryLabel?: string;
 }
 
 export interface EarlyProjectRow {
@@ -403,6 +409,8 @@ export const ALERT_TYPES = [
   "listMonitor",
   "chainlist",
   "githubRepo",
+  "profileChange",
+  "growthReport",
 ] as const;
 export type AlertTypeName = (typeof ALERT_TYPES)[number];
 

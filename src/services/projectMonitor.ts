@@ -748,8 +748,14 @@ async function handleMonitorTweet(
     row.primaryTag && row.primaryTag !== "unknown"
       ? row.primaryTag
       : row.tags.find((t) => t !== "unknown") ?? undefined;
+  const allTags = [
+    ...(tagHint ? [tagHint] : []),
+    ...row.tags.filter((t) => t && t !== "unknown" && t !== tagHint),
+  ];
 
-  let signals = await detectSignalsWithRules(tweet.text, tagHint ?? null);
+  let signals = await detectSignalsWithRules(tweet.text, allTags, {
+    structuralFallback: true,
+  });
   if (signals.length === 0) {
     signals = detectSignals(tweet.text, tagHint);
   }

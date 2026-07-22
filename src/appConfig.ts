@@ -34,7 +34,9 @@ export type AlertType =
   | "monitor"
   | "listMonitor"
   | "chainlist"
-  | "githubRepo";
+  | "githubRepo"
+  | "profileChange"
+  | "growthReport";
 
 export const CONFIG_KEYS = {
   tgAlertChatId: "tg.alertChatId",
@@ -47,6 +49,23 @@ export const CONFIG_KEYS = {
   tgMaxRetries: "tg.maxRetries",
   tgAdminIds: "tg.adminIds",
   tgGrokBotId: "tg.grokBotId",
+  earlyPollBatch: "earlyPoll.batch",
+  earlyPollMaxBatches: "earlyPoll.maxBatches",
+  earlyPollMaxTimelines: "earlyPoll.maxTimelines",
+  earlyPollDelayMs: "earlyPoll.delayMs",
+  earlyPollStaleMs: "earlyPoll.staleMs",
+  earlyPollMaxFollowers: "earlyPoll.maxFollowers",
+  earlyPollMaxFollowing: "earlyPoll.maxFollowing",
+  earlyPollMaxAgeDays: "earlyPoll.maxAgeDays",
+  earlyPollFirstSeenDays: "earlyPoll.firstSeenDays",
+  earlyPollIncludeSoftHot: "earlyPoll.includeSoftHot",
+  earlyPollStrictEarlyOnly: "earlyPoll.strictEarlyOnly",
+  earlyPollSnapshotMinMs: "earlyPoll.snapshotMinMs",
+  earlyPollSignalTopicId: "earlyPoll.signalTopicId",
+  earlyPollRawTopicId: "earlyPoll.rawTopicId",
+  earlyPollSendRawPosts: "earlyPoll.sendRawPosts",
+  earlyPollTweetReqBudget: "earlyPoll.tweetReqBudget",
+  earlyPollTweetReqWindow: "earlyPoll.tweetReqWindow",
 } as const;
 
 export const ALERT_TYPES: AlertType[] = [
@@ -60,10 +79,13 @@ export const ALERT_TYPES: AlertType[] = [
   "listMonitor",
   "chainlist",
   "githubRepo",
+  "profileChange",
+  "growthReport",
 ];
 
 export const alertEnabledKey = (t: AlertType) => `alert.enabled.${t}`;
 export const alertBotKey = (t: AlertType) => `alert.bot.${t}`;
+export const alertTopicKey = (t: AlertType) => `alert.topic.${t}`;
 export const schedEveryKey = (k: string) => `sched.${k}.every`;
 export const schedCronKey = (k: string) => `sched.${k}.cron`;
 export const schedPausedKey = (k: string) => `sched.${k}.paused`;

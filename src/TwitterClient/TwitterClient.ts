@@ -669,6 +669,21 @@ export class TwitterClient {
   // biome-ignore lint/suspicious/noExplicitAny: Twitter GraphQL response shapes vary
   private mapUserFromGraphql(result: any): UserData | undefined {
     if (!result) return undefined;
+    // Suspended / deactivated / not found — treat as missing (caller may delete).
+    const t = result.__typename ?? result.typename;
+    if (
+      typeof t === "string" &&
+      (t === "UserUnavailable" ||
+        t === "UserTombstone" ||
+        /unavailable|suspended/i.test(t))
+    ) {
+      return undefined;
+    }
+    if (result.reason && /suspended|deleted|not.?found|protected/i.test(String(result.reason))) {
+      // Still try map if legacy data present; else missing
+      const sn = result.core?.screen_name ?? result.legacy?.screen_name;
+      if (!sn) return undefined;
+    }
     const screenName = result.core?.screen_name ?? result.legacy?.screen_name;
     if (!screenName) return undefined;
 

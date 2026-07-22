@@ -10,7 +10,7 @@ An Express admin API + BullMQ workers + Telegram bots form the backend. A Next.j
 |---|---|
 | **Seed following** | Poll seed accounts’ following graphs; detect new follows and multi-seed convergence |
 | **Hunter** | Hot board / heat scores fusing seed follows, watchers, search hits, and account age |
-| **Signals** | Rule-based mint / launch / TGE detection from HomeLatest timelines (per tag) |
+| **Signals** | Keyword rules for mint / launch / TGE detection on monitored timelines |
 | **User monitors** | Poll project timelines for new posts matching rules |
 | **Live search** | Scheduled Twitter search queries → hits + alerts |
 | **List monitors** | Track public Twitter lists for new members |
@@ -62,7 +62,8 @@ browser ──(session cookie)──> Next.js admin (:3000)
 | chainlist-poll | every 1h | New chains |
 | github-repo-poll | every 5m | Repo commits |
 | monitor-poll | every 2m | User timeline monitors |
-| home-signal-poll | every 2m | HomeLatest signal scans |
+| early-project-poll | every 1h | Early projects usersByIds |
+| growth-report | Mon 10:00 UTC | Weekly top growing projects |
 
 Intervals are defaults; many can be adjusted via settings / queues UI.
 

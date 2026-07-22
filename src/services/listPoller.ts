@@ -128,8 +128,10 @@ async function handleTweet(ctx: ListSyncCtx, slug: string, tweet: TweetData): Pr
     ? await resolveAccountId(tweet)
     : null;
 
-  // Prefer DB rules (mint live, wl application, …); fall back to hardcoded lexicon
-  let signals = await detectSignalsWithRules(tweet.text, slug);
+  // Prefer DB rules (mint live, wl application, …); structural + legacy lexicon fallback
+  let signals = await detectSignalsWithRules(tweet.text, slug, {
+    structuralFallback: true,
+  });
   if (signals.length === 0) {
     signals = detectSignals(tweet.text, slug);
   }

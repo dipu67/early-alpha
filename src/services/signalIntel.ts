@@ -344,6 +344,32 @@ export function stagesFromLabels(labels: string[]): LifecycleStage[] {
   for (const raw of labels) {
     const l = raw.toLowerCase();
 
+    // Structural fallback labels from detectSignalsWithRules
+    if (l === "mint link") {
+      stages.add("mint_live");
+      continue;
+    }
+    if (l === "wl form link") {
+      stages.add("wl_open");
+      continue;
+    }
+    if (l === "claim link") {
+      stages.add("claim_live");
+      continue;
+    }
+    if (l === "mint schedule" || l === "field card") {
+      stages.add("mint_date");
+      continue;
+    }
+    if (l === "mainnet card") {
+      stages.add("mainnet_live");
+      continue;
+    }
+    if (l === "tge link") {
+      stages.add("tge");
+      continue;
+    }
+
     // NFT mint live
     if (
       /mint\s*is\s*live|minting\s*is\s*live|now\s*minting|minting\s*now|mint\s*live|mint\s*open|mint\s*is\s*open|public\s*mint\s*is\s*live|wl\s*mint\s*is\s*live|you\s*can\s*mint\s*now|mint\s*page\s*is\s*live|mint\s*portal\s*is\s*live|minting\s*is\s*open|mint\s*goes\s*live|minting\s*goes\s*live/.test(
@@ -515,11 +541,20 @@ function enrichStagesFromFields(
   }
   if (fields.phases.length >= 2) stages.add("mint_date");
 
+  // Mint marketplace link + mint language → treat as live-ish (early projects)
   if (
     fields.mintLinks.length > 0 &&
-    /\bmint(?:ing)?\s+is\s+live|now\s+minting|mint\s+live\b/i.test(text)
+    /\bmint(?:ing)?\b/i.test(text)
   ) {
-    stages.add("mint_live");
+    if (
+      /\bmint(?:ing)?\s+is\s+live|now\s+minting|mint\s+live\b|mint(?:ing)?\s+(?:is\s+)?open/i.test(
+        text,
+      )
+    ) {
+      stages.add("mint_live");
+    } else {
+      stages.add("mint_date");
+    }
   }
   if (
     fields.formLinks.length > 0 ||

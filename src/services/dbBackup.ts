@@ -664,5 +664,16 @@ export async function importDatabase(
     }
   }
 
+  // Explicit ids in backup leave Postgres sequences behind MAX(id).
+  // Without this, next create on tracking_runs / seeds / etc. 500s on PK.
+  try {
+    const { resyncAllSerialSequences } = await import("../db/prisma.js");
+    await resyncAllSerialSequences();
+  } catch (err) {
+    errors.push(
+      `resync sequences: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
   return { mode, imported, wiped, skipped, errors };
 }

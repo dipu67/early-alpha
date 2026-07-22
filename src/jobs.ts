@@ -118,22 +118,39 @@ export const JOBS = {
     schema: z.object({}).strict(),
     existing: true,
   }),
-  "poll-home-signals": def({
-    queue: "list-tracker",
-    jobName: "poll-home-signals",
-    schema: z.object({}).strict(),
-    existing: true,
-  }),
   "poll-early-projects": def({
     queue: "list-tracker",
     jobName: "poll-early-projects",
     schema: z.object({}).strict(),
     existing: true,
   }),
+  /**
+   * Per-account getUserTweets for early pool (rate-limited ~50/15m).
+   * Enqueued by poll-early-projects when tweetCount rises.
+   */
+  "early-timeline": def({
+    queue: "list-tracker",
+    jobName: "early-timeline",
+    schema: z
+      .object({
+        accountId: z.string().min(1),
+        username: z.string().optional(),
+        name: z.string().optional(),
+        tags: z.array(z.string()).optional(),
+        lastTweetId: z.string().nullable().optional(),
+      })
+      .strict(),
+    existing: true,
+  }),
   "growth-report": def({
     queue: "list-tracker",
     jobName: "growth-report",
-    schema: z.object({}).strict(),
+    schema: z
+      .object({
+        /** Optional one-shot forum topic override for this send. */
+        topicId: z.number().int().nullable().optional(),
+      })
+      .strict(),
     existing: true,
   }),
   "tag-seed": def({

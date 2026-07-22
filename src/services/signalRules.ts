@@ -16,6 +16,10 @@ export type SignalRuleSeed = {
 function g(category: string, label: string, pattern = label): SignalRuleSeed {
   return { slug: null, category, label, pattern };
 }
+/** Generic (all-tags) regex rule. */
+function gr(category: string, label: string, pattern: string): SignalRuleSeed {
+  return { slug: null, category, label, pattern, isRegex: true };
+}
 function t(
   slug: string,
   category: string,
@@ -148,167 +152,146 @@ export const DEFAULT_SIGNAL_RULES: SignalRuleSeed[] = [
   g("other", "campaign live"),
   g("other", "points program"),
 
-  // ── NFT tag extras — precision only (no bare mint/wl tokens) ──
-  t("nft", "mint", "mint is live"),
-  t("nft", "mint", "minting is live"),
-  t("nft", "mint", "minting is open"),
-  t("nft", "mint", "public mint is live"),
-  t("nft", "mint", "wl mint is live"),
-  t("nft", "mint", "you can mint now"),
-  t("nft", "mint", "mint page is live"),
-  t("nft", "mint", "mint portal is live"),
-  t("nft", "mint", "reveal live"),
-  t("nft", "mint", "reveal soon"),
-  t("nft", "mint", "metadata reveal"),
+  // ── Early-project / lifecycle phrases (generic — was only under nft) ──
+  // Untagged early accounts must catch these; keep under generic not nft-only.
+  g("mint", "you can mint now"),
+  g("mint", "mint page is live"),
+  g("mint", "mint portal is live"),
+  g("mint", "public mint is live"),
+  g("mint", "wl mint is live"),
+  g("mint", "minting is open"),
+  g("mint", "we're minting"),
+  g("mint", "we are minting"),
+  g("mint", "mint starts today"),
+  g("mint", "mint opens today"),
+  g("mint", "minting starts"),
+  g("mint", "mint is starting"),
+  g("mint", "official mint"),
+  g("mint", "mint.fun"),
+  g("mint", "metadata reveal"),
+  g("wl", "al is open"),
+  g("wl", "gtd wl"),
+  g("wl", "gwl open"),
+  g("wl", "raffle open"),
+  g("wl", "raffle is live"),
+  g("wl", "premint live"),
+  g("wl", "wl form is live"),
+  g("wl", "applications are open"),
+  g("wl", "holder wl"),
+  g("wl", "collab wl"),
+  g("wl", "wl closes"),
+  g("wl", "last chance for wl"),
+  g("wl", "allowlist is live"),
 
-  // Waitlist / allowlist (precision)
-  t("nft", "wl", "wl open"),
-  t("nft", "wl", "wl is open"),
-  t("nft", "wl", "wl live"),
-  t("nft", "wl", "whitelist open"),
-  t("nft", "wl", "allowlist open"),
-  t("nft", "wl", "allowlist is live"),
-  t("nft", "wl", "allowlist is open"),
-  t("nft", "wl", "al is open"),
-  t("nft", "wl", "gtd wl"),
-  t("nft", "wl", "gwl open"),
-  t("nft", "wl", "raffle open"),
-  t("nft", "wl", "raffle is live"),
-  t("nft", "wl", "premint live"),
-  t("nft", "wl", "wl form is live"),
-  t("nft", "wl", "applications are open"),
-  t("nft", "wl", "holder wl"),
-  t("nft", "wl", "collab wl"),
-  t("nft", "wl", "wl closes"),
-  t("nft", "wl", "last chance for wl"),
+  // ── Mint schedule / date (generic — early projects often untagged) ──
+  g("mint_date", "mint date"),
+  g("mint_date", "minting date"),
+  g("mint_date", "official mint date"),
+  g("mint_date", "confirmed mint date"),
+  g("mint_date", "mint date announced"),
+  g("mint_date", "mint date is"),
+  g("mint_date", "mint date set"),
+  g("mint_date", "mint calendar"),
+  g("mint_date", "save the date"),
+  g("mint_date", "mark your calendars"),
+  g("mint_date", "mark your calendar"),
+  g("mint_date", "public mint date"),
+  g("mint_date", "wl mint date"),
+  g("mint_date", "whitelist mint date"),
+  g("mint_date", "mint schedule"),
+  g("mint_date", "minting schedule"),
+  g("mint_date", "mint window"),
+  g("mint_date", "mint timeline"),
+  g("mint_date", "full mint schedule"),
+  g("mint_date", "mint starts on"),
+  g("mint_date", "mint opens on"),
+  g("mint_date", "minting on"),
+  g("mint_date", "mint on"),
+  g("mint_date", "we mint on"),
+  g("mint_date", "mint goes live on"),
+  g("mint_date", "minting goes live on"),
+  g("mint_date", "phase 1 mint"),
+  g("mint_date", "og mint"),
+  g("mint_date", "holder mint"),
+  g("mint_time", "mint in 1 hour"),
+  g("mint_time", "mint in 2 hours"),
+  g("mint_time", "mint starts in"),
+  g("mint_time", "minting in"),
+  g("mint_params", "per wallet"),
+  g("mint_params", "max 1 per wallet"),
+  g("mint_params", "max 2 per wallet"),
+  g("mint_params", "mint price"),
+  g("mint_params", "mint price:"),
+  g("mint_params", "supply:"),
+  g("mint_params", "total supply"),
 
-  // Mint live extras (generic also has many)
-  t("nft", "mint", "now minting"),
-  t("nft", "mint", "minting now"),
-  t("nft", "mint", "public mint"),
-  t("nft", "mint", "free mint"),
-  t("nft", "mint", "whitelist mint"),
-  t("nft", "mint", "wl mint"),
-
-  // ── NFT mint date detection (phrases + structured dates) ──
-  t("nft", "mint_date", "mint date"),
-  t("nft", "mint_date", "minting date"),
-  t("nft", "mint_date", "official mint date"),
-  t("nft", "mint_date", "confirmed mint date"),
-  t("nft", "mint_date", "mint date announced"),
-  t("nft", "mint_date", "mint date is"),
-  t("nft", "mint_date", "mint date set"),
-  t("nft", "mint_date", "mint calendar"),
-  t("nft", "mint_date", "save the date"),
-  t("nft", "mint_date", "mark your calendars"),
-  t("nft", "mint_date", "mark your calendar"),
-  t("nft", "mint_date", "drop date"),
-  t("nft", "mint_date", "public mint date"),
-  t("nft", "mint_date", "wl mint date"),
-  t("nft", "mint_date", "whitelist mint date"),
-  t("nft", "mint_date", "mint schedule"),
-  t("nft", "mint_date", "minting schedule"),
-  t("nft", "mint_date", "mint window"),
-  t("nft", "mint_date", "mint timeline"),
-  t("nft", "mint_date", "full mint schedule"),
-  t("nft", "mint_date", "mint starts on"),
-  t("nft", "mint_date", "mint opens on"),
-  t("nft", "mint_date", "minting on"),
-  t("nft", "mint_date", "mint on"),
-  t("nft", "mint_date", "we mint on"),
-  t("nft", "mint_date", "mint goes live on"),
-  t("nft", "mint_date", "minting goes live on"),
-  t("nft", "mint_date", "phase 1 mint"),
-  t("nft", "mint_date", "og mint"),
-  t("nft", "mint_date", "holder mint"),
-
-  // Urgency
-  t("nft", "mint_time", "mint in 1 hour"),
-  t("nft", "mint_time", "mint in 2 hours"),
-  t("nft", "mint_time", "mint starts in"),
-  t("nft", "mint_time", "minting in"),
-  tr(
-    "nft",
+  // Structured regexes — generic so early pool hits without nft tag
+  gr(
     "mint_time",
     "mint in N hours/mins",
     `mint(?:ing)?\\s+(?:in|starts?\\s+in|opens?\\s+in)\\s+\\d+\\s*(?:minutes?|mins?|hours?|hrs?|h|m)\\b`,
   ),
-
-  // Economics / field cards (need co-signal via scorer)
-  t("nft", "mint_params", "per wallet"),
-  t("nft", "mint_params", "max 1 per wallet"),
-  t("nft", "mint_params", "max 2 per wallet"),
-  t("nft", "mint_params", "mint price"),
-  t("nft", "mint_params", "mint price:"),
-  t("nft", "mint_params", "supply:"),
-  t("nft", "mint_params", "total supply"),
-  tr(
-    "nft",
+  gr(
     "tba",
     "mint field TBA",
     `mint\\s*(?:date|price|time|schedule)\\s*[:\\-]?\\s*(?:tba|tbd)\\b`,
   ),
-  tr(
-    "nft",
+  gr(
     "mint_params",
     "mint field card",
     `(?:^|\\n)\\s*(?:•|\\*|●|-)?\\s*(?:mint\\s*date|mint\\s*price|supply|total\\s*supply|blockchain|chain)\\s*[:\\-]`,
   ),
-  tr(
-    "nft",
+  gr(
     "mint_date",
     "phase line",
     `phase\\s*[123]\\s*[:\\-].{0,40}(?:mint|wl|public|fcfs|guaranteed)`,
   ),
-  tr(
-    "nft",
+  gr(
     "mint_date",
     "wl public mint pair",
     `wl\\s*mint\\s*[:\\-].{0,40}public\\s*mint|public\\s*mint\\s*[:\\-].{0,40}wl\\s*mint`,
   ),
-
-  // mint date: March 15 / mint date is 15 March / mint date 03/15
-  tr(
-    "nft",
+  gr(
     "mint_date",
     "mint date + calendar",
     `mint(?:ing)?\\s*dates?\\s*[:\\-–—]?\\s*(?:is\\s+|set\\s+(?:for\\s+|to\\s+)?|announced\\s+)?(?:on\\s+)?(?:(?:${RE_MONTH})\\s*${RE_DOM}|${RE_DOM}\\s*(?:of\\s+)?(?:${RE_MONTH})|${RE_NUMERIC_DATE}|(?:${RE_DOW})|tomorrow|tonight|today)`,
   ),
-  // mint on March 15 / minting Friday / mint goes live April 1st
-  tr(
-    "nft",
+  gr(
     "mint_date",
     "mint on + date",
     `mint(?:ing)?\\s+(?:goes\\s+live\\s+|opens?\\s+|starts?\\s+|begins?\\s+|live\\s+)?(?:on\\s+|this\\s+)?(?:(?:${RE_MONTH})\\s*${RE_DOM}|${RE_DOM}\\s*(?:of\\s+)?(?:${RE_MONTH})|${RE_NUMERIC_DATE}|(?:${RE_DOW})|tomorrow|tonight)`,
   ),
-  // public mint March 15 / free mint April 2nd
-  tr(
-    "nft",
+  gr(
     "mint_date",
     "mint + month day",
     `(?:public|free|wl|whitelist|allowlist|guaranteed)?\\s*mint(?:ing)?\\s+(?:${RE_MONTH})\\s*${RE_DOM}`,
   ),
-  // 🗓️ / 📅 near mint date language (common in NFT tweets)
-  tr(
-    "nft",
+  gr(
     "mint_date",
     "mint date emoji",
     `(?:🗓️|📅|🗓).{0,40}mint|(?:mint(?:ing)?\\s*date).{0,20}(?:🗓️|📅|🗓)`,
   ),
-  // mint @ 2pm / mint at 18:00 UTC
-  tr(
-    "nft",
+  gr(
     "mint_time",
     "mint time slot",
     `mint(?:ing)?\\s*(?:@|at)\\s*\\d{1,2}(?::\\d{2})?\\s*(?:am|pm|utc|est|et|gmt|pst|pt)?`,
   ),
-  // ISO date near mint
-  tr(
-    "nft",
+  gr(
     "mint_date",
     "mint ISO date",
     `mint(?:ing)?[^\\n]{0,30}\\d{4}-\\d{2}-\\d{2}|\\d{4}-\\d{2}-\\d{2}[^\\n]{0,30}mint`,
   ),
+
+  // ── NFT tag-only extras (nft-specific slang, not shared lifecycle) ──
+  t("nft", "mint", "metadata reveal"),
+  t("nft", "wl", "premint live"),
+  t("nft", "wl", "collab wl"),
+  t("nft", "wl", "holder wl"),
+  t("nft", "mint", "gen2 mint"),
+  t("nft", "mint", "gen 2 mint"),
+  t("nft", "mint", "fcfs mint"),
+  t("nft", "mint", "guaranteed mint"),
+  t("nft", "sale", "secondary is live"),
 
   // ── GameFi ──
   t("gamefi", "launch", "game live"),
@@ -525,6 +508,32 @@ let cache: { at: number; generic: Compiled[]; bySlug: Map<string, Compiled[]> } 
   null;
 const TTL = 15_000;
 
+/** Core verticals expanded in early mode when account is untagged / only alpha. */
+const EARLY_EXPAND_VERTICALS = [
+  "nft",
+  "l1",
+  "l2",
+  "defi",
+  "dex",
+  "ai",
+  "ai-agents",
+  "gamefi",
+  "depin",
+  "launchpad",
+  "socialfi",
+  "tools",
+  "lending-yield",
+] as const;
+
+const IGNORE_TAGS = new Set([
+  "unknown",
+  "other",
+  "alpha",
+  "noise",
+  "early",
+  "",
+]);
+
 function compileRule(r: {
   label: string;
   pattern: string;
@@ -532,6 +541,7 @@ function compileRule(r: {
   category: string;
 }): Compiled {
   // Multi-word phrases: flexible whitespace. Single token: word boundary.
+  // Dots in phrases like mint.fun: treat as literal after escape.
   const re = r.isRegex
     ? new RegExp(r.pattern, "i")
     : r.pattern.includes(" ")
@@ -551,28 +561,36 @@ export async function loadCompiledRules(): Promise<{
   const generic: Compiled[] = [];
   const bySlug = new Map<string, Compiled[]>();
   for (const r of rows) {
-    const c = compileRule(r);
-    if (!r.slug) generic.push(c);
-    else {
-      const list = bySlug.get(r.slug) ?? [];
-      list.push(c);
-      bySlug.set(r.slug, list);
+    try {
+      const c = compileRule(r);
+      if (!r.slug) generic.push(c);
+      else {
+        const list = bySlug.get(r.slug) ?? [];
+        list.push(c);
+        bySlug.set(r.slug, list);
+      }
+    } catch {
+      console.warn(`[signal-rules] skip bad pattern id=${r.id} ${r.pattern}`);
     }
   }
   // Fallback if DB empty
   if (rows.length === 0) {
     for (const s of DEFAULT_SIGNAL_RULES) {
-      const c = compileRule({
-        label: s.label,
-        pattern: s.pattern,
-        isRegex: s.isRegex ?? false,
-        category: s.category,
-      });
-      if (!s.slug) generic.push(c);
-      else {
-        const list = bySlug.get(s.slug) ?? [];
-        list.push(c);
-        bySlug.set(s.slug, list);
+      try {
+        const c = compileRule({
+          label: s.label,
+          pattern: s.pattern,
+          isRegex: s.isRegex ?? false,
+          category: s.category,
+        });
+        if (!s.slug) generic.push(c);
+        else {
+          const list = bySlug.get(s.slug) ?? [];
+          list.push(c);
+          bySlug.set(s.slug, list);
+        }
+      } catch {
+        /* skip */
       }
     }
   }
@@ -584,28 +602,129 @@ export function invalidateSignalRuleCache(): void {
   cache = null;
 }
 
+/** Normalize tag slug list for detection. */
+export function normalizeTagSlugs(
+  slug?: string | string[] | null,
+): string[] {
+  if (slug == null) return [];
+  const arr = Array.isArray(slug) ? slug : [slug];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of arr) {
+    const s = String(raw ?? "")
+      .trim()
+      .toLowerCase();
+    if (!s || IGNORE_TAGS.has(s) || seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+  }
+  return out;
+}
+
+/**
+ * When lexicon misses but tweet has mint/claim/mainnet structure (links, dates,
+ * field cards), emit synthetic labels so early projects still surface.
+ */
+export function structuralFallbackSignals(text: string): string[] {
+  const t = text ?? "";
+  if (!t.trim()) return [];
+  const out: string[] = [];
+  const hasMint = /\bmint(?:ing)?\b/i.test(t);
+  const hasWl = /\b(?:\bwl\b|whitelist|allowlist|premint|gtd|gwl)\b/i.test(t);
+  const hasClaim = /\b(?:claim|airdrop|eligibility)\b/i.test(t);
+  const hasMainnet = /\b(?:mainnet|testnet|chain\s*id|rpc)\b/i.test(t);
+  const hasTge = /\b(?:tge|token\s+generation|token\s+launch)\b/i.test(t);
+
+  const mintLink =
+    /https?:\/\/(?:www\.)?(?:opensea\.io|magiceden\.io|launchmynft\.io|tensor\.trade|blur\.io|mint\.fun|exchange\.art|formfunction\.xyz|candymachine|mint\.[^\s/]+)[^\s)]*/i.test(
+      t,
+    );
+  const formLink =
+    /https?:\/\/(?:www\.)?(?:premint\.xyz|superful\.xyz|wlist\.io|forms\.gle|docs\.google\.com\/forms|typeform\.com|guild\.xyz)[^\s)]*/i.test(
+      t,
+    );
+  const claimLink =
+    /https?:\/\/(?:www\.)?(?:claim\.[^\s/]+|airdrop\.[^\s/]+|checker\.[^\s/]+|layer3\.xyz|galxe\.com|zealy\.io)[^\s)]*/i.test(
+      t,
+    );
+  const hasDateNearMint =
+    hasMint &&
+    (/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}/i.test(
+      t,
+    ) ||
+      /\b\d{1,2}[\/\-.]\d{1,2}(?:[\/\-.]\d{2,4})?\b/.test(t) ||
+      /\b(?:tomorrow|tonight|today)\b/i.test(t));
+  const fieldCard =
+    /(?:^|\n)\s*(?:•|\*|●|-)?\s*(?:mint\s*date|mint\s*price|supply|total\s*supply|chain\s*id)\s*[:\-]/im.test(
+      t,
+    );
+
+  if (mintLink && hasMint) out.push("mint link");
+  if (formLink && (hasWl || hasMint)) out.push("wl form link");
+  if (claimLink && hasClaim) out.push("claim link");
+  if (hasDateNearMint) out.push("mint schedule");
+  if (fieldCard && (hasMint || hasMainnet)) out.push("field card");
+  if (hasMainnet && /chain\s*id\s*[:\-]?\s*\d+/i.test(t)) out.push("mainnet card");
+  if (hasTge && /https?:\/\//i.test(t)) out.push("tge link");
+
+  return out;
+}
+
+export type DetectSignalsOpts = {
+  /**
+   * early — use all account tags + expand core verticals when untagged
+   *   so mint-date regexes / vertical extras still fire on early projects.
+   * default — generic + explicit tags only.
+   */
+  mode?: "default" | "early";
+  /** Also run structural fallback when lexicon matches nothing (default true). */
+  structuralFallback?: boolean;
+};
+
 /**
  * Detect signal keywords in a tweet.
- * Always checks generic rules; also tag-specific when slug is set.
- * Returns unique labels that matched (e.g. ["mint live", "wl open"]).
+ * Always checks generic (slug=null) rules.
+ * Also checks every provided tag slug’s extras.
+ * Early mode expands core verticals when the account is untagged.
  */
 export async function detectSignalsWithRules(
   text: string,
-  slug?: string | null,
+  slug?: string | string[] | null,
+  opts?: DetectSignalsOpts,
 ): Promise<string[]> {
   if (!text.trim()) return [];
+  const mode = opts?.mode ?? "default";
+  const useStructural = opts?.structuralFallback !== false;
+  const tags = normalizeTagSlugs(slug);
+
   const { generic, bySlug } = await loadCompiledRules();
-  const pools = [generic];
-  if (slug) {
-    const tagRules = bySlug.get(slug);
+  const pools: Compiled[][] = [generic];
+
+  const extraSlugs = new Set<string>(tags);
+  if (mode === "early" && tags.length === 0) {
+    for (const v of EARLY_EXPAND_VERTICALS) extraSlugs.add(v);
+  }
+
+  for (const s of extraSlugs) {
+    const tagRules = bySlug.get(s);
     if (tagRules?.length) pools.push(tagRules);
   }
+
   const matched = new Set<string>();
   for (const pool of pools) {
     for (const { label, re } of pool) {
-      if (re.test(text)) matched.add(label);
+      try {
+        if (re.test(text)) matched.add(label);
+      } catch {
+        /* bad regex */
+      }
     }
   }
+
+  if (matched.size === 0 && useStructural) {
+    for (const lab of structuralFallbackSignals(text)) matched.add(lab);
+  }
+
   return [...matched];
 }
 
@@ -620,17 +739,45 @@ const LEGACY_BARE_NFT_PATTERNS = new Set([
 ]);
 
 /**
+ * Categories that belong on generic (all tags), not nft-only.
+ * Used to promote wrongly-slugged NFT rows into shared lifecycle.
+ */
+const PROMOTE_TO_GENERIC_CATEGORIES = new Set([
+  "mint",
+  "wl",
+  "mint_date",
+  "mint_time",
+  "mint_params",
+  "tba",
+  "tge",
+  "launch",
+  "sale",
+]);
+
+/**
  * Seed defaults when empty, or insert any missing default patterns.
- * Also disables legacy bare NFT tokens (mint/wl alone).
- * Safe to call on every poll cycle.
+ * Also:
+ *  - disables legacy bare NFT tokens (mint/wl alone)
+ *  - promotes high-value nft-only lifecycle rules → generic (all tags)
+ *    so early untagged projects stop missing mint dates / WL open
+ * Safe to call from admin “Seed defaults”.
  */
 export async function seedDefaultSignalRules(): Promise<{
   inserted: number;
   disabledLegacy: number;
+  promotedToGeneric: number;
   total: number;
 }> {
   const existing = await prisma.signalRule.findMany({
-    select: { id: true, slug: true, pattern: true, enabled: true },
+    select: {
+      id: true,
+      slug: true,
+      pattern: true,
+      enabled: true,
+      category: true,
+      isRegex: true,
+      label: true,
+    },
   });
   const have = new Set(
     existing.map((r) => `${r.slug ?? ""}::${r.pattern.toLowerCase()}`),
@@ -651,9 +798,13 @@ export async function seedDefaultSignalRules(): Promise<{
         enabled: true,
       })),
     });
+    // Refresh have-set for promote step
+    for (const r of toInsert) {
+      have.add(`${r.slug ?? ""}::${r.pattern.toLowerCase()}`);
+    }
   }
 
-  // Demote legacy single-token NFT rules (scoring also demotes, but stop matching first)
+  // Demote legacy single-token NFT rules
   const legacyIds = existing
     .filter(
       (r) =>
@@ -672,10 +823,42 @@ export async function seedDefaultSignalRules(): Promise<{
     disabledLegacy = res.count;
   }
 
-  if (toInsert.length > 0 || disabledLegacy > 0) {
+  // Promote nft-only lifecycle phrases/regex that have no generic twin → generic
+  // (keeps nft row; adds generic so All tags shows them correctly + early hits them)
+  let promotedToGeneric = 0;
+  const promoteCandidates = existing.filter(
+    (r) =>
+      r.enabled &&
+      r.slug === "nft" &&
+      PROMOTE_TO_GENERIC_CATEGORIES.has(r.category) &&
+      !LEGACY_BARE_NFT_PATTERNS.has(r.pattern.toLowerCase().trim()),
+  );
+  for (const r of promoteCandidates) {
+    const key = `::${r.pattern.toLowerCase()}`;
+    if (have.has(key)) continue;
+    await prisma.signalRule.create({
+      data: {
+        slug: null,
+        category: r.category,
+        label: r.label,
+        pattern: r.pattern,
+        isRegex: r.isRegex,
+        enabled: true,
+      },
+    });
+    have.add(key);
+    promotedToGeneric++;
+  }
+
+  if (toInsert.length > 0 || disabledLegacy > 0 || promotedToGeneric > 0) {
     invalidateSignalRuleCache();
   }
 
   const total = await prisma.signalRule.count();
-  return { inserted: toInsert.length, disabledLegacy, total };
+  return {
+    inserted: toInsert.length,
+    disabledLegacy,
+    promotedToGeneric,
+    total,
+  };
 }

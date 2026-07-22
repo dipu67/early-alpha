@@ -69,6 +69,14 @@ const ALERT_META: Record<string, { label: string; hint: string }> = {
     label: "GitHub commits",
     hint: "New commits on watched GitHub repos",
   },
+  profileChange: {
+    label: "Profile changes",
+    hint: "Early monitor: rename / bio change on polled projects",
+  },
+  growthReport: {
+    label: "Growth report",
+    hint: "Weekly top-growing early projects board",
+  },
 };
 
 function numOrNull(s: string): number | null {

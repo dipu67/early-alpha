@@ -131,11 +131,6 @@ const worker = new Worker(
       // Manual monitors only — never auto-enroll from hunter heat
       const { pollAllMonitors } = await import("./projectMonitor.js");
       await pollAllMonitors();
-    } else if (job.name === "poll-home-signals") {
-      const { pollAllSignalScans } = await import("./homeSignalScan.js");
-      const { seedDefaultSignalRules } = await import("./signalRules.js");
-      await seedDefaultSignalRules();
-      await pollAllSignalScans();
     } else if (job.name === "poll-early-projects") {
       const { pollEarlyProjects } = await import("./earlyProjectPoller.js");
       const { setConfig } = await import("./appConfig.js");
@@ -144,12 +139,33 @@ const worker = new Worker(
         ...r,
         finishedAt: new Date().toISOString(),
       });
+    } else if (job.name === "early-timeline") {
+      const { processEarlyTimelineJob } = await import("./earlyProjectPoller.js");
+      const data = job.data as {
+        accountId: string;
+        username?: string;
+        name?: string;
+        tags?: string[];
+        lastTweetId?: string | null;
+      };
+      const r = await processEarlyTimelineJob(data);
+      console.log(
+        `[list-worker] early-timeline ${data.accountId} ` +
+          `signals=${r.signalAlerts} raw=${r.rawAlerts}` +
+          (r.requeued ? " requeued" : "") +
+          (r.deleted ? " deleted" : "") +
+          (r.skipped ? ` skipped=${r.skipped}` : ""),
+      );
     } else if (job.name === "growth-report") {
       const { sendWeeklyGrowthReport } = await import("./growthReport.js");
       const { setConfig } = await import("./appConfig.js");
-      const r = await sendWeeklyGrowthReport();
+      const data = job.data as { topicId?: number | null };
+      const r = await sendWeeklyGrowthReport({
+        topicId: data.topicId ?? null,
+      });
       await setConfig("earlyPoll.lastGrowthReport", {
         ...r,
+        topicId: data.topicId ?? null,
         finishedAt: new Date().toISOString(),
       });
     } else if (job.name === "tag-seed") {

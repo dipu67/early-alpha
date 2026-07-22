@@ -158,19 +158,23 @@ export async function computeTopGrowingProjects(opts?: {
   return rows.slice(0, top);
 }
 
-export async function sendWeeklyGrowthReport(): Promise<{
+export async function sendWeeklyGrowthReport(opts?: {
+  /** One-shot forum topic override (from admin “Send growth report”). */
+  topicId?: number | null;
+}): Promise<{
   sent: boolean;
   count: number;
+  reason?: string;
 }> {
   if (!(await isAlertEnabled("growthReport"))) {
     console.log("[growth-report] disabled via config");
-    return { sent: false, count: 0 };
+    return { sent: false, count: 0, reason: "disabled" };
   }
 
   const rows = await computeTopGrowingProjects();
   if (rows.length === 0) {
     console.log("[growth-report] no growers above thresholds");
-    return { sent: false, count: 0 };
+    return { sent: false, count: 0, reason: "no_growers" };
   }
 
   const text = formatGrowthReport({
@@ -187,7 +191,13 @@ export async function sendWeeklyGrowthReport(): Promise<{
     })),
   });
 
-  await sendTelegramTopic(text, undefined, "MarkdownV2", "growthReport");
+  // Explicit topicId wins; else alert.topic.growthReport → default topic.
+  const thread =
+    opts?.topicId != null && Number.isFinite(Number(opts.topicId))
+      ? Number(opts.topicId)
+      : undefined;
+
+  await sendTelegramTopic(text, thread, "MarkdownV2", "growthReport");
   console.log(`[growth-report] sent top ${rows.length} growers (${WINDOW_DAYS}d)`);
   return { sent: true, count: rows.length };
 }

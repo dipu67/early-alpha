@@ -1,66 +1,21 @@
 import { backendFetch } from "@/lib/api";
 import { PageHeader } from "@/components/ui/card";
 import {
-  type AuthAccount,
-  type Paged,
-  type SignalPost,
-} from "@/lib/types";
-import { SignalsDesk } from "./signals-desk";
+  SignalRulesPanel,
+  type SignalRuleItem,
+} from "./signal-rules-panel";
 
 export const dynamic = "force-dynamic";
 
-export default async function SignalsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ slug?: string; since?: string }>;
-}) {
-  const sp = await searchParams;
-  const [signalsRes, scansRes, rulesRes, followsRes, authRes, tagsRes] =
-    await Promise.all([
-      backendFetch("/api/signals", {
-        query: {
-          slug: sp.slug,
-          // Empty since = show stored feed (latest 20 per tag), not time-window only
-          since: sp.since && sp.since !== "all" ? sp.since : undefined,
-          limit: sp.slug ? "20" : "200",
-          perTag: sp.slug ? "0" : "1",
-        },
-      }),
-      backendFetch("/api/signals/scans"),
-      backendFetch("/api/signals/rules"),
-      backendFetch("/api/signals/auth-follows"),
-      backendFetch("/api/auth-accounts"),
-      backendFetch("/api/tags"),
-    ]);
-
-  const feed = (
-    signalsRes.ok ? signalsRes.body : { items: [], total: 0 }
-  ) as Paged<SignalPost>;
-
-  const scans = (
-    scansRes.ok ? (scansRes.body as { items: unknown[] }).items : []
-  ) as Parameters<typeof SignalsDesk>[0]["scans"];
+export default async function SignalsPage() {
+  const [rulesRes, tagsRes] = await Promise.all([
+    backendFetch("/api/signals/rules"),
+    backendFetch("/api/tags"),
+  ]);
 
   const rules = (
-    rulesRes.ok ? (rulesRes.body as { items: unknown[] }).items : []
-  ) as Parameters<typeof SignalsDesk>[0]["rules"];
-
-  const followsRaw =
-    followsRes.ok && Array.isArray((followsRes.body as { items?: unknown })?.items)
-      ? ((followsRes.body as { items: unknown[] }).items ?? [])
-      : [];
-  // Only keep real auth-follow rows (legacy AlertLog shape lacks username)
-  const follows = followsRaw.filter(
-    (f): f is Parameters<typeof SignalsDesk>[0]["follows"][number] =>
-      !!f &&
-      typeof f === "object" &&
-      typeof (f as { username?: unknown }).username === "string" &&
-      typeof (f as { id?: unknown }).id === "string",
-  );
-
-  const authAccounts = (
-    authRes.ok ? (authRes.body as { items: AuthAccount[] }).items : []
-  ) as AuthAccount[];
+    rulesRes.ok ? (rulesRes.body as { items: SignalRuleItem[] }).items : []
+  ) as SignalRuleItem[];
 
   const tags = (
     tagsRes.ok
@@ -68,8 +23,7 @@ export default async function SignalsPage({
           tagsRes.body as {
             items?: { slug: string; label?: string }[];
           }
-        ).items ??
-        (tagsRes.body as { slug: string }[])
+        ).items ?? (tagsRes.body as { slug: string }[])
       : []
   ) as { slug: string; label?: string }[];
 
@@ -77,16 +31,15 @@ export default async function SignalsPage({
     <div className="space-y-4">
       <PageHeader
         title="Signals"
-        description="Feed: latest 20 posts per tag. Promote to Monitor or Hunter. Flow: follow → HomeLatest → rules → Telegram."
+        description="Shared lifecycle rules (All tags) + per-tag extras. Early monitor multi-tags untagged projects and falls back on mint/WL structure so fewer posts are missed."
       />
-      <SignalsDesk
-        feed={feed.items}
-        feedSlug={sp.slug ?? ""}
-        feedSince={sp.since ?? "all"}
-        scans={scans}
-        rules={rules}
-        follows={follows}
-        authAccounts={authAccounts}
+      {!rulesRes.ok ? (
+        <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          Backend error loading rules ({rulesRes.status}). Is the API running?
+        </p>
+      ) : null}
+      <SignalRulesPanel
+        initialRules={rules}
         tags={Array.isArray(tags) ? tags.map((t) => ({ slug: t.slug, label: t.label })) : []}
       />
     </div>

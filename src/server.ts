@@ -6,7 +6,6 @@ import express, { type Express, type Request, type Response } from "express";
 import { requireApiKey } from "./middleware/auth.js";
 import { errorMiddleware } from "./middleware/error.js";
 import { tagsListsRouter } from "./routes/tags-lists.js";
-import { signalsRouter } from "./routes/signals.js";
 import { authPoolRouter } from "./routes/auth-pool.js";
 import { jobsRouter } from "./routes/jobs.js";
 import { authRouter } from "./routes/auth.js";
@@ -60,7 +59,6 @@ export function createApp(): Express {
   app.use("/api/seeds", seedsRouter);
   app.use("/api/early-projects", earlyProjectsRouter);
   app.use("/api", tagsListsRouter); // /api/projects, /api/lists, /api/reclassify, ...
-  app.use("/api/signals", signalsRouter);
   app.use("/api/signals", signalScansRouter);
   app.use("/api/auth-accounts", authPoolRouter);
   app.use("/api/jobs", jobsRouter);

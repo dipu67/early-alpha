@@ -150,15 +150,6 @@ export const SCHEDULERS: SchedulerDef[] = [
     label: "User timeline monitors",
   },
   {
-    key: "home-signal-poll",
-    queue: "list-tracker",
-    schedulerId: "home-signal-poll",
-    jobName: "poll-home-signals",
-    data: {},
-    defaultEvery: 2 * 60 * 1000,
-    label: "HomeLatest signal scans",
-  },
-  {
     key: "early-project-poll",
     queue: "list-tracker",
     schedulerId: "early-project-poll",

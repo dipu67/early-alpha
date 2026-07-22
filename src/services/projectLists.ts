@@ -591,15 +591,6 @@ export async function reclassifyAccount(
     id: accountId,
     tags,
   });
-  // Optional: auto-follow only when SignalScan.autoFollow is enabled for a tag
-  if (added.length > 0) {
-    try {
-      const { maybeAutoFollowForTags } = await import("./homeSignalScan.js");
-      await maybeAutoFollowForTags(accountId, account.username, added);
-    } catch (err) {
-      console.warn("[lists] auto-follow after reclassify:", err);
-    }
-  }
   return { added, removed, tags };
 }
 
@@ -622,23 +613,12 @@ export async function setAccountTags(
   const tags = [...new Set(rawTags.map((t) => t.trim()).filter(Boolean))];
   if (tags.length === 0) return null;
 
-  const prev = new Set(account.tags);
-  const newlyAdded = tags.filter((t) => !prev.has(t));
-
   await prisma.twitterAccount.update({
     where: { id: accountId },
     data: { tags },
   });
 
   if (!ctx) {
-    if (newlyAdded.length > 0) {
-      try {
-        const { maybeAutoFollowForTags } = await import("./homeSignalScan.js");
-        await maybeAutoFollowForTags(accountId, account.username, newlyAdded);
-      } catch {
-        /* ignore */
-      }
-    }
     return { tags, added: [], removed: [] };
   }
 
@@ -646,14 +626,5 @@ export async function setAccountTags(
     id: accountId,
     tags,
   });
-  const followTags = newlyAdded.length > 0 ? newlyAdded : added;
-  if (followTags.length > 0) {
-    try {
-      const { maybeAutoFollowForTags } = await import("./homeSignalScan.js");
-      await maybeAutoFollowForTags(accountId, account.username, followTags);
-    } catch {
-      /* ignore */
-    }
-  }
   return { tags, added, removed };
 }

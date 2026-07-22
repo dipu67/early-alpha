@@ -29,6 +29,28 @@ export const CONFIG_KEYS = {
   tgAdminIds: "tg.adminIds",
   /** TelegramBot.id (string) for the Grok bot process */
   tgGrokBotId: "tg.grokBotId",
+  /** Early monitor poller knobs (admin Early Monitor page). Env is fallback. */
+  earlyPollBatch: "earlyPoll.batch",
+  earlyPollMaxBatches: "earlyPoll.maxBatches",
+  earlyPollMaxTimelines: "earlyPoll.maxTimelines",
+  earlyPollDelayMs: "earlyPoll.delayMs",
+  earlyPollStaleMs: "earlyPoll.staleMs",
+  earlyPollMaxFollowers: "earlyPoll.maxFollowers",
+  earlyPollMaxFollowing: "earlyPoll.maxFollowing",
+  earlyPollMaxAgeDays: "earlyPoll.maxAgeDays",
+  earlyPollFirstSeenDays: "earlyPoll.firstSeenDays",
+  earlyPollIncludeSoftHot: "earlyPoll.includeSoftHot",
+  earlyPollStrictEarlyOnly: "earlyPoll.strictEarlyOnly",
+  earlyPollSnapshotMinMs: "earlyPoll.snapshotMinMs",
+  /** Telegram topics for early monitor (override signal map / default). */
+  earlyPollSignalTopicId: "earlyPoll.signalTopicId",
+  earlyPollRawTopicId: "earlyPoll.rawTopicId",
+  /** Send non-signal posts as raw early alerts. */
+  earlyPollSendRawPosts: "earlyPoll.sendRawPosts",
+  /** Max getUserTweets per 15m window (Twitter ~50). */
+  earlyPollTweetReqBudget: "earlyPoll.tweetReqBudget",
+  /** Sliding window counters for getUserTweets rate limit. */
+  earlyPollTweetReqWindow: "earlyPoll.tweetReqWindow",
 } as const;
 
 /** Alert types that can be individually enabled/disabled. */

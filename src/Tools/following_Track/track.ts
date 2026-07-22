@@ -2,7 +2,7 @@ import "dotenv/config";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { prisma } from "../../db/prisma.js";
+import { prisma, resyncSerialSequence } from "../../db/prisma.js";
 import { getTwitterClient, markRateLimited } from "../../twitter/getClient.js";
 import type { UserData } from "../../TwitterClient/types.js";
 import {
@@ -243,9 +243,25 @@ export async function runTrackingCycle(
 
   const seedTwitterIds = new Set(seeds.map((s) => s.twitterId!));
 
-  const run = await prisma.trackingRun.create({
-    data: { status: "running" },
-  });
+  // Backup/import can leave tracking_runs_id_seq behind MAX(id) → unique on id.
+  let run;
+  try {
+    run = await prisma.trackingRun.create({
+      data: { status: "running" },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!/Unique constraint|tracking_runs_pkey|fields: \(`id`\)/i.test(msg)) {
+      throw err;
+    }
+    console.warn(
+      "[track] tracking_runs id sequence out of sync — resyncing and retrying",
+    );
+    await resyncSerialSequence("tracking_runs");
+    run = await prisma.trackingRun.create({
+      data: { status: "running" },
+    });
+  }
 
   let seedsProcessed = 0;
   let accountsSeen = 0;

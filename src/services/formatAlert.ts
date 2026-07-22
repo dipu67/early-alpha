@@ -510,6 +510,39 @@ export function formatMonitorAlert(
   };
 }
 
+/** Early monitor raw post (no signal match) — optional TG stream. */
+export function formatEarlyRawPostAlert(input: {
+  accountId: string;
+  username: string;
+  name: string;
+  text: string;
+  tweetId: string;
+  tags?: string[];
+}): { text: string; user: UserData } {
+  const postUrl = `https://x.com/${input.username}/status/${input.tweetId}`;
+  const tagLine =
+    input.tags && input.tags.length
+      ? `🏷 ${escapeMarkdown(input.tags.slice(0, 4).join(" · "))}\n`
+      : "";
+  const text =
+    `📝 *Early · raw post*\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `👤 *${escapeMarkdown(input.name)}*  [@${escapeMarkdown(input.username)}](https://x.com/${input.username})\n` +
+    tagLine +
+    `\n${escapeMarkdown(excerpt(input.text))}\n\n` +
+    `🔗 [View post](${postUrl})\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    escapeMarkdown("No signal keyword matched — raw stream");
+  return {
+    text,
+    user: {
+      id: input.accountId,
+      username: input.username,
+      name: input.name,
+    } as UserData,
+  };
+}
+
 export interface ProfileChangeAlertInput {
   accountId: string;
   username: string;
@@ -581,8 +614,9 @@ export function formatGrowthReport(input: {
   days: number;
   rows: GrowthReportRow[];
 }): string {
+  const days = String(input.days);
   const lines: string[] = [
-    `📈 *Top growing early projects \\(${input.days}d\\)*`,
+    `📈 *Top growing early projects \\(${escapeMarkdown(days)}d\\)*`,
     `━━━━━━━━━━━━━━━━━━`,
   ];
   input.rows.forEach((r, i) => {
@@ -590,15 +624,24 @@ export function formatGrowthReport(input: {
     const tags = r.tags.filter((t) => t !== "unknown" && t !== "other").slice(0, 3);
     const tagStr = tags.length ? ` · ${tags.join(",")}` : "";
     const stage = r.huntStage !== "noise" ? ` · ${r.huntStage}` : "";
+    // Username in URL path: only [A-Za-z0-9_] on X; escape display text only.
+    const user = escapeMarkdown(r.username);
     lines.push(
-      `${i + 1}\\. [@${escapeMarkdown(r.username)}](https://x.com/${r.username})` +
+      `${i + 1}\\. [@${user}](https://x.com/${r.username})` +
         ` \\+${escapeMarkdown(formatNumber(r.absGain))} \\(${escapeMarkdown(pct)}%\\)` +
         `\n    ${escapeMarkdown(formatNumber(r.followersBefore))} → ${escapeMarkdown(formatNumber(r.followersNow))}` +
         escapeMarkdown(tagStr + stage),
     );
   });
   lines.push(`━━━━━━━━━━━━━━━━━━`);
-  lines.push(`_Baseline: snapshot ~${input.days}d ago or detect\\-time followers_`);
+  // MarkdownV2: `~` is strikethrough — must be escaped. Avoid raw `_…_` italic
+  // around unescaped `~` (was: `_Baseline: snapshot ~7d…_`) which 400s as
+  // "Can't find end of Italic entity".
+  lines.push(
+    escapeMarkdown(
+      `Baseline: snapshot ~${days}d ago or detect-time followers`,
+    ),
+  );
   return lines.join("\n");
 }
 
