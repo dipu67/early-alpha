@@ -63,6 +63,7 @@ export const CONFIG_KEYS = {
   earlyPollSnapshotMinMs: "earlyPoll.snapshotMinMs",
   earlyPollSignalTopicId: "earlyPoll.signalTopicId",
   earlyPollRawTopicId: "earlyPoll.rawTopicId",
+  earlyPollProfileChangeTopicId: "earlyPoll.profileChangeTopicId",
   earlyPollSendRawPosts: "earlyPoll.sendRawPosts",
   earlyPollTweetReqBudget: "earlyPoll.tweetReqBudget",
   earlyPollTweetReqWindow: "earlyPoll.tweetReqWindow",

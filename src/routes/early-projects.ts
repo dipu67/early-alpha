@@ -48,6 +48,7 @@ function configView(cfg: EarlyPollRuntimeConfig) {
     // Topics + raw
     signalTopicId: cfg.signalTopicId,
     rawTopicId: cfg.rawTopicId,
+    profileChangeTopicId: cfg.profileChangeTopicId,
     sendRawPosts: cfg.sendRawPosts,
     // Rate limit
     tweetReqBudget: cfg.tweetReqBudget,
@@ -151,6 +152,7 @@ const configPatchSchema = z.object({
   // Topics
   signalTopicId: z.number().int().nullable().optional(),
   rawTopicId: z.number().int().nullable().optional(),
+  profileChangeTopicId: z.number().int().nullable().optional(),
   sendRawPosts: z.boolean().optional(),
 });
 
@@ -184,6 +186,7 @@ earlyProjectsRouter.patch(
       ["strictEarlyOnly", CONFIG_KEYS.earlyPollStrictEarlyOnly],
       ["signalTopicId", CONFIG_KEYS.earlyPollSignalTopicId],
       ["rawTopicId", CONFIG_KEYS.earlyPollRawTopicId],
+      ["profileChangeTopicId", CONFIG_KEYS.earlyPollProfileChangeTopicId],
       ["sendRawPosts", CONFIG_KEYS.earlyPollSendRawPosts],
     ];
 

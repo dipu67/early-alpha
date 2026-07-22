@@ -129,6 +129,9 @@ export function EarlyMonitorPanel({
   const [rawTopicId, setRawTopicId] = useState(
     cfg.rawTopicId != null ? String(cfg.rawTopicId) : "",
   );
+  const [profileChangeTopicId, setProfileChangeTopicId] = useState(
+    cfg.profileChangeTopicId != null ? String(cfg.profileChangeTopicId) : "",
+  );
   const [sendRawPosts, setSendRawPosts] = useState(cfg.sendRawPosts ?? false);
 
   // Poller / rate limit
@@ -227,6 +230,7 @@ export function EarlyMonitorPanel({
     const trb = Number(tweetReqBudget);
     const sigT = parseTopic(signalTopicId);
     const rawT = parseTopic(rawTopicId);
+    const profT = parseTopic(profileChangeTopicId);
 
     if (!Number.isFinite(bs) || bs < 10 || bs > 100) {
       toast.error("Batch size must be 10–100");
@@ -276,6 +280,10 @@ export function EarlyMonitorPanel({
       toast.error("Raw topic must be a number or empty");
       return;
     }
+    if (Number.isNaN(profT as number)) {
+      toast.error("Profile-change topic must be a number or empty");
+      return;
+    }
 
     body.batchSize = Math.floor(bs);
     body.maxBatches = Math.floor(mb);
@@ -291,6 +299,7 @@ export function EarlyMonitorPanel({
     body.strictEarlyOnly = strictEarlyOnly;
     body.signalTopicId = sigT;
     body.rawTopicId = rawT;
+    body.profileChangeTopicId = profT;
     body.sendRawPosts = sendRawPosts;
 
     setBusy(true);
@@ -470,15 +479,18 @@ export function EarlyMonitorPanel({
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Telegram topics · signal &amp; raw</CardTitle>
+              <CardTitle className="text-base">
+                Telegram topics · signal, raw &amp; profile change
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-xs text-muted-foreground">
                 Signal posts use the signal topic (or tag map / default if empty). Non-signal
-                posts can stream as <strong>raw</strong> to a separate topic — useful when
-                keywords miss mint language but you still want early project chatter.
+                posts can stream as <strong>raw</strong> to a separate topic.{" "}
+                <strong>Profile change</strong> (rename / bio) uses its own topic when set;
+                otherwise Telegram → alert.topic.profileChange / default.
               </p>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <Field
                   label="Signal topic"
                   hint="Empty → Telegram signal map / default"
@@ -503,6 +515,19 @@ export function EarlyMonitorPanel({
                     compact
                     showMeta={false}
                     disabled={busy || !sendRawPosts}
+                  />
+                </Field>
+                <Field
+                  label="Profile change topic"
+                  hint="Rename / bio alerts from early poll"
+                >
+                  <TopicPicker
+                    value={profileChangeTopicId}
+                    onChange={(v) => setProfileChangeTopicId(v)}
+                    emptyLabel="Use profileChange alert default"
+                    compact
+                    showMeta={false}
+                    disabled={busy}
                   />
                 </Field>
               </div>

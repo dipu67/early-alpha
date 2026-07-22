@@ -91,6 +91,8 @@ export type EarlyPollRuntimeConfig = {
   maxAccountsPerCycle: number;
   signalTopicId: number | null;
   rawTopicId: number | null;
+  /** Rename / bio change alerts from early poll. */
+  profileChangeTopicId: number | null;
   sendRawPosts: boolean;
   tweetReqBudget: number;
 };
@@ -125,6 +127,7 @@ export async function resolveEarlyPollConfig(): Promise<EarlyPollRuntimeConfig> 
     snapshotRaw,
     signalTopicRaw,
     rawTopicRaw,
+    profileChangeTopicRaw,
     sendRawRaw,
     tweetBudgetRaw,
   ] = await Promise.all([
@@ -142,6 +145,7 @@ export async function resolveEarlyPollConfig(): Promise<EarlyPollRuntimeConfig> 
     getConfig<number | null>(CONFIG_KEYS.earlyPollSnapshotMinMs, null),
     getConfig<number | null>(CONFIG_KEYS.earlyPollSignalTopicId, null),
     getConfig<number | null>(CONFIG_KEYS.earlyPollRawTopicId, null),
+    getConfig<number | null>(CONFIG_KEYS.earlyPollProfileChangeTopicId, null),
     getConfig<boolean | null>(CONFIG_KEYS.earlyPollSendRawPosts, null),
     getConfig<number | null>(CONFIG_KEYS.earlyPollTweetReqBudget, null),
   ]);
@@ -201,6 +205,11 @@ export async function resolveEarlyPollConfig(): Promise<EarlyPollRuntimeConfig> 
     rawTopicRaw != null && Number.isFinite(Number(rawTopicRaw))
       ? Number(rawTopicRaw)
       : null;
+  const profileChangeTopicId =
+    profileChangeTopicRaw != null &&
+    Number.isFinite(Number(profileChangeTopicRaw))
+      ? Number(profileChangeTopicRaw)
+      : null;
 
   return {
     batchSize,
@@ -219,6 +228,7 @@ export async function resolveEarlyPollConfig(): Promise<EarlyPollRuntimeConfig> 
     maxAccountsPerCycle: batchSize * maxBatches,
     signalTopicId,
     rawTopicId,
+    profileChangeTopicId,
     sendRawPosts: toBool(sendRawRaw, false),
     tweetReqBudget,
   };
@@ -1254,7 +1264,7 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
         continue;
       }
 
-      // Profile change alerts (rename / bio) — topic from alert.topic.profileChange (admin).
+      // Profile change alerts (rename / bio) — Early Monitor topic override, else alert.topic.profileChange.
       if ((renamed || bioChanged) && (await isAlertEnabled("profileChange"))) {
         try {
           await sendTelegramAlert(
@@ -1270,7 +1280,7 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
               tags,
             }),
             "MarkdownV2",
-            undefined, // use alert.topic.profileChange → default topic
+            cfg.profileChangeTopicId ?? undefined,
             "profileChange",
           );
         } catch (err) {

@@ -45,6 +45,7 @@ export const CONFIG_KEYS = {
   /** Telegram topics for early monitor (override signal map / default). */
   earlyPollSignalTopicId: "earlyPoll.signalTopicId",
   earlyPollRawTopicId: "earlyPoll.rawTopicId",
+  earlyPollProfileChangeTopicId: "earlyPoll.profileChangeTopicId",
   /** Send non-signal posts as raw early alerts. */
   earlyPollSendRawPosts: "earlyPoll.sendRawPosts",
   /** Max getUserTweets per 15m window (Twitter ~50). */

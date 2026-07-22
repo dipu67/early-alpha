@@ -49,6 +49,7 @@ export default async function EarlyProjectsPage() {
             snapshotMinMs: 6 * 3600 * 1000,
             signalTopicId: null,
             rawTopicId: null,
+            profileChangeTopicId: null,
             sendRawPosts: false,
             tweetReqBudget: 45,
             pollEveryLabel: "1h",

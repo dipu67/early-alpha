@@ -185,6 +185,7 @@ export interface EarlyPollConfig {
   maxAccountsPerCycle: number;
   signalTopicId: number | null;
   rawTopicId: number | null;
+  profileChangeTopicId: number | null;
   sendRawPosts: boolean;
   tweetReqBudget: number;
   pollEveryLabel?: string;
