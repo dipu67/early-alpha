@@ -245,10 +245,10 @@ export async function sendTelegramAlert(
   );
 }
 
-export async function sendTelegramPlaintext(text: string): Promise<void> {
+export async function sendTelegramPlaintext(text: string, parseMode: "MarkdownV2" | "HTML" = "MarkdownV2"): Promise<void> {
   const chatId = await alertChatId();
   const bot = await resolveBot();
-  await schedule(() => sendMessageWithRetry(bot, chatId, text, {}));
+  await schedule(() => sendMessageWithRetry(bot, chatId, text, {parse_mode: parseMode}));
 }
 
 /** Send a message to a specific topic (thread). Used by the early-project digest. */

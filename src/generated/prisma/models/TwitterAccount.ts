@@ -64,7 +64,7 @@ export type TwitterAccountMinAggregateOutputType = {
   huntNote: string | null
   huntUpdatedAt: Date | null
   lastProfilePolledAt: Date | null
-  lastTweetId: string | null
+  fxCursor: string | null
   previousUsername: string | null
   usernameChangedAt: Date | null
   followersAtDetect: number | null
@@ -92,7 +92,7 @@ export type TwitterAccountMaxAggregateOutputType = {
   huntNote: string | null
   huntUpdatedAt: Date | null
   lastProfilePolledAt: Date | null
-  lastTweetId: string | null
+  fxCursor: string | null
   previousUsername: string | null
   usernameChangedAt: Date | null
   followersAtDetect: number | null
@@ -121,7 +121,7 @@ export type TwitterAccountCountAggregateOutputType = {
   huntNote: number
   huntUpdatedAt: number
   lastProfilePolledAt: number
-  lastTweetId: number
+  fxCursor: number
   previousUsername: number
   usernameChangedAt: number
   followersAtDetect: number
@@ -167,7 +167,7 @@ export type TwitterAccountMinAggregateInputType = {
   huntNote?: true
   huntUpdatedAt?: true
   lastProfilePolledAt?: true
-  lastTweetId?: true
+  fxCursor?: true
   previousUsername?: true
   usernameChangedAt?: true
   followersAtDetect?: true
@@ -195,7 +195,7 @@ export type TwitterAccountMaxAggregateInputType = {
   huntNote?: true
   huntUpdatedAt?: true
   lastProfilePolledAt?: true
-  lastTweetId?: true
+  fxCursor?: true
   previousUsername?: true
   usernameChangedAt?: true
   followersAtDetect?: true
@@ -224,7 +224,7 @@ export type TwitterAccountCountAggregateInputType = {
   huntNote?: true
   huntUpdatedAt?: true
   lastProfilePolledAt?: true
-  lastTweetId?: true
+  fxCursor?: true
   previousUsername?: true
   usernameChangedAt?: true
   followersAtDetect?: true
@@ -340,7 +340,7 @@ export type TwitterAccountGroupByOutputType = {
   huntNote: string | null
   huntUpdatedAt: Date | null
   lastProfilePolledAt: Date | null
-  lastTweetId: string | null
+  fxCursor: string | null
   previousUsername: string | null
   usernameChangedAt: Date | null
   followersAtDetect: number | null
@@ -392,7 +392,7 @@ export type TwitterAccountWhereInput = {
   huntNote?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
   huntUpdatedAt?: Prisma.DateTimeNullableFilter<"TwitterAccount"> | Date | string | null
   lastProfilePolledAt?: Prisma.DateTimeNullableFilter<"TwitterAccount"> | Date | string | null
-  lastTweetId?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
+  fxCursor?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
   previousUsername?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
   usernameChangedAt?: Prisma.DateTimeNullableFilter<"TwitterAccount"> | Date | string | null
   followersAtDetect?: Prisma.IntNullableFilter<"TwitterAccount"> | number | null
@@ -425,7 +425,7 @@ export type TwitterAccountOrderByWithRelationInput = {
   huntNote?: Prisma.SortOrderInput | Prisma.SortOrder
   huntUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   lastProfilePolledAt?: Prisma.SortOrderInput | Prisma.SortOrder
-  lastTweetId?: Prisma.SortOrderInput | Prisma.SortOrder
+  fxCursor?: Prisma.SortOrderInput | Prisma.SortOrder
   previousUsername?: Prisma.SortOrderInput | Prisma.SortOrder
   usernameChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   followersAtDetect?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -461,7 +461,7 @@ export type TwitterAccountWhereUniqueInput = Prisma.AtLeast<{
   huntNote?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
   huntUpdatedAt?: Prisma.DateTimeNullableFilter<"TwitterAccount"> | Date | string | null
   lastProfilePolledAt?: Prisma.DateTimeNullableFilter<"TwitterAccount"> | Date | string | null
-  lastTweetId?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
+  fxCursor?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
   previousUsername?: Prisma.StringNullableFilter<"TwitterAccount"> | string | null
   usernameChangedAt?: Prisma.DateTimeNullableFilter<"TwitterAccount"> | Date | string | null
   followersAtDetect?: Prisma.IntNullableFilter<"TwitterAccount"> | number | null
@@ -494,7 +494,7 @@ export type TwitterAccountOrderByWithAggregationInput = {
   huntNote?: Prisma.SortOrderInput | Prisma.SortOrder
   huntUpdatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   lastProfilePolledAt?: Prisma.SortOrderInput | Prisma.SortOrder
-  lastTweetId?: Prisma.SortOrderInput | Prisma.SortOrder
+  fxCursor?: Prisma.SortOrderInput | Prisma.SortOrder
   previousUsername?: Prisma.SortOrderInput | Prisma.SortOrder
   usernameChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   followersAtDetect?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -531,7 +531,7 @@ export type TwitterAccountScalarWhereWithAggregatesInput = {
   huntNote?: Prisma.StringNullableWithAggregatesFilter<"TwitterAccount"> | string | null
   huntUpdatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"TwitterAccount"> | Date | string | null
   lastProfilePolledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"TwitterAccount"> | Date | string | null
-  lastTweetId?: Prisma.StringNullableWithAggregatesFilter<"TwitterAccount"> | string | null
+  fxCursor?: Prisma.StringNullableWithAggregatesFilter<"TwitterAccount"> | string | null
   previousUsername?: Prisma.StringNullableWithAggregatesFilter<"TwitterAccount"> | string | null
   usernameChangedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"TwitterAccount"> | Date | string | null
   followersAtDetect?: Prisma.IntNullableWithAggregatesFilter<"TwitterAccount"> | number | null
@@ -560,7 +560,7 @@ export type TwitterAccountCreateInput = {
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
   lastProfilePolledAt?: Date | string | null
-  lastTweetId?: string | null
+  fxCursor?: string | null
   previousUsername?: string | null
   usernameChangedAt?: Date | string | null
   followersAtDetect?: number | null
@@ -593,7 +593,7 @@ export type TwitterAccountUncheckedCreateInput = {
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
   lastProfilePolledAt?: Date | string | null
-  lastTweetId?: string | null
+  fxCursor?: string | null
   previousUsername?: string | null
   usernameChangedAt?: Date | string | null
   followersAtDetect?: number | null
@@ -626,7 +626,7 @@ export type TwitterAccountUpdateInput = {
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fxCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -659,7 +659,7 @@ export type TwitterAccountUncheckedUpdateInput = {
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fxCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -692,7 +692,7 @@ export type TwitterAccountCreateManyInput = {
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
   lastProfilePolledAt?: Date | string | null
-  lastTweetId?: string | null
+  fxCursor?: string | null
   previousUsername?: string | null
   usernameChangedAt?: Date | string | null
   followersAtDetect?: number | null
@@ -721,7 +721,7 @@ export type TwitterAccountUpdateManyMutationInput = {
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fxCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -750,7 +750,7 @@ export type TwitterAccountUncheckedUpdateManyInput = {
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fxCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -779,7 +779,7 @@ export type TwitterAccountCountOrderByAggregateInput = {
   huntNote?: Prisma.SortOrder
   huntUpdatedAt?: Prisma.SortOrder
   lastProfilePolledAt?: Prisma.SortOrder
-  lastTweetId?: Prisma.SortOrder
+  fxCursor?: Prisma.SortOrder
   previousUsername?: Prisma.SortOrder
   usernameChangedAt?: Prisma.SortOrder
   followersAtDetect?: Prisma.SortOrder
@@ -815,7 +815,7 @@ export type TwitterAccountMaxOrderByAggregateInput = {
   huntNote?: Prisma.SortOrder
   huntUpdatedAt?: Prisma.SortOrder
   lastProfilePolledAt?: Prisma.SortOrder
-  lastTweetId?: Prisma.SortOrder
+  fxCursor?: Prisma.SortOrder
   previousUsername?: Prisma.SortOrder
   usernameChangedAt?: Prisma.SortOrder
   followersAtDetect?: Prisma.SortOrder
@@ -843,7 +843,7 @@ export type TwitterAccountMinOrderByAggregateInput = {
   huntNote?: Prisma.SortOrder
   huntUpdatedAt?: Prisma.SortOrder
   lastProfilePolledAt?: Prisma.SortOrder
-  lastTweetId?: Prisma.SortOrder
+  fxCursor?: Prisma.SortOrder
   previousUsername?: Prisma.SortOrder
   usernameChangedAt?: Prisma.SortOrder
   followersAtDetect?: Prisma.SortOrder
@@ -966,7 +966,7 @@ export type TwitterAccountCreateWithoutMetricSnapshotsInput = {
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
   lastProfilePolledAt?: Date | string | null
-  lastTweetId?: string | null
+  fxCursor?: string | null
   previousUsername?: string | null
   usernameChangedAt?: Date | string | null
   followersAtDetect?: number | null
@@ -998,7 +998,7 @@ export type TwitterAccountUncheckedCreateWithoutMetricSnapshotsInput = {
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
   lastProfilePolledAt?: Date | string | null
-  lastTweetId?: string | null
+  fxCursor?: string | null
   previousUsername?: string | null
   usernameChangedAt?: Date | string | null
   followersAtDetect?: number | null
@@ -1046,7 +1046,7 @@ export type TwitterAccountUpdateWithoutMetricSnapshotsInput = {
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fxCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1078,7 +1078,7 @@ export type TwitterAccountUncheckedUpdateWithoutMetricSnapshotsInput = {
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fxCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1110,7 +1110,7 @@ export type TwitterAccountCreateWithoutListMembershipsInput = {
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
   lastProfilePolledAt?: Date | string | null
-  lastTweetId?: string | null
+  fxCursor?: string | null
   previousUsername?: string | null
   usernameChangedAt?: Date | string | null
   followersAtDetect?: number | null
@@ -1142,7 +1142,7 @@ export type TwitterAccountUncheckedCreateWithoutListMembershipsInput = {
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
   lastProfilePolledAt?: Date | string | null
-  lastTweetId?: string | null
+  fxCursor?: string | null
   previousUsername?: string | null
   usernameChangedAt?: Date | string | null
   followersAtDetect?: number | null
@@ -1190,7 +1190,7 @@ export type TwitterAccountUpdateWithoutListMembershipsInput = {
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fxCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1222,7 +1222,7 @@ export type TwitterAccountUncheckedUpdateWithoutListMembershipsInput = {
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fxCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1254,7 +1254,7 @@ export type TwitterAccountCreateWithoutFollowEdgesAsFollowingInput = {
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
   lastProfilePolledAt?: Date | string | null
-  lastTweetId?: string | null
+  fxCursor?: string | null
   previousUsername?: string | null
   usernameChangedAt?: Date | string | null
   followersAtDetect?: number | null
@@ -1286,7 +1286,7 @@ export type TwitterAccountUncheckedCreateWithoutFollowEdgesAsFollowingInput = {
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
   lastProfilePolledAt?: Date | string | null
-  lastTweetId?: string | null
+  fxCursor?: string | null
   previousUsername?: string | null
   usernameChangedAt?: Date | string | null
   followersAtDetect?: number | null
@@ -1334,7 +1334,7 @@ export type TwitterAccountUpdateWithoutFollowEdgesAsFollowingInput = {
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fxCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1366,7 +1366,7 @@ export type TwitterAccountUncheckedUpdateWithoutFollowEdgesAsFollowingInput = {
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fxCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1398,7 +1398,7 @@ export type TwitterAccountCreateWithoutAlertsInput = {
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
   lastProfilePolledAt?: Date | string | null
-  lastTweetId?: string | null
+  fxCursor?: string | null
   previousUsername?: string | null
   usernameChangedAt?: Date | string | null
   followersAtDetect?: number | null
@@ -1430,7 +1430,7 @@ export type TwitterAccountUncheckedCreateWithoutAlertsInput = {
   huntNote?: string | null
   huntUpdatedAt?: Date | string | null
   lastProfilePolledAt?: Date | string | null
-  lastTweetId?: string | null
+  fxCursor?: string | null
   previousUsername?: string | null
   usernameChangedAt?: Date | string | null
   followersAtDetect?: number | null
@@ -1478,7 +1478,7 @@ export type TwitterAccountUpdateWithoutAlertsInput = {
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fxCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1510,7 +1510,7 @@ export type TwitterAccountUncheckedUpdateWithoutAlertsInput = {
   huntNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   huntUpdatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastProfilePolledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  lastTweetId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fxCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   previousUsername?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   usernameChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   followersAtDetect?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -1600,7 +1600,7 @@ export type TwitterAccountSelect<ExtArgs extends runtime.Types.Extensions.Intern
   huntNote?: boolean
   huntUpdatedAt?: boolean
   lastProfilePolledAt?: boolean
-  lastTweetId?: boolean
+  fxCursor?: boolean
   previousUsername?: boolean
   usernameChangedAt?: boolean
   followersAtDetect?: boolean
@@ -1634,7 +1634,7 @@ export type TwitterAccountSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   huntNote?: boolean
   huntUpdatedAt?: boolean
   lastProfilePolledAt?: boolean
-  lastTweetId?: boolean
+  fxCursor?: boolean
   previousUsername?: boolean
   usernameChangedAt?: boolean
   followersAtDetect?: boolean
@@ -1663,7 +1663,7 @@ export type TwitterAccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   huntNote?: boolean
   huntUpdatedAt?: boolean
   lastProfilePolledAt?: boolean
-  lastTweetId?: boolean
+  fxCursor?: boolean
   previousUsername?: boolean
   usernameChangedAt?: boolean
   followersAtDetect?: boolean
@@ -1692,13 +1692,13 @@ export type TwitterAccountSelectScalar = {
   huntNote?: boolean
   huntUpdatedAt?: boolean
   lastProfilePolledAt?: boolean
-  lastTweetId?: boolean
+  fxCursor?: boolean
   previousUsername?: boolean
   usernameChangedAt?: boolean
   followersAtDetect?: boolean
 }
 
-export type TwitterAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "name" | "description" | "tags" | "followersCount" | "followingCount" | "tweetCount" | "likeCount" | "isBlueVerified" | "profileImageUrl" | "profileBannerUrl" | "location" | "createdAt" | "detectedAt" | "firstSeenAt" | "updatedAt" | "listsSyncedAt" | "huntStage" | "huntNote" | "huntUpdatedAt" | "lastProfilePolledAt" | "lastTweetId" | "previousUsername" | "usernameChangedAt" | "followersAtDetect", ExtArgs["result"]["twitterAccount"]>
+export type TwitterAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "name" | "description" | "tags" | "followersCount" | "followingCount" | "tweetCount" | "likeCount" | "isBlueVerified" | "profileImageUrl" | "profileBannerUrl" | "location" | "createdAt" | "detectedAt" | "firstSeenAt" | "updatedAt" | "listsSyncedAt" | "huntStage" | "huntNote" | "huntUpdatedAt" | "lastProfilePolledAt" | "fxCursor" | "previousUsername" | "usernameChangedAt" | "followersAtDetect", ExtArgs["result"]["twitterAccount"]>
 export type TwitterAccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   followEdgesAsFollowing?: boolean | Prisma.TwitterAccount$followEdgesAsFollowingArgs<ExtArgs>
   alerts?: boolean | Prisma.TwitterAccount$alertsArgs<ExtArgs>
@@ -1747,9 +1747,9 @@ export type $TwitterAccountPayload<ExtArgs extends runtime.Types.Extensions.Inte
      */
     lastProfilePolledAt: Date | null
     /**
-     * Snowflake watermark for new tweets discovered via tweetCount delta
+     * FxTwitter getProfileStatuses cursor.top (updated when timeline results non-empty)
      */
-    lastTweetId: string | null
+    fxCursor: string | null
     /**
      * Prior handle when rename detected
      */
@@ -2208,7 +2208,7 @@ export interface TwitterAccountFieldRefs {
   readonly huntNote: Prisma.FieldRef<"TwitterAccount", 'String'>
   readonly huntUpdatedAt: Prisma.FieldRef<"TwitterAccount", 'DateTime'>
   readonly lastProfilePolledAt: Prisma.FieldRef<"TwitterAccount", 'DateTime'>
-  readonly lastTweetId: Prisma.FieldRef<"TwitterAccount", 'String'>
+  readonly fxCursor: Prisma.FieldRef<"TwitterAccount", 'String'>
   readonly previousUsername: Prisma.FieldRef<"TwitterAccount", 'String'>
   readonly usernameChangedAt: Prisma.FieldRef<"TwitterAccount", 'DateTime'>
   readonly followersAtDetect: Prisma.FieldRef<"TwitterAccount", 'Int'>

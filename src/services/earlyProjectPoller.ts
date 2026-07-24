@@ -2,17 +2,21 @@
 //
 // Flow each hour:
 //   1. Select early TwitterAccount rows only (detection rules from UI/settings)
-//   2. getUsersByIds in batches of 100
+//   2. getUsersByIds (TwitterClient) in batches of 100
 //   3. Diff: username, bio, followers, tweetCount
-//   4. If tweetCount ↑ → enqueue early-timeline jobs (getUserTweets ~50/15m)
-//   5. Metric snapshots (for 7d growth reports)
-//   6. Bio change → optional reclassify
+//   4. If tweetCount ↑ (or no fxCursor yet) → FxTwitter getProfileStatuses
+//   5. New tweets via cursor.top pagination (no lastTweetId):
+//        - no fxCursor → seed: fetch latest page, store cursor.top, no alerts
+//        - has fxCursor → fetch with cursor; non-empty page = new posts only
+//        - alert only original posts (reposted_by == null); skip retweets
+//        - persist response cursor.top → TwitterAccount.fxCursor when results non-empty
+//   6. Metric snapshots (for 7d growth reports)
+//   7. Bio change → optional reclassify
 //
-// Timeline worker drains the queue under a 15-minute tweet-request budget so a
-// 1k+ pool does not burn the UserTweets rate limit in one cycle.
+// Profile batching still uses authenticated TwitterClient (UsersByRestIds).
+// Timelines use public FxTwitter — no UserTweets rate budget.
 
 import { prisma } from "../db/prisma.js";
-import type { TweetData, UserData } from "../TwitterClient/types.js";
 import {
   getTwitterClient,
   markRateLimited,
@@ -45,6 +49,14 @@ import {
 } from "./earlyProjectFilter.js";
 import { getConfig, setConfig, CONFIG_KEYS } from "./appConfig.js";
 import { enqueueJob } from "../enqueue.js";
+import {
+  FxTwitterClient,
+  FxTwitterError,
+} from "../fxTwitter/fxTwitterClient.js";
+import type { APITwitterStatus, APIUser } from "../fxTwitter/types.js";
+import type { UserData } from "../TwitterClient/types.js";
+
+const fxClient = new FxTwitterClient({ timeoutMs: 20_000 });
 
 /** Env defaults — overridden at runtime by settings (admin Early Monitor). */
 const ENV_BATCH = Math.min(100, Math.max(10, Number(process.env.EARLY_POLL_BATCH ?? 100)));
@@ -234,7 +246,10 @@ export async function resolveEarlyPollConfig(): Promise<EarlyPollRuntimeConfig> 
   };
 }
 
-/** Claim one getUserTweets slot under the 15m budget. */
+/**
+ * Legacy 15m tweet-request budget (UserTweets era).
+ * Kept for settings/metrics; timeline fetches now use FxTwitter (no auth budget).
+ */
 export async function claimTweetRequest(
   budget: number,
 ): Promise<{ ok: true } | { ok: false; waitMs: number; used: number; budget: number }> {
@@ -304,24 +319,10 @@ function toId(id: string): bigint {
     return 0n;
   }
 }
-
-function postedAt(tweet: TweetData): Date | null {
-  if (!tweet.createdAt) return null;
-  const d = new Date(tweet.createdAt);
+function postedAt(tweet: APITwitterStatus): Date | null {
+  if (!tweet.created_at) return null;
+  const d = new Date(tweet.created_at);
   return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function maxTweetId(tweets: TweetData[]): string | null {
-  let max: bigint | undefined;
-  let maxStr: string | null = null;
-  for (const t of tweets) {
-    const n = toId(t.id);
-    if (max === undefined || n > max) {
-      max = n;
-      maxStr = t.id;
-    }
-  }
-  return maxStr;
 }
 
 function normBio(s: string | null | undefined): string {
@@ -464,11 +465,11 @@ export type EarlyPollResult = {
   errors: number;
   usersByIdsReqs: number;
   /**
-   * First-time lastTweetId seed (no alerts by design — avoids backlog flood).
-   * Next poll only alerts on tweets newer than this watermark.
+   * First-time fxCursor seed (no alerts by design — avoids backlog flood).
+   * Next poll only alerts on tweets returned by cursor.top pagination.
    */
   watermarkSeeded: number;
-  /** Tweets with id > lastTweetId that were examined this run. */
+  /** Tweets returned by a cursor poll (newer than stored fxCursor) this run. */
   freshTweets: number;
   /** Fresh tweets that matched no signal and raw path was off / skipped. */
   noAlert: number;
@@ -510,7 +511,7 @@ export async function deleteUnavailableAccount(
   }
 }
 
-/** True when getUserTweets / GraphQL error means the user is gone. */
+/** True when getUserTweets / GraphQL / FxTwitter error means the user is gone. */
 export function isUserGoneError(msg: string): boolean {
   const m = msg.toLowerCase();
   return (
@@ -522,6 +523,8 @@ export function isUserGoneError(msg: string): boolean {
     m.includes("user has been suspended") ||
     m.includes("account does not exist") ||
     m.includes("not found.") ||
+    m.includes("suspended") ||
+    m.includes("does not exist") ||
     (m.includes("authorization") && m.includes("suspended"))
   );
 }
@@ -655,14 +658,14 @@ export function earlyPoolWhereFromConfig(cfg: EarlyPollRuntimeConfig) {
 /** Returns { wrote, jump } — jump = 2x or +500 followers since previous DB value. */
 async function maybeSnapshot(
   accountId: string,
-  u: UserData,
+  u: APIUser,
   prevFollowers: number | null | undefined,
   snapshotMinMs: number,
 ): Promise<{ wrote: boolean; jump: boolean }> {
-  const followers = u.followersCount ?? null;
+  const followers = u.followers ?? null;
   const last = await prisma.accountMetricSnapshot.findFirst({
     where: { accountId },
-    orderBy: { recordedAt: "desc" },
+    orderBy: { recordedAt: "desc" }, 
     select: { recordedAt: true, followersCount: true },
   });
 
@@ -687,8 +690,8 @@ async function maybeSnapshot(
     data: {
       accountId,
       followersCount: followers,
-      followingCount: u.followingCount ?? null,
-      tweetCount: u.tweetCount ?? null,
+      followingCount: u.following ?? null,
+      tweetCount: u.statuses ?? null,
       source: "poll",
     },
   });
@@ -702,6 +705,27 @@ async function maybeSnapshot(
   return { wrote: true, jump };
 }
 
+/** Adapt the authenticated profile response to the shared FxTwitter user shape. */
+function toFxUser(u: UserData): APIUser {
+  return {
+    type: "profile",
+    id: u.id,
+    name: u.name,
+    screen_name: u.username,
+    description: u.description ?? "",
+    raw_description: { text: u.description ?? "", facets: [] },
+    location: u.location ?? "",
+    url: "",
+    protected: false,
+    followers: u.followersCount ?? 0,
+    following: u.followingCount ?? 0,
+    statuses: u.tweetCount ?? 0,
+    media_count: 0,
+    likes: u.likeCount ?? 0,
+    joined: u.createdAt ?? "",
+  };
+}
+
 async function resolveSignalThread(
   slug: string,
   cfg: EarlyPollRuntimeConfig,
@@ -710,19 +734,28 @@ async function resolveSignalThread(
   return topicForSlug(slug);
 }
 
+/**
+ * Fetch new tweets via FxTwitter getProfileStatuses + cursor.top pagination.
+ *
+ * No lastTweetId: the stored fxCursor is the sole watermark.
+ *   - No fxCursor → seed: latest page, store cursor.top, no alerts (avoid backlog).
+ *   - Has fxCursor → request with that cursor; empty page = nothing newer;
+ *     non-empty page = only new posts above the previous top.
+ * Persist response cursor.top → TwitterAccount.fxCursor when results non-empty.
+ */
 async function processNewTweets(opts: {
   accountId: string;
   username: string;
   name: string;
   tags: string[];
-  lastTweetId: string | null;
-  client: Awaited<ReturnType<typeof getTwitterClient>>["client"];
-  authAccountId: bigint;
+  /** Prior FxTwitter timeline cursor.top (request cursor for new-only pages). */
+  fxCursor: string | null;
   cfg: EarlyPollRuntimeConfig;
 }): Promise<{
   signalAlerts: number;
   rawAlerts: number;
-  newestId: string | null;
+  /** New cursor.top to store when results were non-empty; null = leave unchanged. */
+  fxCursor: string | null;
   rateLimited: boolean;
   rateLimitWaitMs?: number;
   deleted?: boolean;
@@ -731,70 +764,92 @@ async function processNewTweets(opts: {
   noAlert?: number;
   reason?: string;
 }> {
-  const claim = await claimTweetRequest(opts.cfg.tweetReqBudget);
-  if (!claim.ok) {
-    return {
-      signalAlerts: 0,
-      rawAlerts: 0,
-      newestId: opts.lastTweetId,
-      rateLimited: true,
-      rateLimitWaitMs: claim.waitMs,
-      reason: "tweet_budget",
-    };
-  }
-
-  const res = await opts.client.getUserTweets(opts.accountId, 20);
-  if (res.rateLimit && res.rateLimit.remaining === 0) {
-    await markRateLimited(opts.authAccountId, res.rateLimit.reset);
-    const resetMs =
-      res.rateLimit.reset != null
-        ? Math.max(5_000, res.rateLimit.reset * 1000 - Date.now() + 2_000)
-        : TWEET_WINDOW_MS;
-    return {
-      signalAlerts: 0,
-      rawAlerts: 0,
-      newestId: opts.lastTweetId,
-      rateLimited: true,
-      rateLimitWaitMs: resetMs,
-      reason: "rate_limited",
-    };
-  }
-  if (!res.success) {
-    const msg = res.error ?? "getUserTweets failed";
-    if (isTwitterAuthError(msg)) await markAuthInvalid(opts.authAccountId, msg);
-    if (isUserGoneError(msg)) {
-      await deleteUnavailableAccount(opts.accountId, `tweets: ${msg}`);
+  // Prefer rest-id handle so renames do not break timeline polling.
+  const handle = `id:${opts.accountId}`;
+  const isSeed = !opts.fxCursor;
+  let res;
+  try {
+    res = await fxClient.getProfileStatuses(handle, {
+      count: 20,
+      ...(opts.fxCursor ? { cursor: opts.fxCursor } : {}),
+    });
+  } catch (err) {
+    if (err instanceof FxTwitterError) {
+      if (err.status === 429) {
+        return {
+          signalAlerts: 0,
+          rawAlerts: 0,
+          fxCursor: null,
+          rateLimited: true,
+          rateLimitWaitMs: TWEET_WINDOW_MS,
+          reason: "rate_limited",
+        };
+      }
+      const msg = err.message ?? `FxTwitter HTTP ${err.status}`;
+      if (err.status === 404 || isUserGoneError(msg)) {
+        await deleteUnavailableAccount(opts.accountId, `fxtwitter: ${msg}`);
+        return {
+          signalAlerts: 0,
+          rawAlerts: 0,
+          fxCursor: null,
+          rateLimited: false,
+          deleted: true,
+          reason: "user_gone",
+        };
+      }
+      console.warn(`[early-poll] fxtwitter @${opts.username}: ${msg}`);
       return {
         signalAlerts: 0,
         rawAlerts: 0,
-        newestId: opts.lastTweetId,
+        fxCursor: null,
         rateLimited: false,
-        deleted: true,
-        reason: "user_gone",
+        reason: "tweets_failed",
       };
     }
-    console.warn(`[early-poll] tweets @${opts.username}: ${msg}`);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[early-poll] fxtwitter @${opts.username}: ${msg}`);
     return {
       signalAlerts: 0,
       rawAlerts: 0,
-      newestId: opts.lastTweetId,
+      fxCursor: null,
       rateLimited: false,
       reason: "tweets_failed",
     };
   }
 
-  const tweets = res.tweets ?? [];
-  const newest = maxTweetId(tweets);
+  // 204 No Content (e.g. since + nothing newer) → treat as empty.
+  if (res == null) {
+    return {
+      signalAlerts: 0,
+      rawAlerts: 0,
+      fxCursor: null,
+      rateLimited: false,
+      freshTweets: 0,
+      reason: "no_fresh",
+    };
+  }
 
-  // First seed: set watermark only (no backlog flood of old posts).
-  if (!opts.lastTweetId) {
+  const statuses = (res.results ?? []).filter(
+    (r): r is APITwitterStatus =>
+      r != null && typeof r === "object" && (r as APITwitterStatus).type === "status",
+  );
+  // Only advance fxCursor when the page actually returned statuses (incl. retweets).
+  const nextFxCursor =
+    statuses.length > 0 && res.cursor?.top ? res.cursor.top : null;
+
+  // Original posts only for alerts: reposted_by == null → author original, not a retweet.
+  const originalStatuses = statuses.filter((s) => s.reposted_by == null,);
+  const skippedReposts = statuses.length - originalStatuses.length;
+
+  // First seed: store cursor.top only (no backlog flood of old posts).
+  if (isSeed) {
     console.log(
-      `[early-poll] @${opts.username}: first timeline seed watermark=${newest ?? "none"} tweets=${tweets.length} (no alerts until next new post)`,
+      `[early-poll] @${opts.username}: first timeline seed statuses=${statuses.length} originals=${originalStatuses.length} fxCursor=${nextFxCursor ? "set" : "none"} (no alerts until next new post)`,
     );
     return {
       signalAlerts: 0,
       rawAlerts: 0,
-      newestId: newest ?? opts.lastTweetId,
+      fxCursor: nextFxCursor,
       rateLimited: false,
       watermarkSeeded: true,
       freshTweets: 0,
@@ -802,24 +857,40 @@ async function processNewTweets(opts: {
     };
   }
 
-  const cutoff = toId(opts.lastTweetId);
-  const fresh = tweets
-    .filter((t) => toId(t.id) > cutoff)
-    .sort((a, b) => (toId(a.id) < toId(b.id) ? -1 : 1));
-
-  if (fresh.length === 0) {
+  // Cursor poll: empty page means nothing newer than stored fxCursor.
+  if (statuses.length === 0) {
     console.log(
-      `[early-poll] @${opts.username}: no fresh tweets above watermark ${opts.lastTweetId} (api returned ${tweets.length})`,
+      `[early-poll] @${opts.username}: no fresh tweets above fxCursor`,
     );
     return {
       signalAlerts: 0,
       rawAlerts: 0,
-      newestId: opts.lastTweetId,
+      fxCursor: null,
       rateLimited: false,
       freshTweets: 0,
       reason: "no_fresh",
     };
   }
+
+  // Page had only retweets — still advance cursor so we do not re-fetch them.
+  if (originalStatuses.length === 0) {
+    console.log(
+      `[early-poll] @${opts.username}: skipped ${skippedReposts} retweet(s), no original posts to alert`,
+    );
+    return {
+      signalAlerts: 0,
+      rawAlerts: 0,
+      fxCursor: nextFxCursor,
+      rateLimited: false,
+      freshTweets: 0,
+      reason: "reposts_only",
+    };
+  }
+
+  // Cursor returned only posts newer than previous top — originals, oldest first.
+  const fresh = originalStatuses.sort((a, b) =>
+    toId(a.id) < toId(b.id) ? -1 : 1,
+  );
 
   let signalAlerts = 0;
   let rawAlerts = 0;
@@ -845,16 +916,14 @@ async function processNewTweets(opts: {
   }
 
   console.log(
-    `[early-poll] @${opts.username}: fresh=${fresh.length} signals=${signalAlerts} raw=${rawAlerts} noAlert=${noAlert}` +
+    `[early-poll] @${opts.username}: fresh=${fresh.length} skippedReposts=${skippedReposts} signals=${signalAlerts} raw=${rawAlerts} noAlert=${noAlert}` +
       (opts.cfg.sendRawPosts ? "" : " (raw posts OFF)"),
   );
 
-  const advanced =
-    newest && toId(newest) > cutoff ? newest : opts.lastTweetId;
   return {
     signalAlerts,
     rawAlerts,
-    newestId: advanced,
+    fxCursor: nextFxCursor,
     rateLimited: false,
     freshTweets: fresh.length,
     noAlert,
@@ -867,13 +936,27 @@ async function processNewTweets(opts: {
   };
 }
 
+/** Persist fxCursor after a successful timeline fetch (when advanced). */
+async function persistTimelineCursor(
+  accountId: string,
+  nextFxCursor: string | null,
+  prevFxCursor: string | null,
+): Promise<void> {
+  if (!nextFxCursor || nextFxCursor === prevFxCursor) return;
+  await prisma.twitterAccount.update({
+    where: { id: accountId },
+    data: { fxCursor: nextFxCursor },
+  });
+}
+
+
 async function handleProjectTweet(opts: {
   accountId: string;
   username: string;
   name: string;
   tagSlugs: string[];
   primaryTag: string | null;
-  tweet: TweetData;
+  tweet: APITwitterStatus;
   cfg: EarlyPollRuntimeConfig;
 }): Promise<"signal" | "raw" | false> {
   const seen = await prisma.postAlert.findUnique({
@@ -1009,15 +1092,14 @@ async function handleProjectTweet(opts: {
 }
 
 /**
- * Queue getUserTweets for one early account (deduped by jobId).
- * Used when tweetCount rises — respects UserTweets ~50/15m via claimTweetRequest.
+ * Queue FxTwitter timeline fetch for one early account (deduped by jobId).
+ * Used when tweetCount rises or fxCursor is missing (seed).
  */
 export async function enqueueEarlyTimeline(need: {
   accountId: string;
   username: string;
   name: string;
   tags: string[];
-  lastTweetId: string | null;
   delayMs?: number;
 }): Promise<{ jobId?: string; deduped?: boolean }> {
   const r = await enqueueJob(
@@ -1027,7 +1109,6 @@ export async function enqueueEarlyTimeline(need: {
       username: need.username,
       name: need.name,
       tags: need.tags,
-      lastTweetId: need.lastTweetId,
     },
     {
       // BullMQ custom jobId cannot contain ":"
@@ -1044,15 +1125,14 @@ export async function enqueueEarlyTimeline(need: {
 }
 
 /**
- * Worker: process one early-timeline job (getUserTweets + signal/raw alerts).
- * Re-queues with delay when rate budget is exhausted.
+ * Worker: process one early-timeline job (FxTwitter statuses + signal/raw alerts).
+ * Re-queues with delay when FxTwitter rate-limits (429).
  */
 export async function processEarlyTimelineJob(data: {
   accountId: string;
   username?: string;
   name?: string;
   tags?: string[];
-  lastTweetId?: string | null;
 }): Promise<{
   ok: boolean;
   signalAlerts: number;
@@ -1073,26 +1153,12 @@ export async function processEarlyTimelineJob(data: {
     return { ok: true, signalAlerts: 0, rawAlerts: 0, skipped: "not_early" };
   }
 
-  let client;
-  let authAccountId: bigint;
-  try {
-    const resolved = await getTwitterClient();
-    client = resolved.client;
-    authAccountId = resolved.accountId;
-  } catch (err) {
-    console.error("[early-timeline] no twitter client:", err);
-    return { ok: false, signalAlerts: 0, rawAlerts: 0, skipped: "no_client" };
-  }
-
   const r = await processNewTweets({
     accountId: account.id,
     username: data.username ?? account.username,
     name: data.name ?? account.name,
     tags: data.tags ?? account.tags,
-    lastTweetId:
-      data.lastTweetId !== undefined ? data.lastTweetId : account.lastTweetId,
-    client,
-    authAccountId,
+    fxCursor: account.fxCursor,
     cfg,
   });
 
@@ -1103,7 +1169,6 @@ export async function processEarlyTimelineJob(data: {
       username: account.username,
       name: account.name,
       tags: account.tags,
-      lastTweetId: account.lastTweetId,
       delayMs,
     });
     return {
@@ -1124,12 +1189,7 @@ export async function processEarlyTimelineJob(data: {
     };
   }
 
-  if (r.newestId && r.newestId !== account.lastTweetId) {
-    await prisma.twitterAccount.update({
-      where: { id: account.id },
-      data: { lastTweetId: r.newestId },
-    });
-  }
+  await persistTimelineCursor(account.id, r.fxCursor, account.fxCursor);
 
   if (cfg.delayMs > 0) await sleep(cfg.delayMs);
 
@@ -1196,7 +1256,7 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
     username: string;
     name: string;
     tags: string[];
-    lastTweetId: string | null;
+    fxCursor: string | null;
   };
   const needTimeline: TimelineNeed[] = [];
 
@@ -1271,12 +1331,18 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
       }
 
       const prevCount = db.tweetCount;
+      // Seed when no fxCursor yet; otherwise only when tweetCount rose.
       const needsTweets =
-        !db.lastTweetId ||
+        !db.fxCursor ||
         prevCount == null ||
         (liveTweets != null && prevCount != null && liveTweets > prevCount);
 
-      const snap = await maybeSnapshot(id, u, db.followersCount, cfg.snapshotMinMs);
+      const snap = await maybeSnapshot(
+        id,
+        toFxUser(u),
+        db.followersCount,
+        cfg.snapshotMinMs,
+      );
       if (snap.wrote) result.snapshots++;
       if (snap.jump) result.followerJumps++;
 
@@ -1352,7 +1418,7 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
           username: liveUsername,
           name: liveName,
           tags,
-          lastTweetId: db.lastTweetId,
+          fxCursor: db.fxCursor,
         });
       }
     }
@@ -1360,12 +1426,10 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
     if (cfg.delayMs > 0) await sleep(Math.min(cfg.delayMs, 250));
   }
 
-  // Phase 2 — timeline fetches
-  // getUserTweets ≈ 50 req / 15 min. Large pools always use the queue so we
-  // never burn the whole budget inside one hourly poll.
-  // Inline: up to maxTimelines (default 40) when queue is quiet / small backlog.
+  // Phase 2 — FxTwitter timeline fetches (getProfileStatuses).
+  // Inline: up to maxTimelines when backlog is small.
   // Rest: early-timeline jobs (deduped per accountId), drained by list-worker.
-  const INLINE_CAP = Math.min(cfg.maxTimelines, cfg.tweetReqBudget);
+  const INLINE_CAP = cfg.maxTimelines;
   const useQueueForAll =
     needTimeline.length > INLINE_CAP || result.candidates >= 1000;
 
@@ -1383,20 +1447,17 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
           username: need.username,
           name: need.name,
           tags: need.tags,
-          lastTweetId: need.lastTweetId,
-          client,
-          authAccountId,
+          fxCursor: need.fxCursor,
           cfg,
         });
         if (r.rateLimited) {
-          // Budget hit mid-cycle — queue remainder including this one
+          // FxTwitter 429 mid-cycle — queue remainder including this one
           inlineLeft = 0;
           await enqueueEarlyTimeline({
             accountId: need.id,
             username: need.username,
             name: need.name,
             tags: need.tags,
-            lastTweetId: need.lastTweetId,
             delayMs: r.rateLimitWaitMs ?? TWEET_WINDOW_MS,
           });
           result.timelinesQueued++;
@@ -1408,7 +1469,6 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
               username: n.username,
               name: n.name,
               tags: n.tags,
-              lastTweetId: n.lastTweetId,
             });
             result.timelinesQueued++;
           }
@@ -1419,12 +1479,7 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
         if (r.watermarkSeeded) result.watermarkSeeded++;
         result.freshTweets += r.freshTweets ?? 0;
         result.noAlert += r.noAlert ?? 0;
-        if (r.newestId) {
-          await prisma.twitterAccount.update({
-            where: { id: need.id },
-            data: { lastTweetId: r.newestId },
-          });
-        }
+        await persistTimelineCursor(need.id, r.fxCursor, need.fxCursor);
       } catch (err) {
         result.errors++;
         console.error(`[early-poll] timeline @${need.username}:`, err);
@@ -1440,7 +1495,6 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
         username: need.username,
         name: need.name,
         tags: need.tags,
-        lastTweetId: need.lastTweetId,
       });
       if (!q.deduped) result.timelinesQueued++;
       else result.timelinesQueued++; // count attempted enqueue for visibility
@@ -1449,27 +1503,5 @@ export async function pollEarlyProjects(): Promise<EarlyPollResult> {
       console.error(`[early-poll] queue timeline @${need.username}:`, err);
     }
   }
-
-  console.log(
-    `[early-poll] candidates=${result.candidates} checked=${result.checked} ` +
-      `renames=${result.renames} bio=${result.bioChanges} jumps=${result.followerJumps} ` +
-      `timelines=${result.timelines} queued=${result.timelinesQueued} ` +
-      `signals=${result.signalAlerts} raw=${result.rawAlerts} ` +
-      `seeded=${result.watermarkSeeded} fresh=${result.freshTweets} noAlert=${result.noAlert} ` +
-      `snaps=${result.snapshots} missing=${result.missing} deleted=${result.deleted} ` +
-      `errors=${result.errors} usersByIds=${result.usersByIdsReqs}` +
-      (result.timelines > 0 &&
-      result.signalAlerts === 0 &&
-      result.rawAlerts === 0
-        ? result.watermarkSeeded === result.timelines
-          ? " | note: all timelines were first-seed watermarks (alerts start on next new posts)"
-          : result.freshTweets === 0
-            ? " | note: no tweets newer than lastTweetId watermark"
-            : !cfg.sendRawPosts
-              ? " | note: fresh tweets had no signal match and sendRawPosts is OFF"
-              : " | note: fresh tweets skipped (already seen or filtered)"
-        : ""),
-  );
-
   return result;
 }

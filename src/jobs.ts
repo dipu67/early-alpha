@@ -125,8 +125,8 @@ export const JOBS = {
     existing: true,
   }),
   /**
-   * Per-account getUserTweets for early pool (rate-limited ~50/15m).
-   * Enqueued by poll-early-projects when tweetCount rises.
+   * Per-account FxTwitter timeline for early pool (cursor.top pagination).
+   * Enqueued by poll-early-projects when tweetCount rises or fxCursor is missing.
    */
   "early-timeline": def({
     queue: "list-tracker",
@@ -137,7 +137,6 @@ export const JOBS = {
         username: z.string().optional(),
         name: z.string().optional(),
         tags: z.array(z.string()).optional(),
-        lastTweetId: z.string().nullable().optional(),
       })
       .strict(),
     existing: true,

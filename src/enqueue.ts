@@ -48,7 +48,7 @@ export async function enqueueJob(
       const existingJob = await queue.getJob(opts.jobId).catch(() => null);
       if (existingJob) {
         const state = await existingJob.getState().catch(() => "unknown");
-        // Refresh payload if waiting/delayed so newest lastTweetId wins
+        // Refresh payload if waiting/delayed so newest job data wins
         if (state === "waiting" || state === "delayed") {
           await existingJob.updateData(data).catch(() => undefined);
           if (opts.delay != null && opts.delay > 0) {

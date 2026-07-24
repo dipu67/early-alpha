@@ -146,7 +146,6 @@ const worker = new Worker(
         username?: string;
         name?: string;
         tags?: string[];
-        lastTweetId?: string | null;
       };
       const r = await processEarlyTimelineJob(data);
       console.log(

@@ -2841,7 +2841,7 @@ export const TwitterAccountScalarFieldEnum = {
   huntNote: 'huntNote',
   huntUpdatedAt: 'huntUpdatedAt',
   lastProfilePolledAt: 'lastProfilePolledAt',
-  lastTweetId: 'lastTweetId',
+  fxCursor: 'fxCursor',
   previousUsername: 'previousUsername',
   usernameChangedAt: 'usernameChangedAt',
   followersAtDetect: 'followersAtDetect'

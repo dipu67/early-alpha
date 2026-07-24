@@ -82,8 +82,8 @@ model TwitterAccount {
 
   /// Early-project profile poller (usersByIds) watermark
   lastProfilePolledAt DateTime? @map("last_profile_polled_at") @db.Timestamptz
-  /// Snowflake watermark for new tweets discovered via tweetCount delta
-  lastTweetId         String?   @map("last_tweet_id")
+  /// FxTwitter getProfileStatuses cursor.top (updated when timeline results non-empty)
+  fxCursor            String?   @map("fxtwitter_cursor")
   /// Prior handle when rename detected
   previousUsername    String?   @map("previous_username")
   usernameChangedAt   DateTime? @map("username_changed_at") @db.Timestamptz

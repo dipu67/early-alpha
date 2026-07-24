@@ -40,7 +40,6 @@ const GRAPHQL_API_X = "https://api.x.com/graphql";
 const REST_BASE = "https://x.com/i/api/1.1";
 const BEARER_TOKEN =
   "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
-
 /** Path string for generateTransactionId — must match host layout, not necessarily URL origin. */
 function graphqlTransactionPath(
   style: "i-api" | "api-x",
@@ -116,7 +115,11 @@ async function fetchXDocumentForTx(
     cookie: `auth_token=${authToken}; ct0=${ct0}`,
   };
 
-  const urls = ["https://x.com/home", "https://x.com/", "https://x.com/explore"];
+  const urls = [
+    "https://x.com/home",
+    "https://x.com/",
+    "https://x.com/explore",
+  ];
   let lastErr: Error | undefined;
 
   for (const url of urls) {
@@ -609,7 +612,9 @@ export class TwitterClient {
     const tweet =
       result.tweet ??
       result.tweet_results?.result ??
-      (result.__typename === "TweetWithVisibilityResults" ? result.tweet : result);
+      (result.__typename === "TweetWithVisibilityResults"
+        ? result.tweet
+        : result);
     const node = tweet?.legacy ? tweet : result;
     const legacy = node.legacy;
     if (!legacy?.full_text) return undefined;
@@ -635,7 +640,9 @@ export class TwitterClient {
 
   /** Bottom (or next) cursor from URT instructions, if present. */
   // biome-ignore lint/suspicious/noExplicitAny: timeline instructions
-  private parseBottomCursor(instructions: any[] | undefined): string | undefined {
+  private parseBottomCursor(
+    instructions: any[] | undefined,
+  ): string | undefined {
     for (const instruction of instructions ?? []) {
       const entries = instruction.entries ?? instruction.addEntries?.entries;
       for (const entry of entries ?? []) {
@@ -658,7 +665,8 @@ export class TwitterClient {
       const bottom = instruction.entries?.find(
         // biome-ignore lint/suspicious/noExplicitAny: entry
         (e: any) =>
-          typeof e.entryId === "string" && e.entryId.startsWith("cursor-bottom"),
+          typeof e.entryId === "string" &&
+          e.entryId.startsWith("cursor-bottom"),
       );
       const v = bottom?.content?.value;
       if (typeof v === "string") return v;
@@ -679,7 +687,10 @@ export class TwitterClient {
     ) {
       return undefined;
     }
-    if (result.reason && /suspended|deleted|not.?found|protected/i.test(String(result.reason))) {
+    if (
+      result.reason &&
+      /suspended|deleted|not.?found|protected/i.test(String(result.reason))
+    ) {
       // Still try map if legacy data present; else missing
       const sn = result.core?.screen_name ?? result.legacy?.screen_name;
       if (!sn) return undefined;
@@ -728,7 +739,8 @@ export class TwitterClient {
         // Skip cursor rows
         if (
           typeof entry.entryId === "string" &&
-          (entry.entryId.startsWith("cursor-") || entry.entryId.startsWith("cursor:"))
+          (entry.entryId.startsWith("cursor-") ||
+            entry.entryId.startsWith("cursor:"))
         ) {
           continue;
         }
