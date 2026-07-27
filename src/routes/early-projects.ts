@@ -141,7 +141,7 @@ const configPatchSchema = z.object({
   delayMs: z.number().int().min(0).max(10_000).optional(),
   staleMs: z.number().int().min(60_000).max(7 * 86400_000).optional(),
   snapshotMinMs: z.number().int().min(60_000).max(7 * 86400_000).optional(),
-  tweetReqBudget: z.number().int().min(5).max(50).optional(),
+  tweetReqBudget: z.number().int().min(5).max(1000).optional(),
   // Detection rules
   maxFollowers: z.number().int().min(100).max(5_000_000).optional(),
   maxFollowing: z.number().int().min(100).max(5_000_000).optional(),
@@ -272,7 +272,6 @@ earlyProjectsRouter.get(
           huntStage: true,
           firstSeenAt: true,
           lastProfilePolledAt: true,
-          lastTweetId: true,
           previousUsername: true,
           usernameChangedAt: true,
           description: true,

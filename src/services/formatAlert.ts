@@ -714,16 +714,20 @@ export function formatDailyDigest(
     if (shown >= MAX_ENTRIES) break;
 
     lines.push(
-      `*${escapeMarkdown(category)}* \\(${catEntries.length} new follows\\)`,
+      `*${escapeMarkdown(category)}* \\(${catEntries.length} new follows\\)`
     );
 
     for (const entry of catEntries) {
       if (shown >= MAX_ENTRIES) break;
+
       const bio = entry.targetBio
-        ? `, "${escapeMarkdown(truncate(entry.targetBio, 60))}"`
+        ? `, ${(truncate(entry.targetBio, 60))}`
         : "";
+
+      const followerText = `${formatNumber(entry.targetFollowerCount)} followers${bio}`;
+
       lines.push(
-        `@${escapeMarkdown(entry.seedUsername)} → @${escapeMarkdown(entry.targetUsername)} \\(${formatNumber(entry.targetFollowerCount)} followers${bio}\\)`,
+        `@${escapeMarkdown(entry.seedUsername)} → @${escapeMarkdown(entry.targetUsername)} ${escapeMarkdown(followerText)}`
       );
       shown++;
     }
@@ -731,7 +735,7 @@ export function formatDailyDigest(
   }
 
   if (entries.length > MAX_ENTRIES) {
-    lines.push(`\\.\\.\\.and ${entries.length - MAX_ENTRIES} more`);
+    lines.push(`... and ${entries.length - MAX_ENTRIES} more`);
     lines.push("");
   }
 
@@ -743,7 +747,7 @@ export function formatDailyDigest(
 // --- Helpers ---
 
 function escapeMarkdown(text: string): string {
-  return text.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
+  return text.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, '\\$&');
 }
 
 function formatNumber(n: number): string {

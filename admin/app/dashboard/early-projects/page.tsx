@@ -51,7 +51,7 @@ export default async function EarlyProjectsPage() {
             rawTopicId: null,
             profileChangeTopicId: null,
             sendRawPosts: false,
-            tweetReqBudget: 45,
+            tweetReqBudget: 980,
             pollEveryLabel: "1h",
           },
         }
@@ -69,7 +69,7 @@ export default async function EarlyProjectsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Early Monitor"
-        description="Early-only pool: detection rules (age/followers), usersByIds profiles, queued getUserTweets (~50/15m), signal + optional raw Telegram topics."
+        description="Early-only pool: detection rules (age/followers), usersByIds profiles, FxTwitter timelines (~1k/min), signal + optional raw Telegram topics."
       />
       {!statsRes.ok ? (
         <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">

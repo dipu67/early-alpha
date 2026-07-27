@@ -244,8 +244,8 @@ export function EarlyMonitorPanel({
       toast.error("Inline timelines must be 0–500");
       return;
     }
-    if (!Number.isFinite(trb) || trb < 5 || trb > 50) {
-      toast.error("Tweet budget must be 5–50 (Twitter ~50/15m)");
+    if (!Number.isFinite(trb) || trb < 5 || trb > 1000) {
+      toast.error("Tweet budget must be 5–1000 (fxTwitter ~1k/min)");
       return;
     }
     if (!Number.isFinite(d) || d < 0 || d > 10_000) {

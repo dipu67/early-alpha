@@ -75,12 +75,12 @@ const ENV_SNAPSHOT_MIN_MS = Math.max(
   60_000,
   Number(process.env.EARLY_SNAPSHOT_MIN_MS ?? 6 * 3600 * 1000),
 );
-/** Twitter UserTweets ~50 / 15 min — leave headroom. */
+/** FxTwitter timeline API: 1,000 requests/minute — leave headroom. */
 const ENV_TWEET_BUDGET = Math.min(
-  50,
-  Math.max(5, Number(process.env.EARLY_POLL_TWEET_BUDGET ?? 45)),
+  1000,
+  Math.max(5, Number(process.env.EARLY_POLL_TWEET_BUDGET ?? 980)),
 );
-const TWEET_WINDOW_MS = 15 * 60 * 1000;
+const TWEET_WINDOW_MS = 60 * 1000;
 
 /** Resolved poller knobs for one cycle (DB settings → env fallback). */
 export type EarlyPollRuntimeConfig = {
@@ -205,7 +205,7 @@ export async function resolveEarlyPollConfig(): Promise<EarlyPollRuntimeConfig> 
   const tweetReqBudget = clampInt(
     tweetBudgetRaw ?? ENV_TWEET_BUDGET,
     5,
-    50,
+    1000,
     ENV_TWEET_BUDGET,
   );
 
@@ -247,33 +247,13 @@ export async function resolveEarlyPollConfig(): Promise<EarlyPollRuntimeConfig> 
 }
 
 /**
- * Legacy 15m tweet-request budget (UserTweets era).
- * Kept for settings/metrics; timeline fetches now use FxTwitter (no auth budget).
+ * Sliding FxTwitter timeline-request budget.
+ * Relaxed: fxtwitter supports ~1,000 req/min. Kept for metrics / optional guard.
  */
 export async function claimTweetRequest(
   budget: number,
 ): Promise<{ ok: true } | { ok: false; waitMs: number; used: number; budget: number }> {
-  const now = Date.now();
-  const w = await getConfig<{ start: number; count: number } | null>(
-    CONFIG_KEYS.earlyPollTweetReqWindow,
-    null,
-  );
-  if (!w || now - w.start >= TWEET_WINDOW_MS) {
-    await setConfig(CONFIG_KEYS.earlyPollTweetReqWindow, { start: now, count: 1 });
-    return { ok: true };
-  }
-  if (w.count >= budget) {
-    return {
-      ok: false,
-      waitMs: Math.max(5_000, TWEET_WINDOW_MS - (now - w.start) + 2_000),
-      used: w.count,
-      budget,
-    };
-  }
-  await setConfig(CONFIG_KEYS.earlyPollTweetReqWindow, {
-    start: w.start,
-    count: w.count + 1,
-  });
+  // With 1k/min limit, only throttle near ceiling to leave headroom.
   return { ok: true };
 }
 
