@@ -627,9 +627,9 @@ export function formatGrowthReport(input: {
     // Username in URL path: only [A-Za-z0-9_] on X; escape display text only.
     const user = escapeMarkdown(r.username);
     lines.push(
-      `${i + 1}\\. [@${user}](https://x.com/${r.username})` +
-        ` \\+${escapeMarkdown(formatNumber(r.absGain))} \\(${escapeMarkdown(pct)}%\\)` +
-        `\n    ${escapeMarkdown(formatNumber(r.followersBefore))} → ${escapeMarkdown(formatNumber(r.followersNow))}` +
+      `${i + 1}\\. [@${user}](https://x\\.com/${r.username})` +
+        ` \\+${formatNumber(r.absGain)} \\(${escapeMarkdown(pct)}%\\)` +
+        `\n    ${formatNumber(r.followersBefore)} → ${formatNumber(r.followersNow)}` +
         escapeMarkdown(tagStr + stage),
     );
   });
@@ -702,13 +702,13 @@ export function formatDailyDigest(
 ): string {
   if (entries.length === 0) return "";
 
-  const lines: string[] = [
-    `📋 *Daily Follow Digest \\(${escapeMarkdown(date)}\\)*`,
+
+      const lines: string[] = [`📋 *Daily Follow Digest \\(${escapeMarkdown(date)}\\)*`,
     "",
   ];
 
   let shown = 0;
-  const MAX_ENTRIES = 50;
+  const MAX_ENTRIES = 30;
 
   for (const [category, catEntries] of categorizedEntries) {
     if (shown >= MAX_ENTRIES) break;
@@ -721,13 +721,17 @@ export function formatDailyDigest(
       if (shown >= MAX_ENTRIES) break;
 
       const bio = entry.targetBio
-        ? `, ${(truncate(entry.targetBio, 60))}`
+        ? `, ${escapeMarkdown(truncate(entry.targetBio, 30))}`
         : "";
 
-      const followerText = `${formatNumber(entry.targetFollowerCount)} followers${bio}`;
+      const followerText = `${escapeMarkdown(formatNumber(entry.targetFollowerCount))} followers${bio ? escapeMarkdown(bio) : ""}`;
 
+      // Use plain @username (no MarkdownV2 link brackets) — Telegram parser
+      // rejects ] inside link text even when escaped; plain text is safe.
+      const seedUser = `@${entry.seedUsername}`;
+      const targetUser = `@${entry.targetUsername}`;
       lines.push(
-        `@${escapeMarkdown(entry.seedUsername)} → @${escapeMarkdown(entry.targetUsername)} ${escapeMarkdown(followerText)}`
+        `${seedUser} → ${targetUser} ${followerText}`
       );
       shown++;
     }
@@ -735,7 +739,7 @@ export function formatDailyDigest(
   }
 
   if (entries.length > MAX_ENTRIES) {
-    lines.push(`... and ${entries.length - MAX_ENTRIES} more`);
+    lines.push(`\\.\\.\\. and ${entries.length - MAX_ENTRIES} more`);
     lines.push("");
   }
 
@@ -747,12 +751,16 @@ export function formatDailyDigest(
 // --- Helpers ---
 
 function escapeMarkdown(text: string): string {
-  return text.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, '\\$&');
+  // Telegram MarkdownV2: all of these are entity starters and must be
+  // backslash-escaped.  The previous regex was broken — a literal ]
+  // inside the character class closed it prematurely so almost nothing
+  // was escaped.
+  return text.replace(/[_*[\]()~`>#\+\-=|{}.!]/g, '\\$&');
 }
 
 function formatNumber(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\./g, "\\.")}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\./g, "\\.")}K`;
   return n.toString();
 }
 

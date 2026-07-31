@@ -240,6 +240,7 @@ export const SeedAccountScalarFieldEnum = {
   category: 'category',
   label: 'label',
   active: 'active',
+  followingCursor: 'followingCursor',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

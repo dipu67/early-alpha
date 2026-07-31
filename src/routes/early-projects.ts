@@ -331,6 +331,35 @@ earlyProjectsRouter.post(
   }),
 );
 
+earlyProjectsRouter.post(
+  "/remove-old",
+  asyncHandler(async (req, res) => {
+    const minAgeMonths =
+      z.coerce.number().int().min(1).optional().parse(req.query.minAgeMonths ?? req.body?.minAgeMonths) ?? 6;
+    const minAgeMs = minAgeMonths * 30 * 24 * 60 * 60 * 1000;
+    const cutoff = new Date(Date.now() - minAgeMs);
+
+    const oldIds = await prisma.twitterAccount.findMany({
+      where: { createdAt: { lte: cutoff } },
+      select: { id: true },
+    });
+    const ids = oldIds.map((r) => r.id);
+
+    if (ids.length === 0) {
+      res.json({ deleted: 0, message: "No accounts older than " + minAgeMonths + " months" });
+      return;
+    }
+
+    await prisma.$transaction([
+      prisma.followEdge.deleteMany({ where: { followingId: { in: ids } } }),
+      prisma.alert.deleteMany({ where: { followingId: { in: ids } } }),
+      prisma.twitterAccount.deleteMany({ where: { id: { in: ids } } }),
+    ]);
+
+    res.json({ deleted: ids.length, minAgeMonths });
+  }),
+);
+
 const growthReportBody = z.object({
   topicId: z.number().int().nullable().optional(),
 });

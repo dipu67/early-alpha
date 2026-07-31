@@ -90,6 +90,11 @@ export default async function ProjectsPage({
           missingBioCount={missingBioCount}
         />
         <FetchMissingBiosButton missingBioCount={missingBioCount} />
+        <form action="/api/proxy/api/early-projects/remove-old?minAgeMonths=6" method="POST" className="inline-block ml-auto">
+          <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-destructive bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/20">
+            🗑 Remove Old (&gt;6mo)
+          </button>
+        </form>
       </div>
 
       {!res.ok ? (

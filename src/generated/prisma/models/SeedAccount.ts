@@ -41,6 +41,7 @@ export type SeedAccountMinAggregateOutputType = {
   category: string | null
   label: string | null
   active: boolean | null
+  followingCursor: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -52,6 +53,7 @@ export type SeedAccountMaxAggregateOutputType = {
   category: string | null
   label: string | null
   active: boolean | null
+  followingCursor: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -63,6 +65,7 @@ export type SeedAccountCountAggregateOutputType = {
   category: number
   label: number
   active: number
+  followingCursor: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -84,6 +87,7 @@ export type SeedAccountMinAggregateInputType = {
   category?: true
   label?: true
   active?: true
+  followingCursor?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -95,6 +99,7 @@ export type SeedAccountMaxAggregateInputType = {
   category?: true
   label?: true
   active?: true
+  followingCursor?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -106,6 +111,7 @@ export type SeedAccountCountAggregateInputType = {
   category?: true
   label?: true
   active?: true
+  followingCursor?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -204,6 +210,7 @@ export type SeedAccountGroupByOutputType = {
   category: string
   label: string | null
   active: boolean
+  followingCursor: string | null
   createdAt: Date
   updatedAt: Date
   _count: SeedAccountCountAggregateOutputType | null
@@ -238,6 +245,7 @@ export type SeedAccountWhereInput = {
   category?: Prisma.StringFilter<"SeedAccount"> | string
   label?: Prisma.StringNullableFilter<"SeedAccount"> | string | null
   active?: Prisma.BoolFilter<"SeedAccount"> | boolean
+  followingCursor?: Prisma.StringNullableFilter<"SeedAccount"> | string | null
   createdAt?: Prisma.DateTimeFilter<"SeedAccount"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SeedAccount"> | Date | string
   followEdges?: Prisma.FollowEdgeListRelationFilter
@@ -250,6 +258,7 @@ export type SeedAccountOrderByWithRelationInput = {
   category?: Prisma.SortOrder
   label?: Prisma.SortOrderInput | Prisma.SortOrder
   active?: Prisma.SortOrder
+  followingCursor?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   followEdges?: Prisma.FollowEdgeOrderByRelationAggregateInput
@@ -265,6 +274,7 @@ export type SeedAccountWhereUniqueInput = Prisma.AtLeast<{
   category?: Prisma.StringFilter<"SeedAccount"> | string
   label?: Prisma.StringNullableFilter<"SeedAccount"> | string | null
   active?: Prisma.BoolFilter<"SeedAccount"> | boolean
+  followingCursor?: Prisma.StringNullableFilter<"SeedAccount"> | string | null
   createdAt?: Prisma.DateTimeFilter<"SeedAccount"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SeedAccount"> | Date | string
   followEdges?: Prisma.FollowEdgeListRelationFilter
@@ -277,6 +287,7 @@ export type SeedAccountOrderByWithAggregationInput = {
   category?: Prisma.SortOrder
   label?: Prisma.SortOrderInput | Prisma.SortOrder
   active?: Prisma.SortOrder
+  followingCursor?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.SeedAccountCountOrderByAggregateInput
@@ -296,6 +307,7 @@ export type SeedAccountScalarWhereWithAggregatesInput = {
   category?: Prisma.StringWithAggregatesFilter<"SeedAccount"> | string
   label?: Prisma.StringNullableWithAggregatesFilter<"SeedAccount"> | string | null
   active?: Prisma.BoolWithAggregatesFilter<"SeedAccount"> | boolean
+  followingCursor?: Prisma.StringNullableWithAggregatesFilter<"SeedAccount"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SeedAccount"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SeedAccount"> | Date | string
 }
@@ -307,6 +319,7 @@ export type SeedAccountCreateInput = {
   category: string
   label?: string | null
   active?: boolean
+  followingCursor?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   followEdges?: Prisma.FollowEdgeCreateNestedManyWithoutSeedInput
@@ -319,6 +332,7 @@ export type SeedAccountUncheckedCreateInput = {
   category: string
   label?: string | null
   active?: boolean
+  followingCursor?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   followEdges?: Prisma.FollowEdgeUncheckedCreateNestedManyWithoutSeedInput
@@ -331,6 +345,7 @@ export type SeedAccountUpdateInput = {
   category?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  followingCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   followEdges?: Prisma.FollowEdgeUpdateManyWithoutSeedNestedInput
@@ -343,6 +358,7 @@ export type SeedAccountUncheckedUpdateInput = {
   category?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  followingCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   followEdges?: Prisma.FollowEdgeUncheckedUpdateManyWithoutSeedNestedInput
@@ -355,6 +371,7 @@ export type SeedAccountCreateManyInput = {
   category: string
   label?: string | null
   active?: boolean
+  followingCursor?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -366,6 +383,7 @@ export type SeedAccountUpdateManyMutationInput = {
   category?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  followingCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -377,6 +395,7 @@ export type SeedAccountUncheckedUpdateManyInput = {
   category?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  followingCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -388,6 +407,7 @@ export type SeedAccountCountOrderByAggregateInput = {
   category?: Prisma.SortOrder
   label?: Prisma.SortOrder
   active?: Prisma.SortOrder
+  followingCursor?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -403,6 +423,7 @@ export type SeedAccountMaxOrderByAggregateInput = {
   category?: Prisma.SortOrder
   label?: Prisma.SortOrder
   active?: Prisma.SortOrder
+  followingCursor?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -414,6 +435,7 @@ export type SeedAccountMinOrderByAggregateInput = {
   category?: Prisma.SortOrder
   label?: Prisma.SortOrder
   active?: Prisma.SortOrder
+  followingCursor?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -448,6 +470,7 @@ export type SeedAccountCreateWithoutFollowEdgesInput = {
   category: string
   label?: string | null
   active?: boolean
+  followingCursor?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -459,6 +482,7 @@ export type SeedAccountUncheckedCreateWithoutFollowEdgesInput = {
   category: string
   label?: string | null
   active?: boolean
+  followingCursor?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -486,6 +510,7 @@ export type SeedAccountUpdateWithoutFollowEdgesInput = {
   category?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  followingCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -497,6 +522,7 @@ export type SeedAccountUncheckedUpdateWithoutFollowEdgesInput = {
   category?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  followingCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -539,6 +565,7 @@ export type SeedAccountSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   category?: boolean
   label?: boolean
   active?: boolean
+  followingCursor?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   followEdges?: boolean | Prisma.SeedAccount$followEdgesArgs<ExtArgs>
@@ -552,6 +579,7 @@ export type SeedAccountSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   category?: boolean
   label?: boolean
   active?: boolean
+  followingCursor?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["seedAccount"]>
@@ -563,6 +591,7 @@ export type SeedAccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   category?: boolean
   label?: boolean
   active?: boolean
+  followingCursor?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["seedAccount"]>
@@ -574,11 +603,12 @@ export type SeedAccountSelectScalar = {
   category?: boolean
   label?: boolean
   active?: boolean
+  followingCursor?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type SeedAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "twitterId" | "username" | "category" | "label" | "active" | "createdAt" | "updatedAt", ExtArgs["result"]["seedAccount"]>
+export type SeedAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "twitterId" | "username" | "category" | "label" | "active" | "followingCursor" | "createdAt" | "updatedAt", ExtArgs["result"]["seedAccount"]>
 export type SeedAccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   followEdges?: boolean | Prisma.SeedAccount$followEdgesArgs<ExtArgs>
   _count?: boolean | Prisma.SeedAccountCountOutputTypeDefaultArgs<ExtArgs>
@@ -598,6 +628,7 @@ export type $SeedAccountPayload<ExtArgs extends runtime.Types.Extensions.Interna
     category: string
     label: string | null
     active: boolean
+    followingCursor: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["seedAccount"]>
@@ -1030,6 +1061,7 @@ export interface SeedAccountFieldRefs {
   readonly category: Prisma.FieldRef<"SeedAccount", 'String'>
   readonly label: Prisma.FieldRef<"SeedAccount", 'String'>
   readonly active: Prisma.FieldRef<"SeedAccount", 'Boolean'>
+  readonly followingCursor: Prisma.FieldRef<"SeedAccount", 'String'>
   readonly createdAt: Prisma.FieldRef<"SeedAccount", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"SeedAccount", 'DateTime'>
 }

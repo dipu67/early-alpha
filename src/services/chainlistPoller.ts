@@ -78,17 +78,17 @@ const RPC_TIMEOUT_MS = Number(process.env.CHAINLIST_RPC_TIMEOUT_MS ?? 4_000);
 
 const DEFAULT_SNAPSHOT = path.join(
   process.cwd(),
-  "data",
+  "src/data",
   "chainlist-snapshot.json",
 );
 const DEFAULT_GITHUB_SNAPSHOT = path.join(
   process.cwd(),
-  "data",
+  "src/data",
   "chainlist-github-snapshot.json",
 );
 const DEFAULT_DISCOVERIES = path.join(
   process.cwd(),
-  "data",
+  "src/data",
   "chainlist-discoveries.json",
 );
 

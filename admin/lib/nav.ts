@@ -17,6 +17,7 @@ import {
   Github,
   Sprout,
   Activity,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "./rbac";
@@ -70,4 +71,5 @@ export const SEGMENT_LABELS: Record<string, string> = {
   grok: "Grok",
   backup: "Backup",
   settings: "Settings",
+  "remove-old": "Remove Old",
 };

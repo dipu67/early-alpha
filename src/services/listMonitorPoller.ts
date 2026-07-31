@@ -13,6 +13,14 @@ import { getTwitterClientById, markRateLimited } from "../twitter/getClient.js";
 import type { TweetData } from "../TwitterClient/types.js";
 import { formatListMonitorAlert } from "./formatAlert.js";
 import { sendTelegramAlert, isAlertEnabled } from "../tg/sendAlert.js";
+import {
+  postedAt,
+  toSnowflake,
+  maxSnowflake,
+  filterNewerThan,
+  isDuplicateKeyError,
+  nextWatermark,
+} from "./pollerCore.js";
 
 const TWEETS_PER_POLL = Math.max(
   10,
@@ -23,48 +31,6 @@ const LIST_MONITOR_HIT_KEEP = Math.max(
   1,
   Number(process.env.LIST_MONITOR_HIT_KEEP ?? 20),
 );
-
-function postedAt(tweet: TweetData): Date | null {
-  if (!tweet.createdAt) return null;
-  const d = new Date(tweet.createdAt);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function toSnowflake(id: string): bigint | null {
-  try {
-    return BigInt(id);
-  } catch {
-    return null;
-  }
-}
-
-function maxSnowflake(ids: (string | null | undefined)[]): string | null {
-  let best: bigint | null = null;
-  let bestStr: string | null = null;
-  for (const id of ids) {
-    if (!id) continue;
-    const n = toSnowflake(id);
-    if (n == null) continue;
-    if (best == null || n > best) {
-      best = n;
-      bestStr = id;
-    }
-  }
-  return bestStr;
-}
-
-function filterNewerThan(tweets: TweetData[], lastTweetId: string | null): TweetData[] {
-  if (!lastTweetId) return [];
-  const lastNum = toSnowflake(lastTweetId);
-  if (lastNum == null) {
-    return tweets.filter((t) => t.id !== lastTweetId);
-  }
-  return tweets.filter((t) => {
-    const n = toSnowflake(t.id);
-    if (n == null) return t.id !== lastTweetId;
-    return n > lastNum;
-  });
-}
 
 /**
  * Accept raw list id or x.com/i/lists/<id> URL.
@@ -211,6 +177,11 @@ export async function pollListMonitor(
 
   let newHits = 0;
   let alerted = 0;
+  // Ids we durably handled — the watermark may only advance over these.
+  const processedIds: string[] = [];
+  let failed = 0;
+  let firstFailure: string | null = null;
+
   for (const t of fresh) {
     let created = false;
     try {
@@ -227,8 +198,18 @@ export async function pollListMonitor(
       });
       created = true;
       newHits += 1;
-    } catch {
-      // unique (monitorId, tweetId)
+      processedIds.push(t.id);
+    } catch (err) {
+      if (isDuplicateKeyError(err)) {
+        // Expected: unique (monitorId, tweetId) — already stored.
+        processedIds.push(t.id);
+      } else {
+        // A real write failure. Do NOT let the watermark skip this tweet.
+        failed += 1;
+        const msg = err instanceof Error ? err.message : String(err);
+        firstFailure ??= msg;
+        console.error(`[list-monitor] hit persist failed for ${t.id}:`, msg);
+      }
     }
 
     if (created) {
@@ -253,20 +234,27 @@ export async function pollListMonitor(
     }
   }
 
-  const newWatermark =
-    maxSnowflake([row.lastTweetId, pageNewest, ...fresh.map((t) => t.id)]) ??
-    row.lastTweetId;
+  // Hold the watermark when anything failed, so the next cycle retries instead
+  // of stepping over tweets that were never stored.
+  const advanceTo = nextWatermark({
+    previous: row.lastTweetId,
+    processedIds,
+    pageNewest,
+    failedCount: failed,
+  });
 
   await prisma.listMonitor.update({
     where: { id: monitorId },
     data: {
       lastPolledAt: new Date(),
-      lastTweetId: newWatermark,
+      ...(advanceTo != null ? { lastTweetId: advanceTo } : {}),
       listName: listName ?? row.listName,
       lastError:
-        fetched === 0
-          ? "list returned 0 tweets (private/empty list or bad id?)"
-          : null,
+        failed > 0
+          ? `${failed} hit(s) failed to persist; watermark held. First: ${firstFailure}`
+          : fetched === 0
+            ? "list returned 0 tweets (private/empty list or bad id?)"
+            : null,
       ...(newHits > 0 ? { hitCount: { increment: newHits } } : {}),
     },
   });
@@ -277,7 +265,8 @@ export async function pollListMonitor(
 
   console.log(
     `[list-monitor] ${monitorId} list=${row.twitterListId}: fetched=${fetched} fresh=${fresh.length} ` +
-      `new=${newHits} alerted=${alerted} watermark ${row.lastTweetId} → ${newWatermark}`,
+      `new=${newHits} alerted=${alerted} failed=${failed} watermark ${row.lastTweetId} → ` +
+      (advanceTo ?? `${row.lastTweetId} (held)`),
   );
 
   return { newHits, alerted, fetched };

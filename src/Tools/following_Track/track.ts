@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prisma, resyncSerialSequence } from "../../db/prisma.js";
-import { getTwitterClient, markRateLimited } from "../../twitter/getClient.js";
+import { FxTwitterClient } from "../../fxTwitter/fxTwitterClient.js";
+import type { APIUser } from "../../fxTwitter/types.js";
 import type { UserData } from "../../TwitterClient/types.js";
 import {
   sendTelegramAlert,
@@ -101,13 +102,53 @@ export function passesEarlyStageFilter(user: UserData): boolean {
   const categories = categorizeFromBio(user.description);
   if (categories.length === 0) return false;
 
-  if (user.createdAt) {
-    const ageMs = Date.now() - new Date(user.createdAt).getTime();
-    const sixMonthsMs = 6 * 30 * 24 * 60 * 60 * 1000;
-    if (ageMs > sixMonthsMs) return false;
-  }
+  if (!user.createdAt) return false;
+  const ageMs = Date.now() - new Date(user.createdAt).getTime();
+  const sixMonthsMs = 6 * 30 * 24 * 60 * 60 * 1000;
+  if (ageMs > sixMonthsMs) return false;
 
   return true;
+}
+
+// --- APIUser → UserData adapter ---
+
+function adaptAPIUser(apiUser: APIUser): UserData {
+  const result: UserData = {
+    id: apiUser.id,
+    username: apiUser.screen_name,
+    name: apiUser.name,
+  };
+  if (apiUser.description !== undefined && apiUser.description !== null && apiUser.description !== "") {
+    result.description = apiUser.description;
+  }
+  if (apiUser.followers !== undefined && apiUser.followers !== null) {
+    result.followersCount = apiUser.followers;
+  }
+  if (apiUser.following !== undefined && apiUser.following !== null) {
+    result.followingCount = apiUser.following;
+  }
+  if (apiUser.statuses !== undefined && apiUser.statuses !== null) {
+    result.tweetCount = apiUser.statuses;
+  }
+  if (apiUser.likes !== undefined && apiUser.likes !== null) {
+    result.likeCount = apiUser.likes;
+  }
+  if (apiUser.verification?.verified !== undefined) {
+    result.isBlueVerified = apiUser.verification.verified;
+  }
+  if (apiUser.avatar_url !== undefined && apiUser.avatar_url !== null) {
+    result.profileImageUrl = apiUser.avatar_url;
+  }
+  if (apiUser.banner_url !== undefined && apiUser.banner_url !== null) {
+    result.profileBannerUrl = apiUser.banner_url;
+  }
+  if (apiUser.joined !== undefined && apiUser.joined !== null && apiUser.joined !== "") {
+    result.createdAt = apiUser.joined;
+  }
+  if (apiUser.location !== undefined && apiUser.location !== null && apiUser.location !== "") {
+    result.location = apiUser.location;
+  }
+  return result;
 }
 
 // --- Seed import ---
@@ -145,19 +186,15 @@ async function importSeeds(): Promise<void> {
     }
 
     try {
-      const { client, accountId } = await getTwitterClient();
-      const result = await client.getUserByScreenName(seed.username);
+      const fxClient = new FxTwitterClient();
+      const profile = await fxClient.getProfile(seed.username.replace(/^@/, ""));
 
-      if (result.rateLimit && result.rateLimit.remaining === 0) {
-        await markRateLimited(accountId, result.rateLimit.reset);
-      }
-
-      if (!result.success || !result.user) {
-        failures.push(`@${seed.username} (${result.error ?? "not found"})`);
+      if (!profile.user) {
+        failures.push(`@${seed.username} (${profile.reason ?? "not found"})`);
         continue;
       }
 
-      const user = result.user;
+      const user = adaptAPIUser(profile.user);
 
       const importTags = await classifyAccount(user);
       await prisma.twitterAccount.upsert({
@@ -220,17 +257,81 @@ async function importSeeds(): Promise<void> {
   }
 }
 
-// --- Batch tracking ---
+// --- Batch tracking with fxtwitter cursor pagination ---
 
 interface TrackOptions {
   fullSync?: boolean;
+}
+
+/**
+ * Fetch all pages of following for a seed using cursor pagination.
+ * If seed.followingCursor (top cursor) is set, only new following is returned.
+ * Returns { users, newCursorTop }.
+ */
+async function fetchSeedFollowing(
+  fxClient: FxTwitterClient,
+  username: string,
+  existingFollowingIds: Set<string>,
+  pageSize: number,
+): Promise<{ users: UserData[]; newCursorTop: string | null }> {
+  const allUsers: UserData[] = [];
+
+  // Read stored cursor for this seed to get only new following
+  const seed = await prisma.seedAccount.findUnique({
+    where: { username: username.toLowerCase() },
+    select: { followingCursor: true },
+  });
+
+  const hasStoredCursor = seed?.followingCursor && seed.followingCursor.length > 0;
+  if (hasStoredCursor) {
+    console.log(`[track] @${username} has stored cursor, fetching only new following`);
+  }
+
+  let cursor: string | undefined = hasStoredCursor ? seed!.followingCursor! : undefined;
+
+  do {
+    const response = await fxClient.getProfileFollowing(
+      username.replace(/^@/, ""),
+      { count: pageSize, ...(cursor ? { cursor } : {}) },
+    );
+
+    if (!response.results || response.results.length === 0) {
+      console.log(`[track] @${username} no more results`);
+      break;
+    }
+
+    // Convert APIUser to UserData and filter out already-seen accounts
+    for (const apiUser of response.results) {
+      const user = adaptAPIUser(apiUser);
+      if (!existingFollowingIds.has(user.id)) {
+        allUsers.push(user);
+      }
+    }
+
+    // Capture the top cursor for the next run
+    cursor = response.cursor?.top ?? undefined;
+
+    console.log(
+      `[track] @${username} page: ${response.results.length} results, ${allUsers.length} new total`,
+    );
+
+    if (response.results.length < pageSize) {
+      break;
+    }
+
+    await sleep(1000);
+  } while (cursor && cursor.length > 0);
+
+  return { users: allUsers, newCursorTop: cursor ?? null };
 }
 
 export async function runTrackingCycle(
   options: TrackOptions = {},
 ): Promise<void> {
   const { fullSync = false } = options;
-  const fetchCount = fullSync ? 5000 : 20;
+  const pageSize = 100;
+
+  const fxClient = new FxTwitterClient();
 
   const seeds = await prisma.seedAccount.findMany({
     where: { active: true, twitterId: { not: null } },
@@ -270,41 +371,44 @@ export async function runTrackingCycle(
 
   for (const seed of seeds) {
     try {
-      const { client, accountId } = await getTwitterClient();
-      const result = await client.getFollowing(seed.twitterId!, fetchCount);
+      // Get current active following set for this seed
+      const existingEdges = await prisma.followEdge.findMany({
+        where: { seedId: seed.id, active: true },
+        select: { followingId: true },
+      });
+      const existingFollowingIds = new Set(existingEdges.map((e) => e.followingId));
 
-      if (result.rateLimit && result.rateLimit.remaining === 0) {
-        await markRateLimited(accountId, result.rateLimit.reset);
-      }
+      // Fetch following using fxtwitter with cursor pagination (only new since last cursor)
+      const result = await fetchSeedFollowing(
+        fxClient,
+        seed.username,
+        existingFollowingIds,
+        pageSize,
+      );
 
-      if (!result.success || !result.users) {
-        const errCount = (consecutiveErrors.get(seed.id) ?? 0) + 1;
-        consecutiveErrors.set(seed.id, errCount);
-
-        if (errCount >= 3) {
-          await prisma.seedAccount.update({
-            where: { id: seed.id },
-            data: { active: false },
-          });
-          await sendTelegramPlaintext(
-            `⚠️ Seed @${seed.username} deactivated after 3 consecutive errors. May be private or suspended.`,
-          );
-          console.log(`[track] Seed @${seed.username} deactivated (3 errors)`);
-        }
-        continue;
-      }
-
-      consecutiveErrors.delete(seed.id);
       const users = result.users;
+      const newCursorTop = result.newCursorTop;
       accountsSeen += users.length;
 
+      // Save cursor.top to seed account for next run
+      await prisma.seedAccount.update({
+        where: { id: seed.id },
+        data: { followingCursor: newCursorTop ?? "" },
+      });
+
       const isPopulationRun = await isFirstRunForSeed(seed.id);
-      const currentFollowingIds = new Set<string>();
 
       for (const user of users) {
-        currentFollowingIds.add(user.id);
+        // Skip DB store + alert for accounts older than 6 months
+      if (user.createdAt) {
+        const ageMs = Date.now() - new Date(user.createdAt).getTime();
+        const sixMonthsMs = 6 * 30 * 24 * 60 * 60 * 1000;
+        if (ageMs > sixMonthsMs) continue;
+      } else {
+        continue; // skip if no age info
+      }
 
-        const followTags = await classifyAccount(user);
+      const followTags = await classifyAccount(user);
         await prisma.twitterAccount.upsert({
           where: { id: user.id },
           create: {
@@ -347,6 +451,13 @@ export async function runTrackingCycle(
               active: true,
             },
           });
+          // Existing follow in DB: skip new-follow alert, but send convergence if applicable.
+          if (!isPopulationRun) {
+            const categories = categorizeFromBio(user.description);
+            if (!seedTwitterIds.has(user.id)) {
+              await checkAndAlertConvergence(user, categories, run.id);
+            }
+          }
         } else {
           await prisma.followEdge.create({
             data: {
@@ -358,11 +469,12 @@ export async function runTrackingCycle(
             },
           });
           newEdges++;
-          const msgFormat = await formatNewFollowAlert(seed.username, user);
-          await sendTelegramAlert(msgFormat, "MarkdownV2", 1724, "newFollow");
+          if (passesEarlyStageFilter(user)) {
+            const msgFormat = await formatNewFollowAlert(seed.username, user);
+            await sendTelegramAlert(msgFormat, "MarkdownV2", 1724, "newFollow");
+          }
           if (!isPopulationRun) {
             const categories = categorizeFromBio(user.description);
-
             if (passesEarlyStageFilter(user) && !seedTwitterIds.has(user.id)) {
               await checkAndAlertConvergence(user, categories, run.id);
             }
@@ -371,17 +483,32 @@ export async function runTrackingCycle(
       }
 
       if (fullSync) {
-        await markUnfollowedEdges(seed.id, currentFollowingIds);
+        // Full sync: fetch ALL following pages (without stored cursor),
+        // compare with existing and mark unfollowed edges as inactive
+        await markUnfollowedEdgesFullSync(fxClient, seed, existingFollowingIds, pageSize);
       }
+
 
       seedsProcessed++;
       console.log(
-        `[track] @${seed.username}: ${users.length} following, ${newEdges} new edges`,
+        `[track] @${seed.username}: ${users.length} new following, ${newEdges} new edges, cursor saved`,
       );
 
       await sleep(3000);
     } catch (error) {
       console.error(`[track] Error processing @${seed.username}:`, error);
+      const errCount = (consecutiveErrors.get(seed.id) ?? 0) + 1;
+      consecutiveErrors.set(seed.id, errCount);
+
+      if (errCount >= 3) {
+        await prisma.seedAccount.update({
+          where: { id: seed.id },
+          data: { active: false },
+        });
+
+        await sendTelegramPlaintext(`⚠️ Seed @${seed.username} deactivated after 3 consecutive errors.`);
+        console.log(`[track] Seed @${seed.username} deactivated (3 errors)`);
+      }
     }
   }
 
@@ -401,38 +528,63 @@ export async function runTrackingCycle(
   );
 }
 
-async function isFirstRunForSeed(seedId: bigint): Promise<boolean> {
-  const edgeCount = await prisma.followEdge.count({
-    where: { seedId },
-  });
-  return edgeCount === 0;
-}
-
-async function markUnfollowedEdges(
-  seedId: bigint,
+/**
+ * Full sync: fetch all following pages (without stored cursor),
+ * compare with existing edges and mark unfollowed as inactive.
+ */
+async function markUnfollowedEdgesFullSync(
+  fxClient: FxTwitterClient,
+  seed: { id: bigint; username: string },
   currentFollowingIds: Set<string>,
+  pageSize: number,
 ): Promise<void> {
-  const activeEdges = await prisma.followEdge.findMany({
-    where: { seedId, active: true },
-    select: { followingId: true },
-  });
+  const allFollowingIds = new Set<string>();
+  let cursor: string | undefined = undefined;
 
-  const unfollowedIds = activeEdges
-    .filter((e) => !currentFollowingIds.has(e.followingId))
-    .map((e) => e.followingId);
+  do {
+    const response = await fxClient.getProfileFollowing(
+      seed.username.replace(/^@/, ""),
+      { count: pageSize, ...(cursor ? { cursor } : {}) },
+    );
+
+    if (!response.results || response.results.length === 0) {
+      break;
+    }
+
+    for (const apiUser of response.results) {
+      allFollowingIds.add(apiUser.id);
+    }
+
+    cursor = response.cursor?.top || undefined;
+
+    if (response.results.length < pageSize) {
+      break;
+    }
+
+    await sleep(1000);
+  } while (cursor && cursor.length > 0);
+
+  const unfollowedIds = [...currentFollowingIds].filter((id) => !allFollowingIds.has(id));
 
   if (unfollowedIds.length > 0) {
     await prisma.followEdge.updateMany({
       where: {
-        seedId,
+        seedId: seed.id,
         followingId: { in: unfollowedIds },
       },
       data: { active: false },
     });
     console.log(
-      `[track] Marked ${unfollowedIds.length} edges inactive for seed ${seedId}`,
+      `[track] Marked ${unfollowedIds.length} edges inactive for @${seed.username}`,
     );
   }
+}
+
+async function isFirstRunForSeed(seedId: bigint): Promise<boolean> {
+  const edgeCount = await prisma.followEdge.count({
+    where: { seedId },
+  });
+  return edgeCount === 0;
 }
 
 // --- Convergence detection ---
@@ -456,6 +608,9 @@ async function checkAndAlertConvergence(
   });
 
   const convergenceCount = edges.length;
+  // Only alert for early-stage accounts (<6 months) with non-empty categories
+  if (!categories || categories.length === 0) return;
+
   if (convergenceCount < 2) return;
 
   const recentAlert = await prisma.alert.findFirst({
@@ -590,7 +745,6 @@ export async function sendDailyDigestMessage(): Promise<void> {
   }
 
   if (digestEntries.length === 0) {
-    // Still mark so catch-up does not re-fire empty windows forever.
     const { markDailyDigestSent } =
       await import("../../services/digestCatchUp.js");
     await markDailyDigestSent();
@@ -606,7 +760,7 @@ export async function sendDailyDigestMessage(): Promise<void> {
 
   if (message) {
     try {
-      await sendTelegramPlaintext(message);
+      await sendTelegramPlaintext(message, "MarkdownV2");
       const { markDailyDigestSent } =
         await import("../../services/digestCatchUp.js");
       await markDailyDigestSent();
@@ -688,10 +842,8 @@ if (isMain) {
       console.log("Usage: track.ts <command>");
       console.log("Commands:");
       console.log("  import-seeds  Import seed accounts from CT.json");
-      console.log("  track         Run tracking cycle (3 pages per seed)");
-      console.log(
-        "  track-full    Run full sync (all pages, detect unfollows)",
-      );
+      console.log("  track         Run tracking cycle (cursor pagination, only new following)");
+      console.log("  track-full    Run full sync (all pages, detect unfollows)");
       console.log("  digest        Send daily digest");
       console.log("  health        Run health check");
       break;

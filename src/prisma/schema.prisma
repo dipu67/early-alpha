@@ -166,14 +166,15 @@ model PostAlert {
 }
 
 model SeedAccount {
-  id        BigInt   @id @default(autoincrement())
-  twitterId String?  @unique @map("twitter_id")
-  username  String   @unique
-  category  String
-  label     String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  id             BigInt   @id @default(autoincrement())
+  twitterId      String?  @unique @map("twitter_id")
+  username       String   @unique
+  category       String
+  label          String?
+  active         Boolean  @default(true)
+  followingCursor String?  @map("following_cursor") @default("")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   followEdges FollowEdge[]
 

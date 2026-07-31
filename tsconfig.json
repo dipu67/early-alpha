@@ -20,12 +20,16 @@
     "skipLibCheck": true
   },
   "include": ["index.ts", "src/**/*.ts"],
+  // Tests ARE typechecked — they were excluded wholesale, which let them drift
+  // from the strictness the rest of the repo is held to. Only the three scratch
+  // scripts under src/tests (not vitest specs, run by hand) stay excluded.
   "exclude": [
     "node_modules",
     "dist",
     "admin",
     "frontend",
-    "src/**/*.test.ts",
-    "src/tests/**"
+    "src/tests/dbTest.ts",
+    "src/tests/fxTwitter.ts",
+    "src/tests/usersByRestIds.ts"
   ]
 }

@@ -1,5 +1,5 @@
-// Shared helpers for routes: pagination parsing, "since" windows, and making
-// Prisma rows JSON-safe (BigInt and Date don't serialize natively).
+// Shared helpers for routes: pagination parsing and making Prisma rows
+// JSON-safe (BigInt and Date don't serialize natively).
 
 import { z } from "zod";
 
@@ -8,23 +8,6 @@ export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
-
-/**
- * Parse a "since" value: an ISO date, or a shorthand like "24h", "7d", "30m".
- * Returns a Date, or undefined if not provided/parseable.
- */
-export function parseSince(raw: string | undefined): Date | undefined {
-  if (!raw) return undefined;
-  const m = /^(\d+)\s*([mhd])$/.exec(raw.trim());
-  if (m) {
-    const n = Number(m[1]);
-    const unit = m[2];
-    const ms = unit === "m" ? 60_000 : unit === "h" ? 3_600_000 : 86_400_000;
-    return new Date(Date.now() - n * ms);
-  }
-  const d = new Date(raw);
-  return isNaN(d.getTime()) ? undefined : d;
-}
 
 /**
  * Recursively convert BigInt -> string so `res.json()` never throws on the

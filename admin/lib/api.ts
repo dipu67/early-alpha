@@ -46,29 +46,33 @@ export async function backendFetch(
   path: string,
   init: { method?: string; body?: unknown; query?: Record<string, string | undefined> } = {},
 ): Promise<BackendResponse> {
-  const url = buildUrl(path, init.query);
+  try {
+    const url = buildUrl(path, init.query);
 
-  const hasBody = init.body !== undefined && init.method && init.method !== "GET";
-  const res = await fetch(url, {
-    method: init.method ?? "GET",
-    headers: {
-      "x-api-key": apiKey(),
-      ...(hasBody ? { "content-type": "application/json" } : {}),
-    },
-    ...(hasBody ? { body: JSON.stringify(init.body) } : {}),
-    cache: "no-store",
-  });
+    const hasBody = init.body !== undefined && init.method && init.method !== "GET";
+    const res = await fetch(url, {
+      method: init.method ?? "GET",
+      headers: {
+        "x-api-key": apiKey(),
+        ...(hasBody ? { "content-type": "application/json" } : {}),
+      },
+      ...(hasBody ? { body: JSON.stringify(init.body) } : {}),
+      cache: "no-store",
+    });
 
-  const text = await res.text();
-  let body: unknown = null;
-  if (text) {
-    try {
-      body = JSON.parse(text);
-    } catch {
-      body = text;
+    const text = await res.text();
+    let body: unknown = null;
+    if (text) {
+      try {
+        body = JSON.parse(text);
+      } catch {
+        body = text;
+      }
     }
+    return { status: res.status, ok: res.ok, body };
+  } catch (err) {
+    return { status: 0, ok: false, body: { error: "backend_unavailable", message: err instanceof Error ? err.message : String(err) } };
   }
-  return { status: res.status, ok: res.ok, body };
 }
 
 /**
@@ -80,24 +84,28 @@ export async function backendFetchRaw(
   path: string,
   init: { method?: string; body?: unknown; query?: Record<string, string | undefined> } = {},
 ): Promise<BackendRawResponse> {
-  const url = buildUrl(path, init.query);
+  try {
+    const url = buildUrl(path, init.query);
 
-  const hasBody = init.body !== undefined && init.method && init.method !== "GET";
-  const res = await fetch(url, {
-    method: init.method ?? "GET",
-    headers: {
-      "x-api-key": apiKey(),
-      ...(hasBody ? { "content-type": "application/json" } : {}),
-    },
-    ...(hasBody ? { body: JSON.stringify(init.body) } : {}),
-    cache: "no-store",
-  });
+    const hasBody = init.body !== undefined && init.method && init.method !== "GET";
+    const res = await fetch(url, {
+      method: init.method ?? "GET",
+      headers: {
+        "x-api-key": apiKey(),
+        ...(hasBody ? { "content-type": "application/json" } : {}),
+      },
+      ...(hasBody ? { body: JSON.stringify(init.body) } : {}),
+      cache: "no-store",
+    });
 
-  const body = await res.arrayBuffer();
-  return {
-    status: res.status,
-    ok: res.ok,
-    headers: res.headers,
-    body,
-  };
+    const body = await res.arrayBuffer();
+    return {
+      status: res.status,
+      ok: res.ok,
+      headers: res.headers,
+      body,
+    };
+  } catch (err) {
+    return { status: 0, ok: false, headers: new Headers(), body: new ArrayBuffer(0) };
+  }
 }

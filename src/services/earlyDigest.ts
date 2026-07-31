@@ -13,7 +13,7 @@ import { ALPHA_SLUG } from "./projectLists.js";
 import {
   earlyTopicForSlug,
   earlyProjectTopic,
-  sendTelegramTopic,
+  sendTelegramRichMarkdown,
   isAlertEnabled,
 } from "../tg/sendAlert.js";
 import { escapeMarkdown, formatNumber } from "./formatAlert.js";
@@ -184,12 +184,11 @@ export async function sendEarlyProjectDigest(): Promise<number> {
         total,
       });
 
-      await sendTelegramTopic(
-        text,
-        bucket.topicId,
-        "MarkdownV2",
-        "earlyDigest",
-      );
+      await sendTelegramRichMarkdown({
+        markdown: text,
+        topicId: bucket.topicId ?? null,
+        alertType: "earlyDigest",
+      });
       messages += 1;
     }
 

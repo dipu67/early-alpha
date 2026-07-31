@@ -13,59 +13,20 @@ import { getTwitterClientById, markRateLimited } from "../twitter/getClient.js";
 import type { TweetData } from "../TwitterClient/types.js";
 import { formatSearchAlert } from "./formatAlert.js";
 import { sendTelegramAlert, isAlertEnabled } from "../tg/sendAlert.js";
+import {
+  postedAt,
+  toSnowflake,
+  maxSnowflake,
+  filterNewerThan,
+  isDuplicateKeyError,
+  nextWatermark,
+} from "./pollerCore.js";
 
 /** Max recent hits kept per query for the admin feed (not full history). */
 const SEARCH_HIT_KEEP = Math.max(
   1,
   Number(process.env.SEARCH_HIT_KEEP ?? 20),
 );
-
-function postedAt(tweet: TweetData): Date | null {
-  if (!tweet.createdAt) return null;
-  const d = new Date(tweet.createdAt);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function toSnowflake(id: string): bigint | null {
-  try {
-    return BigInt(id);
-  } catch {
-    return null;
-  }
-}
-
-/** Max snowflake among a list of tweet ids (null if none parse). */
-function maxSnowflake(ids: (string | null | undefined)[]): string | null {
-  let best: bigint | null = null;
-  let bestStr: string | null = null;
-  for (const id of ids) {
-    if (!id) continue;
-    const n = toSnowflake(id);
-    if (n == null) continue;
-    if (best == null || n > best) {
-      best = n;
-      bestStr = id;
-    }
-  }
-  return bestStr;
-}
-
-/**
- * Tweets newer than `lastTweetId`. Does NOT assume timeline order — collects
- * every item with id > watermark (Search results can interleave modules).
- */
-function filterNewerThan(tweets: TweetData[], lastTweetId: string | null): TweetData[] {
-  if (!lastTweetId) return [];
-  const lastNum = toSnowflake(lastTweetId);
-  if (lastNum == null) {
-    return tweets.filter((t) => t.id !== lastTweetId);
-  }
-  return tweets.filter((t) => {
-    const n = toSnowflake(t.id);
-    if (n == null) return t.id !== lastTweetId;
-    return n > lastNum;
-  });
-}
 
 async function sendSearchAlert(
   row: { query: string; label: string | null; topicId: number | null; alertEnabled: boolean },
@@ -93,6 +54,8 @@ export interface PollResult {
   alerted?: number;
   fetched?: number;
   error?: string;
+  /** Items that failed to persist for a non-duplicate reason (watermark held). */
+  failed?: number;
 }
 
 /** Poll one search query. Pass `force` to ignore the per-query interval. */
@@ -170,6 +133,11 @@ export async function pollSearchQuery(
 
   let newHits = 0;
   let alerted = 0;
+  // Ids we durably handled — the watermark may only advance over these.
+  const processedIds: string[] = [];
+  let failed = 0;
+  let firstFailure: string | null = null;
+
   for (const t of fresh) {
     let created = false;
     try {
@@ -185,8 +153,19 @@ export async function pollSearchQuery(
       });
       created = true;
       newHits += 1;
-    } catch {
-      // unique (queryId, tweetId)
+      processedIds.push(t.id);
+    } catch (err) {
+      if (isDuplicateKeyError(err)) {
+        // Expected: unique (queryId, tweetId) — already stored, so it counts
+        // as handled and the watermark can move past it.
+        processedIds.push(t.id);
+      } else {
+        // A real write failure. Do NOT let the watermark skip this tweet.
+        failed += 1;
+        const msg = err instanceof Error ? err.message : String(err);
+        firstFailure ??= msg;
+        console.error(`[search] hit persist failed for ${t.id}:`, msg);
+      }
     }
 
     if (created) {
@@ -202,20 +181,26 @@ export async function pollSearchQuery(
     }
   }
 
-  // Only move watermark forward (never backwards if the page is weird).
-  const newWatermark =
-    maxSnowflake([row.lastTweetId, pageNewest, ...fresh.map((t) => t.id)]) ??
-    row.lastTweetId;
+  // Hold the watermark when anything failed, so the next cycle retries instead
+  // of stepping over tweets that were never stored.
+  const advanceTo = nextWatermark({
+    previous: row.lastTweetId,
+    processedIds,
+    pageNewest,
+    failedCount: failed,
+  });
 
   await prisma.searchQuery.update({
     where: { id: queryId },
     data: {
       lastPolledAt: new Date(),
-      lastTweetId: newWatermark,
+      ...(advanceTo != null ? { lastTweetId: advanceTo } : {}),
       lastError:
-        fetched === 0
-          ? "search returned 0 tweets (check query / operators; use -filter:replies not -is:reply)"
-          : null,
+        failed > 0
+          ? `${failed} hit(s) failed to persist; watermark held. First: ${firstFailure}`
+          : fetched === 0
+            ? "search returned 0 tweets (check query / operators; use -filter:replies not -is:reply)"
+            : null,
       ...(newHits > 0 ? { hitCount: { increment: newHits } } : {}),
     },
   });
@@ -227,10 +212,11 @@ export async function pollSearchQuery(
 
   console.log(
     `[search] query ${queryId} "${row.query}": fetched=${fetched} fresh=${fresh.length} ` +
-      `new=${newHits} alerted=${alerted} watermark ${row.lastTweetId} → ${newWatermark}`,
+      `new=${newHits} alerted=${alerted} failed=${failed} watermark ${row.lastTweetId} → ` +
+      (advanceTo ?? `${row.lastTweetId} (held)`),
   );
 
-  return { newHits, alerted, fetched };
+  return { newHits, alerted, fetched, ...(failed > 0 ? { failed } : {}) };
 }
 
 /** Keep only the newest `keep` SearchHit rows for a query (by createdAt, then id). */
