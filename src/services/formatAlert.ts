@@ -69,23 +69,26 @@ function formatImportanceBlock(
 ): string {
   const f = imp.fields;
   const lines: string[] = [];
-  lines.push(`📌 *${escapeMarkdown(imp.headline)}* \\(score ${escapeMarkdown(String(imp.score))}\\)`);
+  lines.push(
+    `📌 *${escapeMarkdown(imp.headline)}* \\(score ${escapeMarkdown(String(imp.score))}\\)`,
+  );
   if (imp.vertical) {
-    lines.push(`🏷 vertical: \`${escapeMarkdown(imp.vertical)}\``);
+    lines.push(`🏷 vertical: ${mdCode(imp.vertical)}`);
   }
   if (imp.stages.length) {
-    lines.push(`🧭 stage: \`${escapeMarkdown(imp.stages.join(", "))}\``);
+    lines.push(`🧭 stage: ${mdCode(imp.stages.join(", "))}`);
   }
   if (f.datetimeRaws?.length) {
     const tz = f.timezone ? ` ${f.timezone}` : "";
     lines.push(
-      `🗓 ${escapeMarkdown(f.datetimeRaws.slice(0, 3).join(" · "))}${escapeMarkdown(tz)}`,
+      `🗓 ${escapeMarkdown(f.datetimeRaws.slice(0, 3).join(" · ") + tz)}`,
     );
   }
   if (f.relative === "hours" && f.relativeAmount != null) {
-    lines.push(`⏱ in ~${escapeMarkdown(String(f.relativeAmount))}h`);
+    // `~` is strikethrough in MarkdownV2 — must be escaped.
+    lines.push(`⏱ in \\~${escapeMarkdown(String(f.relativeAmount))}h`);
   } else if (f.relative === "minutes" && f.relativeAmount != null) {
-    lines.push(`⏱ in ~${escapeMarkdown(String(f.relativeAmount))}m`);
+    lines.push(`⏱ in \\~${escapeMarkdown(String(f.relativeAmount))}m`);
   } else if (f.relative) {
     lines.push(`⏱ ${escapeMarkdown(f.relative)}`);
   }
@@ -101,40 +104,40 @@ function formatImportanceBlock(
     );
   }
   if (f.chainId) {
-    lines.push(`⛓ chain id: \`${escapeMarkdown(f.chainId)}\``);
+    lines.push(`⛓ chain id: ${mdCode(f.chainId)}`);
   }
   if (f.rpcUrl) {
-    lines.push(`📡 [RPC](${f.rpcUrl})`);
+    lines.push(`📡 ${mdLink("RPC", f.rpcUrl)}`);
   }
   if (f.explorerUrl) {
-    lines.push(`🔎 [Explorer](${f.explorerUrl})`);
+    lines.push(`🔎 ${mdLink("Explorer", f.explorerUrl)}`);
   }
   if (f.contractAddress) {
-    lines.push(`📜 CA: \`${escapeMarkdown(f.contractAddress)}\``);
+    lines.push(`📜 CA: ${mdCode(f.contractAddress)}`);
   }
   if (f.ticker) {
     lines.push(`💱 $${escapeMarkdown(f.ticker)}`);
   }
   for (const link of (f.mintLinks ?? []).slice(0, 2)) {
-    lines.push(`🖼 [Mint link](${link})`);
+    lines.push(`🖼 ${mdLink("Mint link", link)}`);
   }
   for (const link of (f.claimLinks ?? []).slice(0, 2)) {
-    lines.push(`🎁 [Claim](${link})`);
+    lines.push(`🎁 ${mdLink("Claim", link)}`);
   }
   for (const link of (f.appLinks ?? []).slice(0, 2)) {
-    lines.push(`📱 [App](${link})`);
+    lines.push(`📱 ${mdLink("App", link)}`);
   }
   for (const link of (f.docsLinks ?? []).slice(0, 2)) {
-    lines.push(`📘 [Docs](${link})`);
+    lines.push(`📘 ${mdLink("Docs", link)}`);
   }
   for (const link of (f.bridgeLinks ?? []).slice(0, 2)) {
-    lines.push(`🌉 [Bridge](${link})`);
+    lines.push(`🌉 ${mdLink("Bridge", link)}`);
   }
   for (const link of (f.tradeLinks ?? []).slice(0, 2)) {
-    lines.push(`📈 [Trade](${link})`);
+    lines.push(`📈 ${mdLink("Trade", link)}`);
   }
   for (const link of (f.formLinks ?? []).slice(0, 2)) {
-    lines.push(`📝 [WL form](${link})`);
+    lines.push(`📝 ${mdLink("WL form", link)}`);
   }
   return lines.length ? lines.join("\n") + "\n" : "";
 }
@@ -160,11 +163,11 @@ export function formatSignalAlert(
   const text =
     `${emoji} *Signal${escapeMarkdown(tierTag)} · ${escapeMarkdown(tagLabel(input.slug))}*\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
-    `👤 *${escapeMarkdown(input.name)}*  [@${escapeMarkdown(input.username)}](https://x.com/${input.username})\n` +
+    `👤 *${escapeMarkdown(input.name)}*  ${mdUserLink(input.username)}\n` +
     signalLine +
     intel +
     `\n${escapeMarkdown(excerpt(input.text))}\n\n` +
-    `🔗 [View post](${postUrl})\n` +
+    `🔗 ${mdLink("View post", postUrl)}\n` +
     `━━━━━━━━━━━━━━━━━━\n`;
 
   return {
@@ -194,10 +197,10 @@ export function formatReclassifyAlert(
     : "";
 
   const text =
-    `🔀 *Reclassified* — [@${escapeMarkdown(input.username)}](https://x.com/${input.username})\n` +
+    `🔀 *Reclassified* — ${mdUserLink(input.username)}\n` +
     `${escapeMarkdown(tagLabel(input.from))} → *${escapeMarkdown(toLabels)}*\n` +
     signalLine +
-    `🔗 [View post](${postUrl})\n`;
+    `🔗 ${mdLink("View post", postUrl)}\n`;
 
   return {
     text,
@@ -209,7 +212,8 @@ export async function formatNewFollowAlert(
   watchedUsername: string,
   newFollow: UserData,
   rank?: number,
-): Promise<{text: string, user: UserData}> {
+): Promise<{ text: string; user: UserData }> {
+  void rank;
   const verified = newFollow.isBlueVerified ? " ✅" : "";
   const description = newFollow.description
     ? `\n${escapeMarkdown(newFollow.description)}`
@@ -233,17 +237,17 @@ export async function formatNewFollowAlert(
       `🔔 *New Follow Detected*\n` +
       `━━━━━━━━━━━━━━━━━━\n` +
       `👤 *${escapeMarkdown(newFollow.name)}${verified}*\n` +
-      `🐦 [@${escapeMarkdown(newFollow.username)}](https://x.com/${newFollow.username}) \nBio: \n${description}\n\n` +
+      `🐦 ${mdUserLink(newFollow.username)} \nBio: \n${description}\n\n` +
       tagLine +
       `📊 *Stats*\n` +
-      `├ ${followerTier} Followers: \`${formatNumber(newFollow.followersCount ?? 0)}\`\n` +
-      `├ 🐦 Tweets: \`${formatNumber(newFollow.tweetCount ?? 0)}\`\n` +
-      `├ ❤️ Likes: \`${formatNumber(newFollow.likeCount ?? 0)}\`\n` +
-      `└ 🕐 Account Age: \`${accountAge}\`\n\n` +
+      `├ ${followerTier} Followers: ${mdCode(formatNumber(newFollow.followersCount ?? 0))}\n` +
+      `├ 🐦 Tweets: ${mdCode(formatNumber(newFollow.tweetCount ?? 0))}\n` +
+      `├ ❤️ Likes: ${mdCode(formatNumber(newFollow.likeCount ?? 0))}\n` +
+      `└ 🕐 Account Age: ${mdCode(accountAge)}\n\n` +
       `Watched: @${escapeMarkdown(watchedUsername)}\n` +
-      `━━━━━━━━━━━━━━━━━━\n` ,
-      user: newFollow,
-  }
+      `━━━━━━━━━━━━━━━━━━\n`,
+    user: newFollow,
+  };
 
   return msg;
 }
@@ -270,9 +274,9 @@ export function formatSearchAlert(
   const text =
     `${title}\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
-    `👤 *${escapeMarkdown(input.name)}*  [@${escapeMarkdown(input.username)}](https://x.com/${input.username})\n\n` +
+    `👤 *${escapeMarkdown(input.name)}*  ${mdUserLink(input.username)}\n\n` +
     `${escapeMarkdown(excerpt(input.text))}\n\n` +
-    `🔗 [View post](${postUrl})\n` +
+    `🔗 ${mdLink("View post", postUrl)}\n` +
     `━━━━━━━━━━━━━━━━━━\n`;
 
   return {
@@ -321,33 +325,39 @@ export function formatChainlistAlert(input: ChainlistAlertInput): {
       : input.rpcLive === false
         ? "RPC failed ❌"
         : "RPC unchecked";
-  const symbol = input.nativeSymbol ? ` · ${escapeMarkdown(input.nativeSymbol)}` : "";
+  const symbol = input.nativeSymbol
+    ? ` · ${escapeMarkdown(input.nativeSymbol)}`
+    : "";
   const short = input.shortName
     ? ` \\(${escapeMarkdown(input.shortName)}\\)`
     : "";
 
   const links: string[] = [];
   if (input.explorerUrl) {
-    links.push(`[Explorer](${input.explorerUrl.replace(/\)/g, "%29")})`);
+    links.push(mdLink("Explorer", input.explorerUrl));
   }
   if (input.infoUrl) {
-    links.push(`[Info](${input.infoUrl.replace(/\)/g, "%29")})`);
+    links.push(mdLink("Info", input.infoUrl));
   }
-  links.push(`[Chainlist](https://chainlist.org/chain/${input.chainId})`);
+  links.push(mdLink("Chainlist", `https://chainlist.org/chain/${input.chainId}`));
   if (input.commitUrl) {
-    links.push(`[GitHub](${input.commitUrl.replace(/\)/g, "%29")})`);
+    links.push(mdLink("GitHub", input.commitUrl));
   }
+
+  const rpcLine = input.rpcUrl
+    ? `RPC: ${mdCode(
+        input.rpcUrl.slice(0, 80) + (input.rpcUrl.length > 80 ? "…" : ""),
+      )}\n`
+    : "";
 
   const text =
     `⛓ *New chain · ${escapeMarkdown(kind)}*\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
     `*${escapeMarkdown(input.name)}*${short}\n` +
-    `🆔 Chain ID: \`${escapeMarkdown(input.chainId)}\`${symbol}\n` +
+    `🆔 Chain ID: ${mdCode(input.chainId)}${symbol}\n` +
     `📡 ${escapeMarkdown(live)}\n` +
-    `📚 source: \`${escapeMarkdown(input.source)}\`\n` +
-    (input.rpcUrl
-      ? `RPC: \`${escapeMarkdown(input.rpcUrl.slice(0, 80))}${input.rpcUrl.length > 80 ? "…" : ""}\`\n`
-      : "") +
+    `📚 source: ${mdCode(input.source)}\n` +
+    rpcLine +
     `\n${links.join(" · ")}\n` +
     `━━━━━━━━━━━━━━━━━━\n`;
 
@@ -394,9 +404,10 @@ export function formatGithubCommitAlert(
   const removed = input.filesRemoved ?? [];
   const fileLines: string[] = [];
   if (added.length) {
+    const sample = added.slice(0, 3).join(", ") + (added.length > 3 ? "…" : "");
     fileLines.push(
       `➕ ${escapeMarkdown(String(added.length))} added` +
-        (added[0] ? `: \`${escapeMarkdown(added.slice(0, 3).join(", "))}${added.length > 3 ? "…" : ""}\`` : ""),
+        (added[0] ? `: ${mdCode(sample)}` : ""),
     );
   }
   if (modified.length) {
@@ -406,19 +417,17 @@ export function formatGithubCommitAlert(
     fileLines.push(`🗑 ${escapeMarkdown(String(removed.length))} removed`);
   }
 
-  const repoUrl = `https://github.com/${input.fullName}`.replace(/\)/g, "%29");
-  const commitUrl = input.htmlUrl.replace(/\)/g, "%29");
+  const repoUrl = `https://github.com/${input.fullName}`;
+  const commitUrl = input.htmlUrl;
 
   const text =
     `📦 *GitHub · ${title}*\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
-    `\`${escapeMarkdown(shortSha)}\` by ${author}\n` +
+    `${mdCode(shortSha)} by ${author}\n` +
     `${msg}\n` +
-    (input.pathFilter
-      ? `📁 path: \`${escapeMarkdown(input.pathFilter)}\`\n`
-      : "") +
+    (input.pathFilter ? `📁 path: ${mdCode(input.pathFilter)}\n` : "") +
     (fileLines.length ? `${fileLines.join("\n")}\n` : "") +
-    `\n[Commit](${commitUrl}) · [Repo](${repoUrl})\n` +
+    `\n${mdLink("Commit", commitUrl)} · ${mdLink("Repo", repoUrl)}\n` +
     `━━━━━━━━━━━━━━━━━━\n`;
 
   return {
@@ -444,9 +453,9 @@ export function formatListMonitorAlert(
   const text =
     `${title}\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
-    `👤 *${escapeMarkdown(input.name)}*  [@${escapeMarkdown(input.username)}](https://x.com/${input.username})\n\n` +
+    `👤 *${escapeMarkdown(input.name)}*  ${mdUserLink(input.username)}\n\n` +
     `${escapeMarkdown(excerpt(input.text))}\n\n` +
-    `🔗 [View post](${postUrl}) · [List](${listUrl})\n` +
+    `🔗 ${mdLink("View post", postUrl)} · ${mdLink("List", listUrl)}\n` +
     `━━━━━━━━━━━━━━━━━━\n`;
 
   return {
@@ -493,11 +502,11 @@ export function formatMonitorAlert(
   const text =
     `${emoji} *User monitor · ${escapeMarkdown(modeLabel)}*\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
-    `👤 *${escapeMarkdown(input.name)}*  [@${escapeMarkdown(input.username)}](https://x.com/${input.username})\n` +
+    `👤 *${escapeMarkdown(input.name)}*  ${mdUserLink(input.username)}\n` +
     signalLine +
     intel +
     `\n${escapeMarkdown(excerpt(input.text))}\n\n` +
-    `🔗 [View post](${postUrl})\n` +
+    `🔗 ${mdLink("View post", postUrl)}\n` +
     `━━━━━━━━━━━━━━━━━━\n`;
 
   return {
@@ -527,10 +536,10 @@ export function formatEarlyRawPostAlert(input: {
   const text =
     `📝 *Early · raw post*\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
-    `👤 *${escapeMarkdown(input.name)}*  [@${escapeMarkdown(input.username)}](https://x.com/${input.username})\n` +
+    `👤 *${escapeMarkdown(input.name)}*  ${mdUserLink(input.username)}\n` +
     tagLine +
     `\n${escapeMarkdown(excerpt(input.text))}\n\n` +
-    `🔗 [View post](${postUrl})\n` +
+    `🔗 ${mdLink("View post", postUrl)}\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
     escapeMarkdown("No signal keyword matched — raw stream");
   return {
@@ -565,18 +574,20 @@ export function formatProfileChangeAlert(
   ];
   if (input.previousUsername) {
     lines.push(
-      `🔄 @${escapeMarkdown(input.previousUsername)} → [@${escapeMarkdown(input.username)}](https://x.com/${input.username})`,
+      `🔄 @${escapeMarkdown(input.previousUsername)} → ${mdUserLink(input.username)}`,
     );
   } else {
     lines.push(
-      `👤 *${escapeMarkdown(input.name)}* [@${escapeMarkdown(input.username)}](https://x.com/${input.username})`,
+      `👤 *${escapeMarkdown(input.name)}* ${mdUserLink(input.username)}`,
     );
   }
   if (input.followersCount != null) {
-    lines.push(`👥 followers: \`${formatNumber(input.followersCount)}\``);
+    lines.push(`👥 followers: ${mdCode(formatNumber(input.followersCount))}`);
   }
   if (input.tags?.length) {
-    lines.push(`🏷️ ${escapeMarkdown(input.tags.filter((t) => t !== "unknown").join(" · ") || "—")}`);
+    lines.push(
+      `🏷️ ${escapeMarkdown(input.tags.filter((t) => t !== "unknown").join(" · ") || "—")}`,
+    );
   }
   if (input.bioChanged) {
     lines.push(``);
@@ -624,12 +635,10 @@ export function formatGrowthReport(input: {
     const tags = r.tags.filter((t) => t !== "unknown" && t !== "other").slice(0, 3);
     const tagStr = tags.length ? ` · ${tags.join(",")}` : "";
     const stage = r.huntStage !== "noise" ? ` · ${r.huntStage}` : "";
-    // Username in URL path: only [A-Za-z0-9_] on X; escape display text only.
-    const user = escapeMarkdown(r.username);
     lines.push(
-      `${i + 1}\\. [@${user}](https://x\\.com/${r.username})` +
-        ` \\+${formatNumber(r.absGain)} \\(${escapeMarkdown(pct)}%\\)` +
-        `\n    ${formatNumber(r.followersBefore)} → ${formatNumber(r.followersNow)}` +
+      `${i + 1}\\. ${mdUserLink(r.username)}` +
+        ` \\+${escapeMarkdown(formatNumber(r.absGain))} \\(${escapeMarkdown(pct)}%\\)` +
+        `\n    ${escapeMarkdown(formatNumber(r.followersBefore))} → ${escapeMarkdown(formatNumber(r.followersNow))}` +
         escapeMarkdown(tagStr + stage),
     );
   });
@@ -674,17 +683,20 @@ export function formatConvergenceAlert(data: ConvergenceAlertData): string {
     .map((u) => `  • @${escapeMarkdown(u)}`)
     .join("\n");
 
+  const profileUrl = `https://twitter.com/${data.targetUsername}`;
+  const searchUrl = `https://dexscreener.com/search?q=${encodeURIComponent(data.targetUsername)}`;
+
   return (
-    `🚨 *CONVERGENCE ALERT* \\(${data.score} seeds\\)\n` +
+    `🚨 *CONVERGENCE ALERT* \\(${escapeMarkdown(String(data.score))} seeds\\)\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
-    `👤 *[${escapeMarkdown(data.targetName)}](https://twitter.com/${data.targetUsername})*\n` +
+    `👤 *${mdLink(data.targetName, profileUrl)}*\n` +
     `🐦 @${escapeMarkdown(data.targetUsername)}${bioLine}\n\n` +
-    `📊 ${getFollowerTier(data.targetFollowerCount)} \`${formatNumber(data.targetFollowerCount)}\` followers${ageLine}\n` +
+    `📊 ${getFollowerTier(data.targetFollowerCount)} ${mdCode(formatNumber(data.targetFollowerCount))} followers${ageLine}\n` +
     `🏷️ ${escapeMarkdown(categoryTags)}\n\n` +
     `👥 *Seeds who followed:*\n` +
     `${seedList}\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
-    `🔗 [View Profile](https://twitter.com/${data.targetUsername}) \\| [Search CA](https://dexscreener.com/search?q=${data.targetUsername})`
+    `🔗 ${mdLink("View Profile", profileUrl)} \\| ${mdLink("Search CA", searchUrl)}`
   );
 }
 
@@ -702,8 +714,8 @@ export function formatDailyDigest(
 ): string {
   if (entries.length === 0) return "";
 
-
-      const lines: string[] = [`📋 *Daily Follow Digest \\(${escapeMarkdown(date)}\\)*`,
+  const lines: string[] = [
+    `📋 *Daily Follow Digest \\(${escapeMarkdown(date)}\\)*`,
     "",
   ];
 
@@ -714,53 +726,89 @@ export function formatDailyDigest(
     if (shown >= MAX_ENTRIES) break;
 
     lines.push(
-      `*${escapeMarkdown(category)}* \\(${catEntries.length} new follows\\)`
+      `*${escapeMarkdown(category)}* \\(${escapeMarkdown(String(catEntries.length))} new follows\\)`,
     );
 
     for (const entry of catEntries) {
       if (shown >= MAX_ENTRIES) break;
 
+      // Plain @username (no link brackets) — safer for MarkdownV2; still escape
+      // underscores and other specials in the handle.
+      const seedUser = `@${escapeMarkdown(entry.seedUsername)}`;
+      const targetUser = `@${escapeMarkdown(entry.targetUsername)}`;
       const bio = entry.targetBio
-        ? `, ${escapeMarkdown(truncate(entry.targetBio, 30))}`
+        ? escapeMarkdown(`, ${truncate(entry.targetBio, 30)}`)
         : "";
+      // formatNumber is raw; escape once for plain text (never double-escape).
+      const followerText = `${escapeMarkdown(formatNumber(entry.targetFollowerCount))} followers${bio}`;
 
-      const followerText = `${escapeMarkdown(formatNumber(entry.targetFollowerCount))} followers${bio ? escapeMarkdown(bio) : ""}`;
-
-      // Use plain @username (no MarkdownV2 link brackets) — Telegram parser
-      // rejects ] inside link text even when escaped; plain text is safe.
-      const seedUser = `@${entry.seedUsername}`;
-      const targetUser = `@${entry.targetUsername}`;
-      lines.push(
-        `${seedUser} → ${targetUser} ${followerText}`
-      );
+      lines.push(`${seedUser} → ${targetUser} ${followerText}`);
       shown++;
     }
     lines.push("");
   }
 
   if (entries.length > MAX_ENTRIES) {
-    lines.push(`\\.\\.\\. and ${entries.length - MAX_ENTRIES} more`);
+    lines.push(
+      `\\.\\.\\. and ${escapeMarkdown(String(entries.length - MAX_ENTRIES))} more`,
+    );
     lines.push("");
   }
 
-  lines.push(`*Total:* ${entries.length} new follows`);
+  lines.push(
+    `*Total:* ${escapeMarkdown(String(entries.length))} new follows`,
+  );
 
   return lines.join("\n");
 }
 
 // --- Helpers ---
 
+/**
+ * Escape plain-text content for Telegram MarkdownV2.
+ * Specials: _ * [ ] ( ) ~ ` > # + - = | { } . ! and \
+ *
+ * Do NOT use this inside code spans or raw URL bodies — use mdCode / escapeLinkUrl.
+ * Do NOT wrap formatNumber output twice (formatNumber is unescaped raw text).
+ */
 function escapeMarkdown(text: string): string {
-  // Telegram MarkdownV2: all of these are entity starters and must be
-  // backslash-escaped.  The previous regex was broken — a literal ]
-  // inside the character class closed it prematurely so almost nothing
-  // was escaped.
-  return text.replace(/[_*[\]()~`>#\+\-=|{}.!]/g, '\\$&');
+  return text.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, "\\$1");
 }
 
+/**
+ * Inside `code`, only ` and \ must be escaped (Telegram MarkdownV2).
+ * Full escapeMarkdown inside code shows literal backslashes.
+ */
+function escapeCode(text: string): string {
+  return text.replace(/([\\`])/g, "\\$1");
+}
+
+/**
+ * Inside link (...), only ) and \ must be escaped.
+ */
+function escapeLinkUrl(url: string): string {
+  return url.replace(/([)\\])/g, "\\$1");
+}
+
+/** Safe `[label](url)` for MarkdownV2. */
+function mdLink(label: string, url: string): string {
+  return `[${escapeMarkdown(label)}](${escapeLinkUrl(url)})`;
+}
+
+/** Safe inline `code` span for MarkdownV2. */
+function mdCode(text: string): string {
+  return `\`${escapeCode(text)}\``;
+}
+
+/** `[@user](https://x.com/user)` with escaped display + URL. */
+function mdUserLink(username: string): string {
+  return mdLink(`@${username}`, `https://x.com/${username}`);
+}
+
+/** Human count like 1.5K — raw text; escape at the call site for plain MD. */
 function formatNumber(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\./g, "\\.")}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\./g, "\\.")}K`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return n.toString();
 }
 
@@ -787,4 +835,12 @@ function truncate(text: string, maxLen: number): string {
   return text.slice(0, maxLen - 3) + "...";
 }
 
-export { escapeMarkdown, formatNumber, getAccountAge, getFollowerTier };
+export {
+  escapeMarkdown,
+  formatNumber,
+  getAccountAge,
+  getFollowerTier,
+  mdLink,
+  mdCode,
+  mdUserLink,
+};
