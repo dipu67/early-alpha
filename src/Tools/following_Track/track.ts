@@ -118,7 +118,11 @@ function adaptAPIUser(apiUser: APIUser): UserData {
     username: apiUser.screen_name,
     name: apiUser.name,
   };
-  if (apiUser.description !== undefined && apiUser.description !== null && apiUser.description !== "") {
+  if (
+    apiUser.description !== undefined &&
+    apiUser.description !== null &&
+    apiUser.description !== ""
+  ) {
     result.description = apiUser.description;
   }
   if (apiUser.followers !== undefined && apiUser.followers !== null) {
@@ -142,10 +146,18 @@ function adaptAPIUser(apiUser: APIUser): UserData {
   if (apiUser.banner_url !== undefined && apiUser.banner_url !== null) {
     result.profileBannerUrl = apiUser.banner_url;
   }
-  if (apiUser.joined !== undefined && apiUser.joined !== null && apiUser.joined !== "") {
+  if (
+    apiUser.joined !== undefined &&
+    apiUser.joined !== null &&
+    apiUser.joined !== ""
+  ) {
     result.createdAt = apiUser.joined;
   }
-  if (apiUser.location !== undefined && apiUser.location !== null && apiUser.location !== "") {
+  if (
+    apiUser.location !== undefined &&
+    apiUser.location !== null &&
+    apiUser.location !== ""
+  ) {
     result.location = apiUser.location;
   }
   return result;
@@ -187,7 +199,9 @@ async function importSeeds(): Promise<void> {
 
     try {
       const fxClient = new FxTwitterClient();
-      const profile = await fxClient.getProfile(seed.username.replace(/^@/, ""));
+      const profile = await fxClient.getProfile(
+        seed.username.replace(/^@/, ""),
+      );
 
       if (!profile.user) {
         failures.push(`@${seed.username} (${profile.reason ?? "not found"})`);
@@ -282,12 +296,17 @@ async function fetchSeedFollowing(
     select: { followingCursor: true },
   });
 
-  const hasStoredCursor = seed?.followingCursor && seed.followingCursor.length > 0;
+  const hasStoredCursor =
+    seed?.followingCursor && seed.followingCursor.length > 0;
   if (hasStoredCursor) {
-    console.log(`[track] @${username} has stored cursor, fetching only new following`);
+    console.log(
+      `[track] @${username} has stored cursor, fetching only new following`,
+    );
   }
 
-  let cursor: string | undefined = hasStoredCursor ? seed!.followingCursor! : undefined;
+  let cursor: string | undefined = hasStoredCursor
+    ? seed!.followingCursor!
+    : undefined;
 
   do {
     const response = await fxClient.getProfileFollowing(
@@ -376,7 +395,9 @@ export async function runTrackingCycle(
         where: { seedId: seed.id, active: true },
         select: { followingId: true },
       });
-      const existingFollowingIds = new Set(existingEdges.map((e) => e.followingId));
+      const existingFollowingIds = new Set(
+        existingEdges.map((e) => e.followingId),
+      );
 
       // Fetch following using fxtwitter with cursor pagination (only new since last cursor)
       const result = await fetchSeedFollowing(
@@ -400,15 +421,15 @@ export async function runTrackingCycle(
 
       for (const user of users) {
         // Skip DB store + alert for accounts older than 6 months
-      if (user.createdAt) {
-        const ageMs = Date.now() - new Date(user.createdAt).getTime();
-        const sixMonthsMs = 6 * 30 * 24 * 60 * 60 * 1000;
-        if (ageMs > sixMonthsMs) continue;
-      } else {
-        continue; // skip if no age info
-      }
+        if (user.createdAt) {
+          const ageMs = Date.now() - new Date(user.createdAt).getTime();
+          const sixMonthsMs = 6 * 30 * 24 * 60 * 60 * 1000;
+          if (ageMs > sixMonthsMs) continue;
+        } else {
+          continue; // skip if no age info
+        }
 
-      const followTags = await classifyAccount(user);
+        const followTags = await classifyAccount(user);
         await prisma.twitterAccount.upsert({
           where: { id: user.id },
           create: {
@@ -453,7 +474,7 @@ export async function runTrackingCycle(
           });
           // Existing follow in DB: skip new-follow alert, but send convergence if applicable.
           if (!isPopulationRun) {
-            const categories = categorizeFromBio(user.description);
+            const categories = await classifyAccount(user);
             if (!seedTwitterIds.has(user.id)) {
               await checkAndAlertConvergence(user, categories, run.id);
             }
@@ -469,12 +490,11 @@ export async function runTrackingCycle(
             },
           });
           newEdges++;
-          if (passesEarlyStageFilter(user)) {
-            const msgFormat = await formatNewFollowAlert(seed.username, user);
-            await sendTelegramAlert(msgFormat, "MarkdownV2", 1724, "newFollow");
-          }
+          const msgFormat = await formatNewFollowAlert(seed.username, user);
+          await sendTelegramAlert(msgFormat, "MarkdownV2", 1724, "newFollow");
+
           if (!isPopulationRun) {
-            const categories = categorizeFromBio(user.description);
+            const categories = await classifyAccount(user);
             if (passesEarlyStageFilter(user) && !seedTwitterIds.has(user.id)) {
               await checkAndAlertConvergence(user, categories, run.id);
             }
@@ -485,9 +505,13 @@ export async function runTrackingCycle(
       if (fullSync) {
         // Full sync: fetch ALL following pages (without stored cursor),
         // compare with existing and mark unfollowed edges as inactive
-        await markUnfollowedEdgesFullSync(fxClient, seed, existingFollowingIds, pageSize);
+        await markUnfollowedEdgesFullSync(
+          fxClient,
+          seed,
+          existingFollowingIds,
+          pageSize,
+        );
       }
-
 
       seedsProcessed++;
       console.log(
@@ -506,7 +530,9 @@ export async function runTrackingCycle(
           data: { active: false },
         });
 
-        await sendTelegramPlaintext(`⚠️ Seed @${seed.username} deactivated after 3 consecutive errors.`);
+        await sendTelegramPlaintext(
+          `⚠️ Seed @${seed.username} deactivated after 3 consecutive errors.`,
+        );
         console.log(`[track] Seed @${seed.username} deactivated (3 errors)`);
       }
     }
@@ -564,7 +590,9 @@ async function markUnfollowedEdgesFullSync(
     await sleep(1000);
   } while (cursor && cursor.length > 0);
 
-  const unfollowedIds = [...currentFollowingIds].filter((id) => !allFollowingIds.has(id));
+  const unfollowedIds = [...currentFollowingIds].filter(
+    (id) => !allFollowingIds.has(id),
+  );
 
   if (unfollowedIds.length > 0) {
     await prisma.followEdge.updateMany({
@@ -842,8 +870,12 @@ if (isMain) {
       console.log("Usage: track.ts <command>");
       console.log("Commands:");
       console.log("  import-seeds  Import seed accounts from CT.json");
-      console.log("  track         Run tracking cycle (cursor pagination, only new following)");
-      console.log("  track-full    Run full sync (all pages, detect unfollows)");
+      console.log(
+        "  track         Run tracking cycle (cursor pagination, only new following)",
+      );
+      console.log(
+        "  track-full    Run full sync (all pages, detect unfollows)",
+      );
       console.log("  digest        Send daily digest");
       console.log("  health        Run health check");
       break;

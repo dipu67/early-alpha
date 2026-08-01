@@ -226,7 +226,7 @@ export async function formatNewFollowAlert(
   const tagLine =
     meaningfulTags.length > 0
       ? `🏷️ ${escapeMarkdown(meaningfulTags.map(tagLabel).join(" · "))}\n`
-      : "";
+      : "unknown \n";
 
   const accountAge = newFollow.createdAt
     ? getAccountAge(newFollow.createdAt)
