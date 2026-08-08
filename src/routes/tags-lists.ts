@@ -39,6 +39,7 @@ import {
   removeMemberFromProjectList,
   setAccountTags,
 } from "../services/projectLists.js";
+import { sendTelegramTopic } from "../tg/sendAlert.js";
 
 export const tagsListsRouter: Router = Router();
 
@@ -697,5 +698,107 @@ tagsListsRouter.delete(
       if (msg.includes("not found or inactive")) throw new HttpError(400, msg);
       throw new HttpError(502, msg);
     }
+  }),
+);
+
+// ── Send tag alert endpoints ──
+
+const sendTagAlertBody = z.object({
+  tag: z.string().min(1),
+  topicId: z.number().int().nullable().optional(),
+});
+
+tagsListsRouter.post(
+  "/projects/send-tag-alert",
+  asyncHandler(async (req, res) => {
+    const body = sendTagAlertBody.parse(req.body);
+    const { tag, topicId } = body;
+
+    // Find all projects with this tag
+    const projects = await prisma.twitterAccount.findMany({
+      where: { tags: { has: tag } },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        tags: true,
+        followersCount: true,
+        description: true,
+        isBlueVerified: true,
+        firstSeenAt: true,
+      },
+    });
+
+    if (projects.length === 0) {
+      res.json({ sent: false, count: 0, message: `No projects found with tag "${tag}"` });
+      return;
+    }
+
+    // Build a rich message for each project
+    const lines = projects.map((p) => {
+      const bio = p.description ? `\n   📝 ${p.description.slice(0, 140).replace(/\n/g, " ")}` : "";
+      const followers = p.followersCount ? `${p.followersCount.toLocaleString()} followers` : "— followers";
+      const verified = p.isBlueVerified ? " ✅" : "";
+      const tags = p.tags.length > 0 ? `\n   🏷 ${p.tags.slice(0, 6).map((t) => `#${t}`).join(" ")}` : "";
+      const link = `<a href="https://x.com/${p.username}">@${p.username}</a>`;
+      return `▸ <b>${link}${verified}</b> [${p.name}] — ${followers}${bio}${tags}`;
+    });
+
+    const header = `📢 <b>Tag Alert: #${tag}</b>\n📊 <i>${projects.length} project${projects.length !== 1 ? "s" : ""} found</i>\n━━━━━━━━━━━━━━━━━━━━`;
+    const footer = `\n━━━━━━━━━━━━━━━━━━━━\n🕐 <i>Generated ${new Date().toLocaleString()}</i>`;
+    const text = header + "\n\n" + lines.join("\n\n") + footer;
+
+    await sendTelegramTopic(text, topicId ?? undefined, "HTML", "search");
+
+    res.json({ sent: true, count: projects.length, tag });
+  }),
+);
+
+const sendSelectedAlertBody = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(200),
+  topicId: z.number().int().nullable().optional(),
+});
+
+tagsListsRouter.post(
+  "/projects/send-selected-alert",
+  asyncHandler(async (req, res) => {
+    const body = sendSelectedAlertBody.parse(req.body);
+    const { ids, topicId } = body;
+
+    const projects = await prisma.twitterAccount.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        tags: true,
+        followersCount: true,
+        description: true,
+        isBlueVerified: true,
+        firstSeenAt: true,
+      },
+    });
+
+    if (projects.length === 0) {
+      res.json({ sent: false, count: 0, message: "No projects found for selected IDs" });
+      return;
+    }
+
+    const lines = projects.map((p) => {
+      const bio = p.description ? `\n   📝 ${p.description.slice(0, 140).replace(/\n/g, " ")}` : "";
+      const followers = p.followersCount ? `${p.followersCount.toLocaleString()} followers` : "— followers";
+      const verified = p.isBlueVerified ? " ✅" : "";
+      const tags = p.tags.length > 0 ? `\n   🏷 ${p.tags.slice(0, 6).map((t) => `#${t}`).join(" ")}` : "";
+      const link = `<a href="https://x.com/${p.username}">@${p.username}</a>`;
+      return `▸ <b>${link}${verified}</b> [${p.name}] — ${followers}${bio}${tags}`;
+    });
+
+    const header = `📋 <b>Selected Projects Alert</b>\n📊 <i>${projects.length} project${projects.length !== 1 ? "s" : ""} selected</i>\n━━━━━━━━━━━━━━━━━━━━`;
+    const footer = `\n━━━━━━━━━━━━━━━━━━━━\n🕐 <i>Generated ${new Date().toLocaleString()}</i>`;
+    const text = header + "\n\n" + lines.join("\n\n") + footer;
+
+    await sendTelegramTopic(text, topicId ?? undefined, "HTML", "search");
+
+    res.json({ sent: true, count: projects.length, ids });
   }),
 );

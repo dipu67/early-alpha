@@ -314,7 +314,14 @@ export function HunterBoard({
                       </td>
                       <td className="px-2 py-2">
                         <div className="font-medium">
-                          @{row.username}
+                          <a
+                            href={`https://x.com/${row.username}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:underline"
+                          >
+                            @{row.username}
+                          </a>
                           {row.isBlueVerified ? (
                             <span className="ml-1 text-primary">✓</span>
                           ) : null}

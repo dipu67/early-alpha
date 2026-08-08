@@ -1,0 +1,8 @@
+{
+  "hasCompletedOnboarding": true,
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://api.hcnsec.cn/",
+    "ANTHROPIC_AUTH_TOKEN": "sk-jH0Kw66osefUws7zwJrp4bYsOiUFwO2dOYM5OOADJvTft3M4",
+    "ANTHROPIC_MODEL": "DeepSeek-V4-Pro"
+  }
+}

@@ -428,6 +428,11 @@ export async function runTrackingCycle(
         } else {
           continue; // skip if no age info
         }
+        // Skip if already stored in db
+        const existingAccount = await prisma.twitterAccount.findUnique({
+          where: { id: user.id },
+        });
+        if (existingAccount) continue;
 
         const followTags = await classifyAccount(user);
         await prisma.twitterAccount.upsert({

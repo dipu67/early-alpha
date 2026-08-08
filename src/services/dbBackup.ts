@@ -5,7 +5,7 @@
 //   merge   — upsert / createMany skipDuplicates (keep existing rows)
 //   replace — wipe target tables (reverse FK order) then insert from backup
 
-import { prisma } from "../db/prisma.js";
+import { prisma, resyncAllSerialSequences } from "../db/prisma.js";
 
 export type BackupMode = "merge" | "replace";
 
@@ -667,7 +667,6 @@ export async function importDatabase(
   // Explicit ids in backup leave Postgres sequences behind MAX(id).
   // Without this, next create on tracking_runs / seeds / etc. 500s on PK.
   try {
-    const { resyncAllSerialSequences } = await import("../db/prisma.js");
     await resyncAllSerialSequences();
   } catch (err) {
     errors.push(
