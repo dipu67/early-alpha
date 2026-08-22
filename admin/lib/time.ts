@@ -78,3 +78,27 @@ export function fmtLocalDateFull(
 ): string {
   return fmtLocalDate(iso, { year: true, seconds: true, zone: true });
 }
+
+/**
+ * Relative time ago, e.g. "2 min ago", "3 hours ago", "5 days ago".
+ */
+export function timeAgo(
+  iso: string | number | Date | null | undefined,
+): string {
+  if (iso == null || iso === "") return "—";
+  const d = iso instanceof Date ? iso : new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return diffSec === 0 ? "just now" : `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} min${diffMin > 1 ? "s" : ""} ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} hr${diffHr > 1 ? "s" : ""} ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 30) return `${diffDay} day${diffDay > 1 ? "s" : ""} ago`;
+  const diffMo = Math.floor(diffDay / 30);
+  if (diffMo < 12) return `${diffMo} month${diffMo > 1 ? "s" : ""} ago`;
+  return `${Math.floor(diffMo / 12)} year${Math.floor(diffMo / 12) > 1 ? "s" : ""} ago`;
+}

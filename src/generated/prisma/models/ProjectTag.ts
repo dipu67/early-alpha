@@ -29,6 +29,7 @@ export type ProjectTagMinAggregateOutputType = {
   label: string | null
   isBuiltin: boolean | null
   enabled: boolean | null
+  isChain: boolean | null
   createdAt: Date | null
 }
 
@@ -37,6 +38,7 @@ export type ProjectTagMaxAggregateOutputType = {
   label: string | null
   isBuiltin: boolean | null
   enabled: boolean | null
+  isChain: boolean | null
   createdAt: Date | null
 }
 
@@ -45,6 +47,7 @@ export type ProjectTagCountAggregateOutputType = {
   label: number
   isBuiltin: number
   enabled: number
+  isChain: number
   keywords: number
   regexKeywords: number
   handleTokens: number
@@ -59,6 +62,7 @@ export type ProjectTagMinAggregateInputType = {
   label?: true
   isBuiltin?: true
   enabled?: true
+  isChain?: true
   createdAt?: true
 }
 
@@ -67,6 +71,7 @@ export type ProjectTagMaxAggregateInputType = {
   label?: true
   isBuiltin?: true
   enabled?: true
+  isChain?: true
   createdAt?: true
 }
 
@@ -75,6 +80,7 @@ export type ProjectTagCountAggregateInputType = {
   label?: true
   isBuiltin?: true
   enabled?: true
+  isChain?: true
   keywords?: true
   regexKeywords?: true
   handleTokens?: true
@@ -160,6 +166,7 @@ export type ProjectTagGroupByOutputType = {
   label: string
   isBuiltin: boolean
   enabled: boolean
+  isChain: boolean
   keywords: string[]
   regexKeywords: string[]
   handleTokens: string[]
@@ -193,6 +200,7 @@ export type ProjectTagWhereInput = {
   label?: Prisma.StringFilter<"ProjectTag"> | string
   isBuiltin?: Prisma.BoolFilter<"ProjectTag"> | boolean
   enabled?: Prisma.BoolFilter<"ProjectTag"> | boolean
+  isChain?: Prisma.BoolFilter<"ProjectTag"> | boolean
   keywords?: Prisma.StringNullableListFilter<"ProjectTag">
   regexKeywords?: Prisma.StringNullableListFilter<"ProjectTag">
   handleTokens?: Prisma.StringNullableListFilter<"ProjectTag">
@@ -205,6 +213,7 @@ export type ProjectTagOrderByWithRelationInput = {
   label?: Prisma.SortOrder
   isBuiltin?: Prisma.SortOrder
   enabled?: Prisma.SortOrder
+  isChain?: Prisma.SortOrder
   keywords?: Prisma.SortOrder
   regexKeywords?: Prisma.SortOrder
   handleTokens?: Prisma.SortOrder
@@ -220,6 +229,7 @@ export type ProjectTagWhereUniqueInput = Prisma.AtLeast<{
   label?: Prisma.StringFilter<"ProjectTag"> | string
   isBuiltin?: Prisma.BoolFilter<"ProjectTag"> | boolean
   enabled?: Prisma.BoolFilter<"ProjectTag"> | boolean
+  isChain?: Prisma.BoolFilter<"ProjectTag"> | boolean
   keywords?: Prisma.StringNullableListFilter<"ProjectTag">
   regexKeywords?: Prisma.StringNullableListFilter<"ProjectTag">
   handleTokens?: Prisma.StringNullableListFilter<"ProjectTag">
@@ -232,6 +242,7 @@ export type ProjectTagOrderByWithAggregationInput = {
   label?: Prisma.SortOrder
   isBuiltin?: Prisma.SortOrder
   enabled?: Prisma.SortOrder
+  isChain?: Prisma.SortOrder
   keywords?: Prisma.SortOrder
   regexKeywords?: Prisma.SortOrder
   handleTokens?: Prisma.SortOrder
@@ -250,6 +261,7 @@ export type ProjectTagScalarWhereWithAggregatesInput = {
   label?: Prisma.StringWithAggregatesFilter<"ProjectTag"> | string
   isBuiltin?: Prisma.BoolWithAggregatesFilter<"ProjectTag"> | boolean
   enabled?: Prisma.BoolWithAggregatesFilter<"ProjectTag"> | boolean
+  isChain?: Prisma.BoolWithAggregatesFilter<"ProjectTag"> | boolean
   keywords?: Prisma.StringNullableListFilter<"ProjectTag">
   regexKeywords?: Prisma.StringNullableListFilter<"ProjectTag">
   handleTokens?: Prisma.StringNullableListFilter<"ProjectTag">
@@ -262,6 +274,7 @@ export type ProjectTagCreateInput = {
   label: string
   isBuiltin?: boolean
   enabled?: boolean
+  isChain?: boolean
   keywords?: Prisma.ProjectTagCreatekeywordsInput | string[]
   regexKeywords?: Prisma.ProjectTagCreateregexKeywordsInput | string[]
   handleTokens?: Prisma.ProjectTagCreatehandleTokensInput | string[]
@@ -274,6 +287,7 @@ export type ProjectTagUncheckedCreateInput = {
   label: string
   isBuiltin?: boolean
   enabled?: boolean
+  isChain?: boolean
   keywords?: Prisma.ProjectTagCreatekeywordsInput | string[]
   regexKeywords?: Prisma.ProjectTagCreateregexKeywordsInput | string[]
   handleTokens?: Prisma.ProjectTagCreatehandleTokensInput | string[]
@@ -286,6 +300,7 @@ export type ProjectTagUpdateInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   isBuiltin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isChain?: Prisma.BoolFieldUpdateOperationsInput | boolean
   keywords?: Prisma.ProjectTagUpdatekeywordsInput | string[]
   regexKeywords?: Prisma.ProjectTagUpdateregexKeywordsInput | string[]
   handleTokens?: Prisma.ProjectTagUpdatehandleTokensInput | string[]
@@ -298,6 +313,7 @@ export type ProjectTagUncheckedUpdateInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   isBuiltin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isChain?: Prisma.BoolFieldUpdateOperationsInput | boolean
   keywords?: Prisma.ProjectTagUpdatekeywordsInput | string[]
   regexKeywords?: Prisma.ProjectTagUpdateregexKeywordsInput | string[]
   handleTokens?: Prisma.ProjectTagUpdatehandleTokensInput | string[]
@@ -310,6 +326,7 @@ export type ProjectTagCreateManyInput = {
   label: string
   isBuiltin?: boolean
   enabled?: boolean
+  isChain?: boolean
   keywords?: Prisma.ProjectTagCreatekeywordsInput | string[]
   regexKeywords?: Prisma.ProjectTagCreateregexKeywordsInput | string[]
   handleTokens?: Prisma.ProjectTagCreatehandleTokensInput | string[]
@@ -322,6 +339,7 @@ export type ProjectTagUpdateManyMutationInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   isBuiltin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isChain?: Prisma.BoolFieldUpdateOperationsInput | boolean
   keywords?: Prisma.ProjectTagUpdatekeywordsInput | string[]
   regexKeywords?: Prisma.ProjectTagUpdateregexKeywordsInput | string[]
   handleTokens?: Prisma.ProjectTagUpdatehandleTokensInput | string[]
@@ -334,6 +352,7 @@ export type ProjectTagUncheckedUpdateManyInput = {
   label?: Prisma.StringFieldUpdateOperationsInput | string
   isBuiltin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   enabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isChain?: Prisma.BoolFieldUpdateOperationsInput | boolean
   keywords?: Prisma.ProjectTagUpdatekeywordsInput | string[]
   regexKeywords?: Prisma.ProjectTagUpdateregexKeywordsInput | string[]
   handleTokens?: Prisma.ProjectTagUpdatehandleTokensInput | string[]
@@ -354,6 +373,7 @@ export type ProjectTagCountOrderByAggregateInput = {
   label?: Prisma.SortOrder
   isBuiltin?: Prisma.SortOrder
   enabled?: Prisma.SortOrder
+  isChain?: Prisma.SortOrder
   keywords?: Prisma.SortOrder
   regexKeywords?: Prisma.SortOrder
   handleTokens?: Prisma.SortOrder
@@ -366,6 +386,7 @@ export type ProjectTagMaxOrderByAggregateInput = {
   label?: Prisma.SortOrder
   isBuiltin?: Prisma.SortOrder
   enabled?: Prisma.SortOrder
+  isChain?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -374,6 +395,7 @@ export type ProjectTagMinOrderByAggregateInput = {
   label?: Prisma.SortOrder
   isBuiltin?: Prisma.SortOrder
   enabled?: Prisma.SortOrder
+  isChain?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -432,6 +454,7 @@ export type ProjectTagSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   label?: boolean
   isBuiltin?: boolean
   enabled?: boolean
+  isChain?: boolean
   keywords?: boolean
   regexKeywords?: boolean
   handleTokens?: boolean
@@ -444,6 +467,7 @@ export type ProjectTagSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   label?: boolean
   isBuiltin?: boolean
   enabled?: boolean
+  isChain?: boolean
   keywords?: boolean
   regexKeywords?: boolean
   handleTokens?: boolean
@@ -456,6 +480,7 @@ export type ProjectTagSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   label?: boolean
   isBuiltin?: boolean
   enabled?: boolean
+  isChain?: boolean
   keywords?: boolean
   regexKeywords?: boolean
   handleTokens?: boolean
@@ -468,6 +493,7 @@ export type ProjectTagSelectScalar = {
   label?: boolean
   isBuiltin?: boolean
   enabled?: boolean
+  isChain?: boolean
   keywords?: boolean
   regexKeywords?: boolean
   handleTokens?: boolean
@@ -475,7 +501,7 @@ export type ProjectTagSelectScalar = {
   createdAt?: boolean
 }
 
-export type ProjectTagOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"slug" | "label" | "isBuiltin" | "enabled" | "keywords" | "regexKeywords" | "handleTokens" | "handleSuffixTokens" | "createdAt", ExtArgs["result"]["projectTag"]>
+export type ProjectTagOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"slug" | "label" | "isBuiltin" | "enabled" | "isChain" | "keywords" | "regexKeywords" | "handleTokens" | "handleSuffixTokens" | "createdAt", ExtArgs["result"]["projectTag"]>
 
 export type $ProjectTagPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ProjectTag"
@@ -485,6 +511,7 @@ export type $ProjectTagPayload<ExtArgs extends runtime.Types.Extensions.Internal
     label: string
     isBuiltin: boolean
     enabled: boolean
+    isChain: boolean
     keywords: string[]
     regexKeywords: string[]
     /**
@@ -923,6 +950,7 @@ export interface ProjectTagFieldRefs {
   readonly label: Prisma.FieldRef<"ProjectTag", 'String'>
   readonly isBuiltin: Prisma.FieldRef<"ProjectTag", 'Boolean'>
   readonly enabled: Prisma.FieldRef<"ProjectTag", 'Boolean'>
+  readonly isChain: Prisma.FieldRef<"ProjectTag", 'Boolean'>
   readonly keywords: Prisma.FieldRef<"ProjectTag", 'String[]'>
   readonly regexKeywords: Prisma.FieldRef<"ProjectTag", 'String[]'>
   readonly handleTokens: Prisma.FieldRef<"ProjectTag", 'String[]'>

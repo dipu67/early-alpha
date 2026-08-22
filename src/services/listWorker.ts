@@ -10,6 +10,7 @@ import {
   type ListSyncCtx,
 } from "./projectLists.js";
 import { pollAllLists } from "./listPoller.js";
+import { enrichFromBio } from "./projectEnricher.js";
 
 /** Accounts reconciled per cycle — bounded to stay under add-member limits. */
 const RECONCILE_BATCH = Number(process.env.LIST_RECONCILE_BATCH ?? 40);
@@ -78,6 +79,32 @@ async function runReclassify(data: {
       `[list-worker] reclassify ${data.accountId} → [${result.tags.join(", ")}] ` +
         `lists +${result.added.join(",") || "—"} -${result.removed.join(",") || "—"}`,
     );
+
+    // Also update Project.category from bio + username
+    try {
+      const acc = await prisma.twitterAccount.findUnique({
+        where: { id: data.accountId },
+        select: { id: true, username: true, name: true, description: true, tags: true, project: { select: { id: true, category: true, chain: true } } },
+      });
+      if (acc?.project) {
+        const { chain } = enrichFromBio(acc.description, acc.name ?? acc.username);
+        const { tagsToCategories } = await import("./projectTagger.js");
+        const effectiveCategory = tagsToCategories(acc.tags);
+        const catChanged = JSON.stringify(acc.project.category) !== JSON.stringify(effectiveCategory);
+        const chainChanged = acc.project.chain !== chain;
+        if (catChanged || chainChanged) {
+          await prisma.project.update({
+            where: { id: acc.project.id },
+            data: {
+              ...(catChanged ? { category: effectiveCategory } : {}),
+              ...(chainChanged ? { chain } : {}),
+            },
+          });
+        }
+      }
+    } catch (err) {
+      console.warn(`[list-worker] reclassify: project category update failed:`, err instanceof Error ? err.message : err);
+    }
   } catch (err) {
     if (err instanceof ListDailyAddLimitError) {
       // Tags were already written by the API; list membership retries tomorrow.
@@ -105,9 +132,6 @@ const worker = new Worker(
       await runReconcile();
     } else if (job.name === "poll-lists") {
       await runPoll();
-    } else if (job.name === "early-digest") {
-      const { sendEarlyProjectDigest } = await import("./earlyDigest.js");
-      await sendEarlyProjectDigest();
     } else if (job.name === "reclassify") {
       const data = job.data as { accountId: string; tags: string[] };
       await runReclassify(data);
@@ -131,29 +155,11 @@ const worker = new Worker(
       // Manual monitors only — never auto-enroll from hunter heat
       const { pollAllMonitors } = await import("./projectMonitor.js");
       await pollAllMonitors();
-    } else if (job.name === "poll-early-projects") {
-      const { pollEarlyProjects } = await import("./earlyProjectPoller.js");
-      const { setConfig } = await import("./appConfig.js");
-      const r = await pollEarlyProjects();
-      await setConfig("earlyPoll.lastResult", {
-        ...r,
-        finishedAt: new Date().toISOString(),
-      });
-    } else if (job.name === "early-timeline") {
-      const { processEarlyTimelineJob } = await import("./earlyProjectPoller.js");
-      const data = job.data as {
-        accountId: string;
-        username?: string;
-        name?: string;
-        tags?: string[];
-      };
-      const r = await processEarlyTimelineJob(data);
+    } else if (job.name === "poll-watching") {
+      const { pollWatchingProjects } = await import("./watchingPoller.js");
+      const r = await pollWatchingProjects();
       console.log(
-        `[list-worker] early-timeline ${data.accountId} ` +
-          `signals=${r.signalAlerts} raw=${r.rawAlerts}` +
-          (r.requeued ? " requeued" : "") +
-          (r.deleted ? " deleted" : "") +
-          (r.skipped ? ` skipped=${r.skipped}` : ""),
+        `[list-worker] poll-watching checked=${r.checked} timelines=${r.timelines} alerted=${r.alerted} rateLimited=${r.rateLimited}`,
       );
     } else if (job.name === "growth-report") {
       const { sendWeeklyGrowthReport } = await import("./growthReport.js");
@@ -162,7 +168,7 @@ const worker = new Worker(
       const r = await sendWeeklyGrowthReport({
         topicId: data.topicId ?? null,
       });
-      await setConfig("earlyPoll.lastGrowthReport", {
+      await setConfig("digest.growthReport", {
         ...r,
         topicId: data.topicId ?? null,
         finishedAt: new Date().toISOString(),

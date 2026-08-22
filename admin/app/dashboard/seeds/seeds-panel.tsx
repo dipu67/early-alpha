@@ -20,7 +20,7 @@ import { ActionButton } from "@/components/action-button";
 import { proxy } from "@/lib/client";
 import { toast } from "@/components/ui/sonner";
 import { useCan } from "@/components/role-context";
-import { fmtNum, type SeedAccount, type SeedStats } from "@/lib/types";
+import { fmtNum, type SeedAccount, type SeedStats, type TrackingRun } from "@/lib/types";
 import { Sprout } from "lucide-react";
 
 function Kpi({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
@@ -41,12 +41,14 @@ export function SeedsPanel({
   stats,
   suggestedCategories,
   inUseCategories,
+  runs,
 }: {
   initialItems: SeedAccount[];
   total: number;
   stats: SeedStats;
   suggestedCategories: string[];
   inUseCategories: string[];
+  runs?: TrackingRun[];
 }) {
   const router = useRouter();
   const canWrite = useCan("editor");
@@ -233,6 +235,57 @@ export function SeedsPanel({
         </span>
       </div>
 
+      {runs && runs.length > 0 ? (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Run</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead className="text-right">Seeds</TableHead>
+                  <TableHead className="text-right">Accounts</TableHead>
+                  <TableHead className="text-right">Edges</TableHead>
+                  <TableHead>Time</TableHead>
+                  {runs.some((r) => r.error) ? <TableHead>Error</TableHead> : null}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {runs.map((run) => (
+                  <TableRow key={run.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">#{run.id}</TableCell>
+                    <TableCell>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                        run.status === "success" ? "bg-green-100 text-green-700" :
+                        run.status === "running" ? "bg-blue-100 text-blue-700" :
+                        "bg-red-100 text-red-700"
+                      }`}>
+                        {run.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {run.finishedAt
+                        ? `${Math.round((new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime()) / 1000)}s`
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-xs">{run.seedsProcessed}</TableCell>
+                    <TableCell className="text-right tabular-nums text-xs">{run.accountsSeen}</TableCell>
+                    <TableCell className="text-right tabular-nums text-xs">{run.newFollowEdges}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      <LocalTime iso={run.startedAt} />
+                    </TableCell>
+                    {run.error ? (
+                      <TableCell className="text-xs text-destructive max-w-[20rem] truncate">{run.error}</TableCell>
+                    ) : null}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {filtered.length === 0 ? (
         <EmptyState
           icon={Sprout}
@@ -256,19 +309,30 @@ export function SeedsPanel({
               {filtered.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell>
-                    <a
-                      href={`https://x.com/${s.username}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      @{s.username}
-                    </a>
-                    {s.label ? (
-                      <div className="text-xs text-muted-foreground">{s.label}</div>
-                    ) : null}
-                    <div className="font-mono text-[10px] text-muted-foreground">
-                      {s.twitterId ?? "no twitter id"}
+                    <div className="flex items-center gap-2">
+                      {s.profileImageUrl ? (
+                        <img src={s.profileImageUrl} alt={s.username} className="size-7 rounded-full flex-shrink-0 object-cover" />
+                      ) : (
+                        <div className="size-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium flex-shrink-0">
+                          {s.username.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <a
+                          href={`https://x.com/${s.username}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          @{s.username}
+                        </a>
+                        {s.label ? (
+                          <div className="text-xs text-muted-foreground">{s.label}</div>
+                        ) : null}
+                        <div className="font-mono text-[10px] text-muted-foreground">
+                          {s.twitterId ?? "no twitter id"}
+                        </div>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>

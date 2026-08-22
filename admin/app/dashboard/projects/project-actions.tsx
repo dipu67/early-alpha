@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { Loader2, RefreshCw, Trash2, Check, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { proxy } from "@/lib/client";
 import { toast } from "@/components/ui/sonner";
 import { useCan } from "@/components/role-context";
 import { ReclassifyControl } from "./reclassify-control";
+import { useMemo } from "react";
 
 /** Edit tags + fetch bio + remove project. */
 export function ProjectActions({
@@ -27,8 +28,16 @@ export function ProjectActions({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [reclassify, setReclassify] = useState(false);
 
   if (!canWrite) return null;
+
+  useMemo(() => {
+    // Sync reclassify state with current tags
+    if (currentTags && currentTags.length > 0) {
+      setReclassify(true);
+    }
+  }, [currentTags]);
 
   async function fetchProfile() {
     setFetching(true);
@@ -37,7 +46,7 @@ export function ProjectActions({
         `/api/projects/${encodeURIComponent(accountId)}/fetch-profile`,
         {
           method: "POST",
-          body: { reclassify: true },
+          body: { reclassify },
         },
       );
       if (res.ok) {
@@ -76,6 +85,14 @@ export function ProjectActions({
     }
   }
 
+  async function toggleReclassify() {
+    setReclassify((prev) => {
+      const next = !prev;
+      // If enabling, show reclassify control; if disabling, just update silently
+      return next;
+    });
+  }
+
   return (
     <div className="flex flex-wrap items-start gap-1.5">
       <ReclassifyControl accountId={accountId} currentTags={currentTags} />
@@ -98,6 +115,21 @@ export function ProjectActions({
           <RefreshCw className="size-3.5" />
         )}
         {missingBio ? "Fetch bio" : "Refresh"}
+      </Button>
+      <Button
+        type="button"
+        variant={reclassify ? "secondary" : "ghost"}
+        size="sm"
+        className="h-8 text-primary"
+        disabled={busy || fetching}
+        onClick={() => void toggleReclassify()}
+        title={reclassify ? "Disable reclassify on fetch" : "Enable reclassify on fetch"}
+      >
+        {reclassify ? (
+          <Check className="size-3.5" />
+        ) : (
+          <XCircle className="size-3.5 text-muted-foreground" />
+        )}
       </Button>
       <Button
         type="button"

@@ -19,7 +19,6 @@ import {
   getAccountAge,
   formatNewFollowAlert,
 } from "../../services/formatAlert.js";
-import { classifyAccount } from "../../services/projectTagger.js";
 
 // --- Category tagging ---
 
@@ -84,6 +83,35 @@ export function categorizeFromBio(bio: string | null | undefined): string[] {
   }
 
   return matched;
+}
+
+// --- Project enrichment ---
+
+import { enrichFromBio } from "../../services/projectEnricher.js";
+
+
+/** Ensure a Project row exists for this account, created at discovery time. */
+async function upsertProjectAtDiscovery(
+  accountId: string,
+  username: string,
+  bio: string | null | undefined,
+): Promise<void> {
+  const { chain } = enrichFromBio(bio, username);
+  const { tagsToCategories } = await import("../../services/projectTagger.js");
+  const catArray = tagsToCategories([]);
+  const existing = await prisma.project.findUnique({
+    where: { twitterAccountId: accountId },
+    select: { id: true },
+  });
+  if (existing) return; // already enriched, don't overwrite manual edits
+  await prisma.project.create({
+    data: {
+      twitterAccountId: accountId,
+      name: username,
+      projectStatus: "discovered",
+      chain,
+    },
+  });
 }
 
 export function passesEarlyStageFilter(user: UserData): boolean {
@@ -210,7 +238,6 @@ async function importSeeds(): Promise<void> {
 
       const user = adaptAPIUser(profile.user);
 
-      const importTags = await classifyAccount(user);
       await prisma.twitterAccount.upsert({
         where: { id: user.id },
         create: {
@@ -218,7 +245,6 @@ async function importSeeds(): Promise<void> {
           username: user.username,
           name: user.name,
           description: user.description ?? null,
-          tags: importTags,
           followersCount: user.followersCount ?? null,
           followingCount: user.followingCount ?? null,
           isBlueVerified: user.isBlueVerified ?? null,
@@ -229,7 +255,6 @@ async function importSeeds(): Promise<void> {
           username: user.username,
           name: user.name,
           description: user.description ?? null,
-          tags: importTags,
           followersCount: user.followersCount ?? null,
           followingCount: user.followingCount ?? null,
           isBlueVerified: user.isBlueVerified ?? null,
@@ -434,7 +459,6 @@ export async function runTrackingCycle(
         });
         if (existingAccount) continue;
 
-        const followTags = await classifyAccount(user);
         await prisma.twitterAccount.upsert({
           where: { id: user.id },
           create: {
@@ -442,7 +466,6 @@ export async function runTrackingCycle(
             username: user.username,
             name: user.name,
             description: user.description ?? null,
-            tags: followTags,
             followersCount: user.followersCount ?? null,
             followingCount: user.followingCount ?? null,
             isBlueVerified: user.isBlueVerified ?? null,
@@ -452,13 +475,16 @@ export async function runTrackingCycle(
           update: {
             username: user.username,
             name: user.name,
-            tags: followTags,
+            description: user.description ?? null,
             followersCount: user.followersCount ?? null,
             followingCount: user.followingCount ?? null,
             isBlueVerified: user.isBlueVerified ?? null,
             profileImageUrl: user.profileImageUrl ?? null,
           },
         });
+
+        // Auto-create Project row at first discovery so it shows up in the dashboard immediately.
+        await upsertProjectAtDiscovery(user.id, user.username, user.description);
 
         const existingEdge = await prisma.followEdge.findUnique({
           where: {
@@ -478,11 +504,8 @@ export async function runTrackingCycle(
             },
           });
           // Existing follow in DB: skip new-follow alert, but send convergence if applicable.
-          if (!isPopulationRun) {
-            const categories = await classifyAccount(user);
-            if (!seedTwitterIds.has(user.id)) {
-              await checkAndAlertConvergence(user, categories, run.id);
-            }
+          if (!isPopulationRun && !seedTwitterIds.has(user.id)) {
+            await checkAndAlertConvergence(user, run.id);
           }
         } else {
           await prisma.followEdge.create({
@@ -496,13 +519,10 @@ export async function runTrackingCycle(
           });
           newEdges++;
           const msgFormat = await formatNewFollowAlert(seed.username, user);
-          await sendTelegramAlert(msgFormat, "MarkdownV2", 1724, "newFollow");
+          await sendTelegramAlert(msgFormat, "MarkdownV2", undefined, "newFollow");
 
-          if (!isPopulationRun) {
-            const categories = await classifyAccount(user);
-            if (passesEarlyStageFilter(user) && !seedTwitterIds.has(user.id)) {
-              await checkAndAlertConvergence(user, categories, run.id);
-            }
+          if (!isPopulationRun && passesEarlyStageFilter(user) && !seedTwitterIds.has(user.id)) {
+            await checkAndAlertConvergence(user, run.id);
           }
         }
       }
@@ -624,7 +644,6 @@ async function isFirstRunForSeed(seedId: bigint): Promise<boolean> {
 
 async function checkAndAlertConvergence(
   target: UserData,
-  categories: string[],
   runId: bigint,
 ): Promise<void> {
   const windowMs = 72 * 60 * 60 * 1000;
@@ -642,7 +661,8 @@ async function checkAndAlertConvergence(
 
   const convergenceCount = edges.length;
   // Only alert for early-stage accounts (<6 months) with non-empty categories
-  if (!categories || categories.length === 0) return;
+  const categories = categorizeFromBio(target.description);
+  if (categories.length === 0) return;
 
   if (convergenceCount < 2) return;
 
@@ -685,6 +705,32 @@ async function checkAndAlertConvergence(
       reason: `${convergenceCount} seeds followed within 72h`,
     },
   });
+
+  // Promote the Project row to "investigating" now that convergence was detected.
+  const accForProject = await prisma.twitterAccount.findUnique({
+    where: { id: target.id },
+    select: { description: true, username: true },
+  });
+  if (accForProject) {
+    const { chain } = enrichFromBio(accForProject.description, accForProject.username);
+    const { tagsToCategories } = await import("../../services/projectTagger.js");
+    const catArray = tagsToCategories([]);
+    await prisma.project.upsert({
+      where: { twitterAccountId: target.id },
+      create: {
+        twitterAccountId: target.id,
+        name: accForProject.username,
+        category: catArray,
+        projectStatus: "investigating",
+        chain,
+      },
+      update: {
+        category: catArray,
+        chain,
+        projectStatus: "investigating",
+      },
+    });
+  }
 
   const alertData: ConvergenceAlertData = {
     targetUsername: target.username,

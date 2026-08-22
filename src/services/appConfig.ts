@@ -21,37 +21,18 @@ export const CONFIG_KEYS = {
   tgDefaultTopicId: "tg.defaultTopicId",
   tgSignalTopicId: "tg.signalTopicId",
   tgSignalTopicMap: "tg.signalTopicMap",
-  tgEarlyProjectTopicId: "tg.earlyProjectTopicId",
-  tgEarlyTopicMap: "tg.earlyTopicMap",
+  /** Watching project alert settings */
+  watchingSignalEnabled: "watching.signalEnabled",
+  watchingRowEnabled: "watching.rowEnabled",
+  watchingIntervalMs: "watching.intervalMs",
+  watchingSignalTopicId: "watching.signalTopicId",
+  watchingRowTopicId: "watching.rowTopicId",
   tgMinIntervalMs: "tg.minIntervalMs",
   tgMaxRetries: "tg.maxRetries",
   /** JSON array or comma-separated Telegram user ids for bot admin commands */
   tgAdminIds: "tg.adminIds",
   /** TelegramBot.id (string) for the Grok bot process */
   tgGrokBotId: "tg.grokBotId",
-  /** Early monitor poller knobs (admin Early Monitor page). Env is fallback. */
-  earlyPollBatch: "earlyPoll.batch",
-  earlyPollMaxBatches: "earlyPoll.maxBatches",
-  earlyPollMaxTimelines: "earlyPoll.maxTimelines",
-  earlyPollDelayMs: "earlyPoll.delayMs",
-  earlyPollStaleMs: "earlyPoll.staleMs",
-  earlyPollMaxFollowers: "earlyPoll.maxFollowers",
-  earlyPollMaxFollowing: "earlyPoll.maxFollowing",
-  earlyPollMaxAgeDays: "earlyPoll.maxAgeDays",
-  earlyPollFirstSeenDays: "earlyPoll.firstSeenDays",
-  earlyPollIncludeSoftHot: "earlyPoll.includeSoftHot",
-  earlyPollStrictEarlyOnly: "earlyPoll.strictEarlyOnly",
-  earlyPollSnapshotMinMs: "earlyPoll.snapshotMinMs",
-  /** Telegram topics for early monitor (override signal map / default). */
-  earlyPollSignalTopicId: "earlyPoll.signalTopicId",
-  earlyPollRawTopicId: "earlyPoll.rawTopicId",
-  earlyPollProfileChangeTopicId: "earlyPoll.profileChangeTopicId",
-  /** Send non-signal posts as raw early alerts. */
-  earlyPollSendRawPosts: "earlyPoll.sendRawPosts",
-  /** Max getUserTweets per 15m window (Twitter ~50). */
-  earlyPollTweetReqBudget: "earlyPoll.tweetReqBudget",
-  /** Sliding window counters for getUserTweets rate limit. */
-  earlyPollTweetReqWindow: "earlyPoll.tweetReqWindow",
 } as const;
 
 /** Alert types that can be individually enabled/disabled. */
@@ -59,7 +40,6 @@ export type AlertType =
   | "newFollow"
   | "signal"
   | "reclassify"
-  | "earlyDigest"
   | "convergence"
   | "search"
   | "monitor"
@@ -74,7 +54,6 @@ export const ALERT_TYPES: AlertType[] = [
   "newFollow",
   "signal",
   "reclassify",
-  "earlyDigest",
   "convergence",
   "search",
   "monitor",

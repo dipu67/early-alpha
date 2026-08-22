@@ -40,7 +40,7 @@ void import("./src/services/digestCatchUp.js")
   .then(({ catchUpMissedDigests }) => catchUpMissedDigests())
   .then((r) =>
     console.log(
-      `[digest-catchup] done daily=${r.daily} early=${r.early}`,
+      `[digest-catchup] done daily=${r.daily}`,
     ),
   )
   .catch((err) =>

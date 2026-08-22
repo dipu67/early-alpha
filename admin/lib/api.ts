@@ -26,12 +26,18 @@ export interface BackendRawResponse {
 
 function buildUrl(
   path: string,
-  query?: Record<string, string | undefined>,
+  query?: Record<string, string | string[] | undefined>,
 ): URL {
   const url = new URL(path, BASE);
   if (query) {
     for (const [k, v] of Object.entries(query)) {
-      if (v !== undefined && v !== "") url.searchParams.set(k, v);
+      if (v !== undefined && v !== "") {
+        if (Array.isArray(v)) {
+          for (const item of v) url.searchParams.append(k, item);
+        } else {
+          url.searchParams.set(k, v);
+        }
+      }
     }
   }
   return url;
@@ -44,7 +50,7 @@ function buildUrl(
  */
 export async function backendFetch(
   path: string,
-  init: { method?: string; body?: unknown; query?: Record<string, string | undefined> } = {},
+  init: { method?: string; body?: unknown; query?: Record<string, string | string[] | undefined> } = {},
 ): Promise<BackendResponse> {
   try {
     const url = buildUrl(path, init.query);

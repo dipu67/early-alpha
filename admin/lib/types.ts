@@ -6,12 +6,43 @@ export interface Project {
   name: string;
   /** Twitter bio — null/empty when never fetched */
   description?: string | null;
+  /** Profile image URL from Twitter */
+  profileImageUrl?: string | null;
   tags: string[];
   followersCount: number | null;
   isBlueVerified: boolean | null;
   listsSyncedAt: string | null;
   firstSeenAt: string;
   updatedAt?: string;
+  project?: {
+    id: number;
+    projectStatus: string;
+    chain: string | null;
+    website: string | null;
+    github: string | null;
+    name: string;
+    description: string | null;
+  } | null;
+}
+
+/** Whether the account has a Project row (category/status/chain set). */
+export function isEnriched(p: Project): boolean {
+  return p.project != null;
+}
+
+/** Display tags as category labels. */
+export function categoryDisplay(p: Project): string {
+  return p.tags[0] ?? "Other";
+}
+
+/** Get all tags (used as categories). */
+export function categoryList(p: Project): string[] {
+  return p.tags.length > 0 ? p.tags : ["other"];
+}
+
+/** Project status with a sensible default. */
+export function projectStatus(p: Project): string {
+  return p.project?.projectStatus ?? "discovered";
 }
 
 /** Sort keys for GET /api/projects?sort= */
@@ -29,6 +60,7 @@ export interface ProjectTag {
   label: string;
   enabled: boolean;
   isBuiltin: boolean;
+  isChain: boolean;
   keywords: string[];
   regexKeywords: string[];
   handleTokens: string[];
@@ -132,6 +164,18 @@ export interface SeedAccount {
   lastEdgeAt: string | null;
   createdAt: string;
   updatedAt: string;
+  profileImageUrl?: string | null;
+}
+
+export interface TrackingRun {
+  id: number;
+  status: string;
+  startedAt: string;
+  finishedAt: string | null;
+  seedsProcessed: number;
+  accountsSeen: number;
+  newFollowEdges: number;
+  error: string | null;
 }
 
 export interface EarlyProjectStats {
@@ -184,6 +228,7 @@ export interface EarlyPollConfig {
   firstSeenDays: number;
   includeSoftHot: boolean;
   strictEarlyOnly: boolean;
+  watchingOnly: boolean;
   snapshotMinMs: number;
   maxAccountsPerCycle: number;
   signalTopicId: number | null;

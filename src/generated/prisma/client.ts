@@ -202,3 +202,13 @@ export type GithubRepoMonitor = Prisma.GithubRepoMonitorModel
  * 
  */
 export type GithubRepoCommit = Prisma.GithubRepoCommitModel
+/**
+ * Model Project
+ * Enrichment layer over TwitterAccount — manual category, lifecycle status, chain, links.
+ */
+export type Project = Prisma.ProjectModel
+/**
+ * Model ProjectTemplate
+ * Reusable template for creating projects quickly (e.g. "DeFi DEX on Arbitrum").
+ */
+export type ProjectTemplate = Prisma.ProjectTemplateModel

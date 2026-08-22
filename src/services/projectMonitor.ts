@@ -974,10 +974,6 @@ export async function pollAllMonitors(): Promise<{
 
       // Keep TwitterAccount in sync (username + counts)
       try {
-        const { freeUsernameIfHeldByOther } = await import(
-          "./earlyProjectPoller.js"
-        );
-        await freeUsernameIfHeldByOther(m.twitterUserId, liveUsername);
         await prisma.twitterAccount.update({
           where: { id: m.twitterUserId },
           data: {

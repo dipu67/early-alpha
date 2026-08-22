@@ -110,18 +110,6 @@ export async function topicForSlug(slug: string): Promise<number | undefined> {
   return defaultTopicId();
 }
 
-/** Per-tag topic for the early-project digest (map only). */
-export async function earlyTopicForSlug(slug: string): Promise<number | undefined> {
-  const map = parseTopicMap(await getConfig(CONFIG_KEYS.tgEarlyTopicMap, null));
-  return slug in map ? map[slug] : undefined;
-}
-
-/** General early-project topic for tags with no map entry. */
-export async function earlyProjectTopic(): Promise<number | undefined> {
-  const v = await getConfig<unknown>(CONFIG_KEYS.tgEarlyProjectTopicId, null);
-  return toInt(v) ?? (await defaultTopicId());
-}
-
 /** Whether a given alert type is enabled (default: enabled). */
 export async function isAlertEnabled(type: AlertType): Promise<boolean> {
   return getConfig<boolean>(alertEnabledKey(type), true);

@@ -1,8 +1,8 @@
 {
   "hasCompletedOnboarding": true,
   "env": {
-    "ANTHROPIC_BASE_URL": "https://api.hcnsec.cn/",
-    "ANTHROPIC_AUTH_TOKEN": "sk-jH0Kw66osefUws7zwJrp4bYsOiUFwO2dOYM5OOADJvTft3M4",
-    "ANTHROPIC_MODEL": "DeepSeek-V4-Pro"
+    "ANTHROPIC_BASE_URL": "https://agentrouter.org/",
+    "ANTHROPIC_AUTH_TOKEN": "sk-KaradUAKIhZSQ8ApllFZHXinIQJPkm41A2OV1SVapB2D9d35",
+    "ANTHROPIC_MODEL": "claude-opus-5"
   }
 }

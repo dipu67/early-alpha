@@ -7,10 +7,14 @@
 //   DELETE /tags/:slug          -> delete tag
 //   POST   /tags/seed           -> enqueue seed keywords from lexicon file
 //   POST   /tags/backfill       -> enqueue re-classify accounts from lexicon
-//   GET    /projects            -> tagged TwitterAccounts, filter by tag/search
+//   GET    /projects            -> tagged TwitterAccounts, filter by tag/search/category/status/chain
+//   PATCH  /projects/:id        -> set project fields (category, status, chain, website, …)
+//   POST   /projects/:id/set-category  bulk tag-select → set category + reconcile lists
 //   POST   /projects/fetch-profiles -> getUsersByIds → fill null bios (+ re-tag)
 //   POST   /projects/:id/fetch-profile -> same for one project
 //   DELETE /projects/:id        -> remove project account from DB (+ list mirror)
+//   GET    /project-templates   -> list project templates
+//   POST   /project-templates   -> create a project template (editor+)
 //   GET    /lists               -> ProjectLists with member counts
 //   GET    /lists/owned         -> live getMyLists() across all auth accounts
 //   POST   /lists               -> create list (slug + auth owner)
@@ -24,7 +28,7 @@
 
 import { Router } from "express";
 import { z } from "zod";
-import { prisma } from "../db/prisma.js";
+import { prisma, sql } from "../db/prisma.js";
 import { asyncHandler, HttpError } from "../middleware/error.js";
 import { paginationSchema, jsonSafe } from "../http.js";
 import { enqueueJob } from "../enqueue.js";
@@ -63,6 +67,7 @@ function serializeTag(t: {
   label: string;
   enabled: boolean;
   isBuiltin: boolean;
+  isChain: boolean;
   keywords: string[];
   regexKeywords: string[];
   handleTokens: string[];
@@ -74,6 +79,7 @@ function serializeTag(t: {
     label: t.label,
     enabled: t.enabled,
     isBuiltin: t.isBuiltin,
+    isChain: t.isChain,
     keywords: t.keywords,
     regexKeywords: t.regexKeywords,
     handleTokens: t.handleTokens,
@@ -106,6 +112,7 @@ const createTagBody = z.object({
   slug: slugSchema,
   label: z.string().min(1).max(80),
   enabled: z.boolean().optional().default(true),
+  isChain: z.boolean().optional().default(false),
   keywords: keywordListSchema.optional().default([]),
   regexKeywords: keywordListSchema.optional().default([]),
   handleTokens: keywordListSchema.optional().default([]),
@@ -124,6 +131,7 @@ tagsListsRouter.post(
         slug: body.slug,
         label: body.label,
         enabled: body.enabled,
+        isChain: body.isChain,
         isBuiltin: false,
         keywords: body.keywords,
         regexKeywords: body.regexKeywords,
@@ -140,6 +148,7 @@ const patchTagBody = z
   .object({
     label: z.string().min(1).max(80).optional(),
     enabled: z.boolean().optional(),
+    isChain: z.boolean().optional(),
     keywords: keywordListSchema.optional(),
     regexKeywords: keywordListSchema.optional(),
     handleTokens: keywordListSchema.optional(),
@@ -160,6 +169,7 @@ tagsListsRouter.patch(
       data: {
         ...(body.label !== undefined ? { label: body.label } : {}),
         ...(body.enabled !== undefined ? { enabled: body.enabled } : {}),
+        ...(body.isChain !== undefined ? { isChain: body.isChain } : {}),
         ...(body.keywords !== undefined ? { keywords: body.keywords } : {}),
         ...(body.regexKeywords !== undefined ? { regexKeywords: body.regexKeywords } : {}),
         ...(body.handleTokens !== undefined ? { handleTokens: body.handleTokens } : {}),
@@ -222,12 +232,21 @@ const PROJECT_SORTS = [
 ] as const;
 
 const projectsQuery = paginationSchema.extend({
-  tag: z.string().optional(),
   search: z.string().optional(),
+  category: z.array(z.string()).or(z.string()).transform((v) => {
+    if (Array.isArray(v)) return v;
+    return v ? [v] : undefined;
+  }).optional(),
+  projectStatus: z.string().optional(),
+  chain: z.string().optional(),
   sort: z.enum(PROJECT_SORTS).optional().default("latest"),
   /** Only accounts with null/empty description (bio). */
   missingBio: z
     .union([z.literal("1"), z.literal("0"), z.literal("true"), z.literal("false")])
+    .optional(),
+  /** Opt-in: include enriched Project row alongside TwitterAccount fields. */
+  includeProject: z
+    .union([z.literal("1"), z.literal("true")])
     .optional(),
 });
 
@@ -267,11 +286,10 @@ tagsListsRouter.get(
           : null;
 
     const where = {
-      ...(q.tag ? { tags: { has: q.tag } } : {}),
       ...(q.search
         ? {
             OR: [
-              { username: { contains: q.search, mode: "insensitive" as const } },
+              { username: { contains: q.search.toLowerCase(), mode: "insensitive" as const } },
               { name: { contains: q.search, mode: "insensitive" as const } },
             ],
           }
@@ -295,9 +313,23 @@ tagsListsRouter.get(
           tags: true,
           followersCount: true,
           isBlueVerified: true,
+          profileImageUrl: true,
           listsSyncedAt: true,
           firstSeenAt: true,
           updatedAt: true,
+          project: q.includeProject
+            ? {
+                select: {
+                  id: true,
+                  projectStatus: true,
+                  chain: true,
+                  website: true,
+                  github: true,
+                  name: true,
+                  description: true,
+                },
+              }
+            : false,
         },
       }),
       prisma.twitterAccount.count({ where }),
@@ -306,15 +338,56 @@ tagsListsRouter.get(
       }),
     ]);
 
+    // When filtering by Project fields, do a second pass to narrow results
+    // because the Project fields live in a separate table.
+    let enriched = items;
+    let enrichedTotal = total;
+    if ((q.category || q.projectStatus || q.chain) && q.includeProject) {
+      // Filter from twitter_accounts.tags (not projects.category — unified source of truth)
+      const whereTags = q.category ? { tags: { hasEvery: q.category as string[] } } : {};
+      const whereStatus = q.projectStatus ? { project: { projectStatus: q.projectStatus } } : {};
+      const whereChain = q.chain ? { project: { chain: q.chain } } : {};
+      const matchingAccounts = await prisma.twitterAccount.findMany({
+        where: { ...whereTags, ...whereStatus, ...whereChain },
+        select: { id: true },
+      });
+      const matchedIds = new Set(matchingAccounts.map((a) => a.id));
+      enrichedTotal = matchedIds.size;
+
+      // Fetch ALL matching accounts (no pagination) then paginate client-side
+      const allMatches = await prisma.twitterAccount.findMany({
+        where: {
+          id: { in: Array.from(matchedIds) },
+          ...where,
+        },
+        orderBy: projectsOrderBy(q.sort),
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          description: true,
+          tags: true,
+          followersCount: true,
+          isBlueVerified: true,
+          profileImageUrl: true,
+          listsSyncedAt: true,
+          firstSeenAt: true,
+          updatedAt: true,
+          project: true,
+        },
+      });
+      enriched = allMatches.slice(q.offset, q.offset + q.limit);
+    }
+
     res.json({
-      total,
+      total: enrichedTotal,
       limit: q.limit,
       offset: q.offset,
       sort: q.sort,
       missingBioCount,
-      items: jsonSafe(items),
+      items: jsonSafe(enriched),
     });
-  }),
+  })
 );
 
 const fetchProfilesBody = z.object({
@@ -373,6 +446,58 @@ tagsListsRouter.post(
   }),
 );
 
+// ── Project enrichment layer (category, status, chain, links) ──────────────
+
+const patchProjectBody = z.object({
+  projectStatus: z.string().optional(),
+  chain: z.string().optional().nullable(),
+  name: z.string().optional(),
+  description: z.string().max(2000).optional().nullable(),
+  website: z.string().url().optional().nullable(),
+  github: z.string().url().optional().nullable(),
+  tokenAddress: z.string().optional().nullable(),
+});
+
+tagsListsRouter.patch(
+  "/projects/:id",
+  asyncHandler(async (req, res) => {
+    const idRaw = req.params.id;
+    const id = Array.isArray(idRaw) ? idRaw[0]! : idRaw!;
+    const body = patchProjectBody.parse(req.body ?? {});
+    const account = await prisma.twitterAccount.findUnique({
+      where: { id },
+      select: { id: true, username: true, name: true },
+    });
+    if (!account) throw new HttpError(404, "project_not_found");
+
+    const project = await prisma.project.upsert({
+      where: { twitterAccountId: id },
+      create: {
+        twitterAccountId: id,
+        name: body.name ?? account.name ?? account.username,
+        description: body.description ?? null,
+        website: body.website ?? null,
+        github: body.github ?? null,
+        projectStatus: body.projectStatus ?? "discovered",
+        chain: body.chain ?? null,
+        tokenAddress: body.tokenAddress ?? null,
+      },
+      update: {
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.website !== undefined ? { website: body.website } : {}),
+        ...(body.github !== undefined ? { github: body.github } : {}),
+        ...(body.projectStatus !== undefined ? { projectStatus: body.projectStatus } : {}),
+        ...(body.chain !== undefined ? { chain: body.chain } : {}),
+        ...(body.tokenAddress !== undefined ? { tokenAddress: body.tokenAddress } : {}),
+      },
+    });
+
+    void enqueueJob("reconcile-lists", {});
+    res.json(jsonSafe(project));
+  }),
+);
+
 // Remove a project (twitter_accounts row). Cascades list_members / alerts / follow edges.
 // Best-effort: try remove from Twitter lists using each list's owner auth.
 tagsListsRouter.delete(
@@ -410,6 +535,222 @@ tagsListsRouter.delete(
 
     await prisma.twitterAccount.delete({ where: { id } });
     res.json({ deleted: true, id, username: account.username });
+  }),
+);
+
+// ── Bulk project helpers ──────────────────────────────────────────────────────
+
+const setCategoryBody = z.object({
+  category: z.array(z.string().min(1).max(64)),
+});
+
+tagsListsRouter.post(
+  "/projects/set-category",
+  asyncHandler(async (req, res) => {
+    const body = setCategoryBody.parse(req.body ?? {});
+
+    const accounts = await prisma.twitterAccount.findMany({
+      select: { id: true, username: true, name: true },
+    });
+
+    let updated = 0;
+    for (const acc of accounts) {
+      await prisma.project.upsert({
+        where: { twitterAccountId: acc.id },
+        create: {
+          twitterAccountId: acc.id,
+          name: acc.name ?? acc.username,
+          projectStatus: "discovered",
+        },
+        update: {},
+      });
+      updated++;
+    }
+
+    void enqueueJob("reconcile-lists", {});
+    res.json({ updated });
+  }),
+);
+
+// ── Bulk chain backfill ───────────────────────────────────────────────────────
+
+const backfillChainBody = z.object({
+  limit: z.number().int().min(1).max(5000).optional().default(500),
+});
+
+tagsListsRouter.post(
+  "/projects/backfill-chain",
+  asyncHandler(async (req, res) => {
+    const body = backfillChainBody.parse(req.body ?? {});
+    const { enrichFromBio } = await import("../services/projectEnricher.js");
+    const { warmLexicon } = await import("../services/projectTagger.js");
+    await warmLexicon();
+
+    let scanned = 0;
+    let updated = 0;
+    let unchanged = 0;
+    let cursor: string | undefined;
+
+    while (scanned < body.limit) {
+      const batchSize = Math.min(200, body.limit - scanned);
+      const accounts = await prisma.twitterAccount.findMany({
+        where: cursor ? { id: { gt: cursor } } : {},
+        orderBy: { id: "asc" },
+        take: batchSize,
+        select: { id: true, username: true, name: true, description: true, tags: true },
+      });
+
+      if (accounts.length === 0) break;
+      cursor = accounts[accounts.length - 1]!.id;
+
+      for (const acc of accounts) {
+        const { chain } = enrichFromBio(acc.description, acc.name ?? acc.username);
+        const existing = await prisma.project.findUnique({
+          where: { twitterAccountId: acc.id },
+          select: { id: true, chain: true },
+        });
+        if (!existing) {
+          // Create new Project row
+          await prisma.project.create({
+            data: {
+              twitterAccountId: acc.id,
+              name: acc.name ?? acc.username,
+              projectStatus: "discovered",
+              chain,
+            },
+          });
+          updated++;
+        } else {
+          const chainChanged = existing.chain !== chain;
+          if (chainChanged) {
+            await prisma.project.update({
+              where: { id: existing.id },
+              data: { chain },
+            });
+            updated++;
+          } else {
+            unchanged++;
+          }
+        }
+        scanned++;
+      }
+    }
+
+    res.json({ scanned, updated, unchanged });
+  }),
+);
+
+// ── Project templates ────────────────────────────────────────────────────────
+
+tagsListsRouter.get(
+  "/project-templates",
+  asyncHandler(async (_req, res) => {
+    const templates = await prisma.projectTemplate.findMany({
+      orderBy: [{ isBuiltin: "desc" }, { name: "asc" }],
+    });
+    res.json({ items: jsonSafe(templates) });
+  }),
+);
+
+const createTemplateBody = z.object({
+  slug: slugSchema,
+  name: z.string().min(1).max(80),
+  description: z.string().max(500).optional().nullable(),
+  chain: z.string().optional().nullable(),
+  defaultTags: z.array(z.string().min(1)).max(20).optional().default([]),
+  templateFields: z.record(z.string(), z.unknown()),
+});
+
+tagsListsRouter.post(
+  "/project-templates",
+  asyncHandler(async (req, res) => {
+    const body = createTemplateBody.parse(req.body ?? {});
+    const item = await prisma.projectTemplate.create({
+      data: {
+        slug: body.slug,
+        name: body.name,
+        description: body.description ?? null,
+        chain: body.chain ?? null,
+        defaultTags: body.defaultTags ?? [],
+        templateFields: JSON.stringify(body.templateFields ?? {}),
+        isBuiltin: false,
+      },
+    });
+    res.status(201).json({ item: jsonSafe(item) });
+  }),
+);
+
+// ── Category + chain inventories ─────────────────────────────────────────────
+
+tagsListsRouter.get(
+  "/project-categories",
+  asyncHandler(async (req, res) => {
+    // Derive categories from tags (not the removed projects.category column)
+    const rows = await prisma.$queryRaw<{ tag: string; count: bigint }[]>`
+      SELECT unnest(tags) AS tag, COUNT(*)::bigint AS count
+      FROM twitter_accounts
+      WHERE NOT tags @> ARRAY['unknown', 'robinhood', 'ethereum', 'arc', 'mev']::text[]
+      GROUP BY tag ORDER BY count DESC LIMIT 50
+    `;
+    res.json({ items: rows.map((r) => r.tag) });
+  }),
+);
+
+tagsListsRouter.get(
+  "/project-chains",
+  asyncHandler(async (_req, res) => {
+    const rows = await prisma.$queryRaw<{ chain: string }[]>`
+      SELECT DISTINCT chain FROM projects WHERE chain IS NOT NULL AND chain <> '' ORDER BY chain
+    `;
+    res.json({ items: rows.map((r) => r.chain) });
+  }),
+);
+
+tagsListsRouter.get(
+  "/project-chain-stats",
+  asyncHandler(async (_req, res) => {
+    const stats = await prisma.$queryRaw<{ total: bigint; with_chain: bigint }[]>`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(CASE WHEN chain IS NOT NULL AND chain <> '' THEN 1 END)::int AS with_chain
+      FROM projects
+    `;
+    const chains = await prisma.$queryRaw<{ chain: string; count: bigint }[]>`
+      SELECT chain, COUNT(*)::int AS count FROM projects WHERE chain IS NOT NULL AND chain <> '' GROUP BY chain ORDER BY count DESC
+    `;
+    const s = stats[0] ?? { total: 0n, with_chain: 0n };
+    res.json({
+      total: Number(s.total),
+      enriched: Number(s.total), // all accounts have a project now
+      withChain: Number(s.with_chain),
+      chainDistribution: chains.map((r) => ({ chain: r.chain, count: Number(r.count) })),
+    });
+  }),
+);
+
+tagsListsRouter.get(
+  "/tag-stats",
+  asyncHandler(async (_req, res) => {
+    const [categories, chains, enabledTags, totalTags, chainTags, regularTags] = await Promise.all([
+      prisma.$queryRaw<{ category: string; count: bigint }[]>`
+        SELECT unnest(tags) AS tag, COUNT(*)::int AS count FROM twitter_accounts GROUP BY tag ORDER BY count DESC
+      `,
+      prisma.$queryRaw<{ chain: string; count: bigint }[]>`
+        SELECT chain, COUNT(*)::int AS count FROM projects WHERE chain IS NOT NULL AND chain <> '' GROUP BY chain ORDER BY count DESC
+      `,
+      prisma.projectTag.count({ where: { enabled: true } }),
+      prisma.projectTag.count(),
+      prisma.projectTag.count({ where: { isChain: true } }),
+      prisma.projectTag.count({ where: { isChain: false } }),
+    ]);
+    res.json({
+      categories: categories.map((r) => ({ category: r.category, count: Number(r.count) })),
+      chains: chains.map((r) => ({ chain: r.chain, count: Number(r.count) })),
+      enabledTags: Number(enabledTags),
+      totalTags: Number(totalTags),
+      chainTags: Number(chainTags),
+      regularTags: Number(regularTags),
+    });
   }),
 );
 
@@ -635,8 +976,31 @@ tagsListsRouter.post(
   "/reclassify",
   asyncHandler(async (req, res) => {
     const body = reclassifyBody.parse(req.body);
-    const updated = await setAccountTags(body.accountId, body.tags, null);
+    // Normalize tags: sort alphabetically to prevent ordering duplicates
+    const normalizedTags = [...new Set(body.tags)].sort();
+    const updated = await setAccountTags(body.accountId, normalizedTags, null);
     if (!updated) throw new HttpError(404, "account_not_found");
+
+    // Also update Project.chain from the account's bio + username
+    try {
+      const { enrichFromBio } = await import("../services/projectEnricher.js");
+      const account = await prisma.twitterAccount.findUnique({
+        where: { id: body.accountId },
+        select: { id: true, username: true, name: true, description: true, tags: true, project: { select: { id: true, chain: true } } },
+      });
+      if (account?.project) {
+        const { chain } = enrichFromBio(account.description, account.name ?? account.username);
+        const chainChanged = account.project.chain !== chain;
+        if (chainChanged) {
+          await prisma.project.update({
+            where: { id: account.project.id },
+            data: { chain },
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("[api] reclassify: project chain update failed:", err instanceof Error ? err.message : err);
+    }
 
     let enqueued = false;
     let jobId: string | undefined;
@@ -704,7 +1068,7 @@ tagsListsRouter.delete(
 // ── Send tag alert endpoints ──
 
 const sendTagAlertBody = z.object({
-  tag: z.string().min(1),
+  projectStatus: z.string().min(1).max(64),
   topicId: z.number().int().nullable().optional(),
 });
 
@@ -712,16 +1076,15 @@ tagsListsRouter.post(
   "/projects/send-tag-alert",
   asyncHandler(async (req, res) => {
     const body = sendTagAlertBody.parse(req.body);
-    const { tag, topicId } = body;
+    const { projectStatus, topicId } = body;
 
-    // Find all projects with this tag
+    // Find all projects with this status
     const projects = await prisma.twitterAccount.findMany({
-      where: { tags: { has: tag } },
+      where: { project: { projectStatus } },
       select: {
         id: true,
         username: true,
         name: true,
-        tags: true,
         followersCount: true,
         description: true,
         isBlueVerified: true,
@@ -730,7 +1093,7 @@ tagsListsRouter.post(
     });
 
     if (projects.length === 0) {
-      res.json({ sent: false, count: 0, message: `No projects found with tag "${tag}"` });
+      res.json({ sent: false, count: 0, message: `No projects found with status "${projectStatus}"` });
       return;
     }
 
@@ -739,18 +1102,17 @@ tagsListsRouter.post(
       const bio = p.description ? `\n   📝 ${p.description.slice(0, 140).replace(/\n/g, " ")}` : "";
       const followers = p.followersCount ? `${p.followersCount.toLocaleString()} followers` : "— followers";
       const verified = p.isBlueVerified ? " ✅" : "";
-      const tags = p.tags.length > 0 ? `\n   🏷 ${p.tags.slice(0, 6).map((t) => `#${t}`).join(" ")}` : "";
       const link = `<a href="https://x.com/${p.username}">@${p.username}</a>`;
-      return `▸ <b>${link}${verified}</b> [${p.name}] — ${followers}${bio}${tags}`;
+      return `▸ <b>${link}${verified}</b> [${p.name}] — ${followers}${bio}`;
     });
 
-    const header = `📢 <b>Tag Alert: #${tag}</b>\n📊 <i>${projects.length} project${projects.length !== 1 ? "s" : ""} found</i>\n━━━━━━━━━━━━━━━━━━━━`;
+    const header = `📢 <b>Status: ${projectStatus}</b>\n📊 <i>${projects.length} project${projects.length !== 1 ? "s" : ""} found</i>\n━━━━━━━━━━━━━━━━━━━━`;
     const footer = `\n━━━━━━━━━━━━━━━━━━━━\n🕐 <i>Generated ${new Date().toLocaleString()}</i>`;
     const text = header + "\n\n" + lines.join("\n\n") + footer;
 
     await sendTelegramTopic(text, topicId ?? undefined, "HTML", "search");
 
-    res.json({ sent: true, count: projects.length, tag });
+    res.json({ sent: true, count: projects.length, projectStatus });
   }),
 );
 

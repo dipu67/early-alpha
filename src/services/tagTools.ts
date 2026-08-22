@@ -14,6 +14,9 @@ import {
   warmLexicon,
   invalidateLexiconCache,
   DEFAULT_SLUG,
+  tagLabel,
+  CHAIN_SLUGS,
+  tagSlugToCategory,
 } from "./projectTagger.js";
 
 function labelFromSlug(slug: string): string {
@@ -147,17 +150,47 @@ export async function backfillAccountTags(opts: {
         description: row.description,
       });
 
-      if (sameTags(row.tags, next)) {
-        unchanged += 1;
-        continue;
-      }
-
-      updated += 1;
       if (!dryRun) {
+        // Always normalize: sort tags alphabetically to eliminate ordering
+        // duplicates like {nft,robinhood} vs {robinhood,nft}
+        const normalized = [...next].sort();
         await prisma.twitterAccount.update({
           where: { id: row.id },
-          data: { tags: next, listsSyncedAt: null },
+          data: { tags: normalized, listsSyncedAt: null },
         });
+        updated += 1;
+
+        // Always sync Project.category from classified tag slugs → labels
+        // (catches accounts tagged before this sync was added)
+        try {
+          const project = await prisma.project.findUnique({
+            where: { twitterAccountId: row.id },
+            select: { id: true, category: true, chain: true },
+          });
+          if (project) {
+            const categories = next
+              .filter((t) => t !== DEFAULT_SLUG && !CHAIN_SLUGS.has(t))
+              .map((t) => tagSlugToCategory(t));
+            const cleanCategories = [...new Set(categories)];
+            const chain = next.find((t) => CHAIN_SLUGS.has(t)) ?? null;
+            const catChanged = JSON.stringify(project.category) !== JSON.stringify(cleanCategories);
+            const chainChanged = project.chain !== chain;
+            if (catChanged || chainChanged) {
+              await prisma.project.update({
+                where: { id: project.id },
+                data: {
+                  ...(catChanged ? { category: cleanCategories.length > 0 ? cleanCategories : ["other"] } : {}),
+                  ...(chainChanged ? { chain } : {}),
+                },
+              });
+              updated += 1;
+            }
+          }
+        } catch (err) {
+          console.warn("[tagTools] backfill: project category update failed:", err instanceof Error ? err.message : err);
+        }
+      } else {
+        unchanged += 1;
       }
     }
 

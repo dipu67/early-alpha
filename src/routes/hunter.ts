@@ -14,6 +14,7 @@ import {
   HUNT_STAGES,
   isHuntStage,
   setHuntStage,
+  promoteTakenStage,
 } from "../services/hunter.js";
 import { prisma } from "../db/prisma.js";
 
@@ -85,8 +86,16 @@ hunterRouter.patch(
     if (!exists) throw new HttpError(404, "account_not_found");
 
     const row = await setHuntStage(id, body.stage, body.note);
+    const takenOpts = (() => {
+      const id = process.env.TAKEN_AUTH_ACCOUNT_ID;
+      return id ? { authAccountId: BigInt(id) } : {};
+    })();
+    const takeActions =
+      body.stage === "taken"
+        ? await promoteTakenStage(id, takenOpts)
+        : null;
     // Stage does not auto-add User Monitors — use "Monitor this user" explicitly.
-    res.json(jsonSafe(row));
+    res.json(jsonSafe({ ...row, takeActions }));
   }),
 );
 

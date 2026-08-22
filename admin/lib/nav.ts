@@ -17,6 +17,7 @@ import {
   Github,
   Sprout,
   Activity,
+  Eye,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
@@ -33,7 +34,8 @@ export interface NavItem {
 export const NAV: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/seeds", label: "Seeds", icon: Sprout },
-  { href: "/dashboard/early-projects", label: "Early Monitor", icon: Activity },
+  { href: "/dashboard/growth", label: "Growth", icon: Sparkles },
+  { href: "/dashboard/watching", label: "Watching", icon: Eye },
   { href: "/dashboard/hunter", label: "Hunter", icon: Crosshair },
   { href: "/dashboard/monitors", label: "User Monitor", icon: Radar },
   { href: "/dashboard/signals", label: "Signals", icon: Radio },
@@ -55,7 +57,8 @@ export const NAV: NavItem[] = [
 export const SEGMENT_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   seeds: "Seeds",
-  "early-projects": "Early Monitor",
+  growth: "Growth",
+  watching: "Watching",
   hunter: "Hunter",
   monitors: "User Monitor",
   signals: "Signals",

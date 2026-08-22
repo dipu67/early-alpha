@@ -699,7 +699,7 @@ export class TwitterClient {
     if (!screenName) return undefined;
 
     return {
-      id: result.rest_id || "",
+      id: String(result.rest_id) || "",
       username: screenName,
       name: result.core?.name ?? result.legacy?.name ?? screenName,
       description:

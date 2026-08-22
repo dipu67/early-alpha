@@ -6,10 +6,11 @@ import { SeedsPanel } from "./seeds-panel";
 export const dynamic = "force-dynamic";
 
 export default async function SeedsPage() {
-  const [listRes, statsRes, catRes] = await Promise.all([
+  const [listRes, statsRes, catRes, runsRes] = await Promise.all([
     backendFetch("/api/seeds", { query: { limit: "200" } }),
     backendFetch("/api/seeds/stats"),
     backendFetch("/api/seeds/categories"),
+    backendFetch("/api/seeds/runs", { query: { limit: "20" } }),
   ]);
 
   const data = (
@@ -37,6 +38,8 @@ export default async function SeedsPage() {
       : { suggested: [], inUse: [] }
   ) as { suggested: string[]; inUse: string[] };
 
+  const runs = runsRes.ok ? (runsRes.body as { items: { id: number; status: string; startedAt: string; finishedAt: string | null; seedsProcessed: number; accountsSeen: number; newFollowEdges: number; error: string | null }[] }) : { items: [] };
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -54,6 +57,7 @@ export default async function SeedsPage() {
         stats={stats}
         suggestedCategories={categories.suggested ?? []}
         inUseCategories={categories.inUse ?? []}
+        runs={runs.items}
       />
     </div>
   );

@@ -1,10 +1,12 @@
 import "dotenv/config";
 import { PrismaClient } from "../generated/prisma/client.js";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Prisma } from "../generated/prisma/client.js";
 
 const adapter = new PrismaPg(process.env.DATABASE_URL as string);
 
 export const prisma = new PrismaClient({ adapter });
+export const { sql } = Prisma;
 
 /**
  * After restore/import with explicit serial ids, Postgres sequences often lag

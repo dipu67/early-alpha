@@ -13,7 +13,7 @@ name: early-alpha
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: early-alpha-postgres
     restart: unless-stopped
     environment:
@@ -32,7 +32,7 @@ services:
       start_period: 10s
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: early-alpha-redis
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]

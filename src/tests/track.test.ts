@@ -94,9 +94,9 @@ describe("passesEarlyStageFilter", () => {
     expect(passesEarlyStageFilter(makeUser({ createdAt: oldDate }))).toBe(false);
   });
 
-  it("passes accounts without createdAt (can't determine age)", () => {
+  it("rejects accounts without createdAt (can't determine age)", () => {
     const noDate = makeUser();
     delete (noDate as unknown as Record<string, unknown>).createdAt;
-    expect(passesEarlyStageFilter(noDate)).toBe(true);
+    expect(passesEarlyStageFilter(noDate)).toBe(false);
   });
 });

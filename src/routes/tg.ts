@@ -219,8 +219,7 @@ tgRouter.get(
       defaultTopicId,
       signalTopicId,
       signalTopicMap,
-      earlyProjectTopicId,
-      earlyTopicMap,
+
       minIntervalMs,
       maxRetries,
       adminIdsRaw,
@@ -229,21 +228,21 @@ tgRouter.get(
       getConfig<number | null>(CONFIG_KEYS.tgDefaultTopicId, null),
       getConfig<number | null>(CONFIG_KEYS.tgSignalTopicId, null),
       getConfig<Record<string, number>>(CONFIG_KEYS.tgSignalTopicMap, {}),
-      getConfig<number | null>(CONFIG_KEYS.tgEarlyProjectTopicId, null),
-      getConfig<Record<string, number>>(CONFIG_KEYS.tgEarlyTopicMap, {}),
+
       getConfig<number | null>(CONFIG_KEYS.tgMinIntervalMs, null),
       getConfig<number | null>(CONFIG_KEYS.tgMaxRetries, null),
       getConfig<unknown>(CONFIG_KEYS.tgAdminIds, null),
     ]);
 
+    const adminIdsRawVal = await getConfig<unknown>(CONFIG_KEYS.tgAdminIds, null);
     const adminIds: string[] = [];
-    if (Array.isArray(adminIdsRaw)) {
-      for (const x of adminIdsRaw) {
+    if (Array.isArray(adminIdsRawVal)) {
+      for (const x of adminIdsRawVal as unknown[]) {
         const s = String(x).trim();
         if (s) adminIds.push(s);
       }
-    } else if (typeof adminIdsRaw === "string" && adminIdsRaw.trim()) {
-      for (const part of adminIdsRaw.split(/[,\s]+/)) {
+    } else if (typeof adminIdsRawVal === "string" && adminIdsRawVal.trim()) {
+      for (const part of (adminIdsRawVal as string).split(/[,\s]+/)) {
         if (part.trim()) adminIds.push(part.trim());
       }
     }
@@ -261,8 +260,7 @@ tgRouter.get(
         defaultTopicId,
         signalTopicId,
         signalTopicMap,
-        earlyProjectTopicId,
-        earlyTopicMap,
+
         minIntervalMs,
         maxRetries,
         adminIds,
@@ -277,8 +275,7 @@ const configBody = z.object({
   defaultTopicId: z.number().int().nullable().optional(),
   signalTopicId: z.number().int().nullable().optional(),
   signalTopicMap: z.record(z.string(), z.number().int()).optional(),
-  earlyProjectTopicId: z.number().int().nullable().optional(),
-  earlyTopicMap: z.record(z.string(), z.number().int()).optional(),
+
   minIntervalMs: z.number().int().min(500).nullable().optional(),
   maxRetries: z.number().int().min(0).max(20).nullable().optional(),
   /** Telegram user ids for bot admin commands (array or null to clear). */
@@ -290,8 +287,7 @@ const KEY_MAP: Record<string, string> = {
   defaultTopicId: CONFIG_KEYS.tgDefaultTopicId,
   signalTopicId: CONFIG_KEYS.tgSignalTopicId,
   signalTopicMap: CONFIG_KEYS.tgSignalTopicMap,
-  earlyProjectTopicId: CONFIG_KEYS.tgEarlyProjectTopicId,
-  earlyTopicMap: CONFIG_KEYS.tgEarlyTopicMap,
+
   minIntervalMs: CONFIG_KEYS.tgMinIntervalMs,
   maxRetries: CONFIG_KEYS.tgMaxRetries,
   adminIds: CONFIG_KEYS.tgAdminIds,

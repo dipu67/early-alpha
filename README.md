@@ -42,7 +42,7 @@ browser ──(session cookie)──> Next.js admin (:3000)
 |---|---|
 | **TwitterClient** | GraphQL client over auth-pool accounts (cookies / tokens) |
 | **BullMQ queues** | `follow-tracker`, `seed-tracker`, `list-tracker` |
-| **Workers** | `worker.ts`, `seedWorker.ts`, `listWorker.ts` (started with the API process) |
+| **Workers** | `seedWorker.ts`, `listWorker.ts` (side-effect-imported into the API process) |
 | **Telegram** | Main alert bot + Grok bot (tokens from DB) |
 | **PostgreSQL** | Seeds, edges, projects, signals, settings, auth pool, … |
 | **Redis** | Job queue + repeatable schedulers |
@@ -192,14 +192,12 @@ npm run dev:admin
 
 # Standalone process scripts (Bun)
 npm run bot            # Telegram bot only
-npm run worker         # follow-tracker worker only
-npm run seed-worker    # seed-tracker worker only
+npm run seed-worker    # seed-tracker worker only (rarely needed standalone)
 ```
 
 ### Tracking CLI
 
 ```sh
-npm run track:init-db
 npm run track:import-seeds
 npm run track:run            # incremental pass
 npm run track:run-full       # full sync

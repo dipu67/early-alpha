@@ -4,6 +4,7 @@
 import { prisma } from "../db/prisma.js";
 import { getTwitterClient, markRateLimited } from "../twitter/getClient.js";
 import { classifyAccount } from "./projectTagger.js";
+import { enrichFromBio } from "./projectEnricher.js";
 import type { UserData } from "../TwitterClient/types.js";
 
 const BATCH = 50;
@@ -113,13 +114,17 @@ export async function fetchAndUpdateProjectProfiles(opts: {
       });
     }
 
+    // Clean up: remove "other" if there are meaningful tags/categories
+    const cleanTags = tags.filter((t) => t !== "other");
+    const effectiveTags = cleanTags.length > 0 ? cleanTags : tags;
+
     await prisma.twitterAccount.update({
       where: { id: row.id },
       data: {
         username,
         name,
         description,
-        tags,
+        tags: effectiveTags,
         ...(u.followersCount != null ? { followersCount: u.followersCount } : {}),
         ...(u.followingCount != null ? { followingCount: u.followingCount } : {}),
         ...(u.tweetCount != null ? { tweetCount: u.tweetCount } : {}),
@@ -135,6 +140,25 @@ export async function fetchAndUpdateProjectProfiles(opts: {
         ...(u.createdAt ? { createdAt: new Date(u.createdAt) } : {}),
       },
     });
+
+    // Update Project.chain from bio (category lives on account.tags, not Project)
+    if (reclassify) {
+      const { enrichFromBio } = await import("./projectEnricher.js");
+      const { chain } = enrichFromBio(description, name || row.username);
+      const existingProject = await prisma.project.findUnique({
+        where: { twitterAccountId: row.id },
+        select: { id: true, chain: true },
+      });
+      if (existingProject) {
+        const chainChanged = existingProject.chain !== chain;
+        if (chainChanged) {
+          await prisma.project.update({
+            where: { id: existingProject.id },
+            data: { chain },
+          });
+        }
+      }
+    }
 
     updated += 1;
     items.push({

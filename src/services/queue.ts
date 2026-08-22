@@ -95,16 +95,6 @@ export const SCHEDULERS: SchedulerDef[] = [
     label: "Health check",
   },
   {
-    key: "early-digest",
-    queue: "list-tracker",
-    schedulerId: "early-digest",
-    jobName: "early-digest",
-    data: {},
-    // Every 12h clock-aligned: 09:00 and 21:00 UTC
-    defaultCron: "0 9,21 * * *",
-    label: "Early-project digest (09:00 & 21:00 UTC)",
-  },
-  {
     key: "search-poll",
     queue: "list-tracker",
     schedulerId: "search-poll",
@@ -150,13 +140,13 @@ export const SCHEDULERS: SchedulerDef[] = [
     label: "User timeline monitors",
   },
   {
-    key: "early-project-poll",
+    key: "watching-poll",
     queue: "list-tracker",
-    schedulerId: "early-project-poll",
-    jobName: "poll-early-projects",
+    schedulerId: "watching-poll",
+    jobName: "poll-watching",
     data: {},
-    defaultEvery: 60 * 60 * 1000,
-    label: "Early projects usersByIds (1h)",
+    defaultEvery: 3600 * 1000,
+    label: "Watching projects poll (1h)",
   },
   {
     key: "growth-report",

@@ -610,7 +610,7 @@ export async function setAccountTags(
   });
   if (!account) return null;
 
-  const tags = [...new Set(rawTags.map((t) => t.trim()).filter(Boolean))];
+  const tags = [...new Set(rawTags.map((t) => t.trim()).filter(Boolean))].sort();
   if (tags.length === 0) return null;
 
   await prisma.twitterAccount.update({

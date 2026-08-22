@@ -212,6 +212,17 @@ seedsRouter.get(
       prisma.seedAccount.count({ where }),
     ]);
 
+    // Fetch profile images for all seeds that have a twitterId
+    const twitterIds = items.map((s) => s.twitterId).filter((id): id is string => !!id);
+    const profileMap = new Map<string, string | null>();
+    if (twitterIds.length > 0) {
+      const profiles = await prisma.twitterAccount.findMany({
+        where: { id: { in: twitterIds } },
+        select: { id: true, profileImageUrl: true },
+      });
+      profiles.forEach((p) => profileMap.set(p.id, p.profileImageUrl ?? null));
+    }
+
     res.json({
       total,
       limit: q.limit,
@@ -228,6 +239,7 @@ seedsRouter.get(
           lastEdgeAt: s.followEdges[0]?.lastSeenAt ?? s.followEdges[0]?.firstSeenAt ?? null,
           createdAt: s.createdAt,
           updatedAt: s.updatedAt,
+          profileImageUrl: s.twitterId ? (profileMap.get(s.twitterId) ?? null) : null,
         })),
       ),
     });

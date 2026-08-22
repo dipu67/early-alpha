@@ -12,6 +12,7 @@ model ProjectTag {
   label              String
   isBuiltin          Boolean  @default(false) @map("is_builtin")
   enabled            Boolean  @default(true)
+  isChain            Boolean  @default(false) @map("is_chain")
   keywords           String[] @default([])
   regexKeywords      String[] @default([]) @map("regex_keywords")
   /// Username delim tokens: match as (?:^|[_\\d])token(?:[_\\d]|$)
@@ -84,6 +85,8 @@ model TwitterAccount {
   lastProfilePolledAt DateTime? @map("last_profile_polled_at") @db.Timestamptz
   /// FxTwitter getProfileStatuses cursor.top (updated when timeline results non-empty)
   fxCursor            String?   @map("fxtwitter_cursor")
+  /// Snowflake watermark: only tweets with id > this are treated as new
+  lastTweetId         String?   @map("last_tweet_id")
   /// Prior handle when rename detected
   previousUsername    String?   @map("previous_username")
   usernameChangedAt   DateTime? @map("username_changed_at") @db.Timestamptz
@@ -94,6 +97,8 @@ model TwitterAccount {
   alerts                 Alert[]
   listMemberships        ListMember[]
   metricSnapshots        AccountMetricSnapshot[]
+  project                Project?
+  seedAccounts           SeedAccount[] @relation("seedTwitterAccount")
 
   @@index([huntStage])
   @@index([firstSeenAt(sort: Desc)])
@@ -177,6 +182,7 @@ model SeedAccount {
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   followEdges FollowEdge[]
+  twitterAccount TwitterAccount? @relation("seedTwitterAccount", fields: [twitterId], references: [id])
 
   @@map("seed_accounts")
 }
@@ -680,4 +686,40 @@ model GithubRepoCommit {
   @@index([createdAt(sort: Desc)])
   @@index([monitorId, createdAt(sort: Desc)])
   @@map("github_repo_commits")
+}
+
+/// Enrichment layer over TwitterAccount — manual category, lifecycle status, chain, links.
+model Project {
+  id               BigInt   @id @default(autoincrement())
+  twitterAccountId String   @unique @map("twitter_account_id")
+  name             String   // project display name (may differ from Twitter name)
+  description      String?  // operator notes / project description
+  website          String?
+  github           String?
+  projectStatus    String   @default("discovered") @map("project_status")
+  chain            String?
+  tokenAddress     String?  @map("token_address")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  account TwitterAccount @relation(fields: [twitterAccountId], references: [id], onDelete: Cascade)
+
+  @@index([projectStatus])
+  @@index([chain])
+  @@map("projects")
+}
+
+/// Reusable template for creating projects quickly (e.g. "DeFi DEX on Arbitrum").
+model ProjectTemplate {
+  id           BigInt   @id @default(autoincrement())
+  slug         String   @unique
+  name         String
+  description  String?
+  chain        String?
+  defaultTags  String[] @default([])
+  templateFields Json   @default("{}")
+  isBuiltin    Boolean  @default(false) @map("is_builtin")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  @@map("project_templates")
 }

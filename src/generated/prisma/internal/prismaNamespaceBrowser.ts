@@ -81,7 +81,9 @@ export const ModelName = {
   ProjectMonitor: 'ProjectMonitor',
   ProjectMonitorTagRule: 'ProjectMonitorTagRule',
   GithubRepoMonitor: 'GithubRepoMonitor',
-  GithubRepoCommit: 'GithubRepoCommit'
+  GithubRepoCommit: 'GithubRepoCommit',
+  Project: 'Project',
+  ProjectTemplate: 'ProjectTemplate'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -105,6 +107,7 @@ export const ProjectTagScalarFieldEnum = {
   label: 'label',
   isBuiltin: 'isBuiltin',
   enabled: 'enabled',
+  isChain: 'isChain',
   keywords: 'keywords',
   regexKeywords: 'regexKeywords',
   handleTokens: 'handleTokens',
@@ -175,6 +178,7 @@ export const TwitterAccountScalarFieldEnum = {
   huntUpdatedAt: 'huntUpdatedAt',
   lastProfilePolledAt: 'lastProfilePolledAt',
   fxCursor: 'fxCursor',
+  lastTweetId: 'lastTweetId',
   previousUsername: 'previousUsername',
   usernameChangedAt: 'usernameChangedAt',
   followersAtDetect: 'followersAtDetect'
@@ -609,12 +613,52 @@ export const GithubRepoCommitScalarFieldEnum = {
 export type GithubRepoCommitScalarFieldEnum = (typeof GithubRepoCommitScalarFieldEnum)[keyof typeof GithubRepoCommitScalarFieldEnum]
 
 
+export const ProjectScalarFieldEnum = {
+  id: 'id',
+  twitterAccountId: 'twitterAccountId',
+  name: 'name',
+  description: 'description',
+  website: 'website',
+  github: 'github',
+  projectStatus: 'projectStatus',
+  chain: 'chain',
+  tokenAddress: 'tokenAddress',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectScalarFieldEnum = (typeof ProjectScalarFieldEnum)[keyof typeof ProjectScalarFieldEnum]
+
+
+export const ProjectTemplateScalarFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  name: 'name',
+  description: 'description',
+  chain: 'chain',
+  defaultTags: 'defaultTags',
+  templateFields: 'templateFields',
+  isBuiltin: 'isBuiltin',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectTemplateScalarFieldEnum = (typeof ProjectTemplateScalarFieldEnum)[keyof typeof ProjectTemplateScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {
@@ -631,4 +675,13 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 

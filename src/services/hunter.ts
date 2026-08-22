@@ -382,3 +382,74 @@ export async function setHuntStage(
     },
   });
 }
+
+/**
+ * Side-effects when an account is marked `taken`:
+ * - invalidate the tag lexicon cache so downstream classify calls refresh
+ * - optionally upsert an AuthFollow row so the take is tracked
+ * - enqueue a reconcile-lists job to mirror memberships into Twitter lists
+ */
+export interface TakeActions {
+  authFollowed?: boolean;
+  reconcileEnqueued: true;
+}
+
+export async function promoteTakenStage(
+  accountId: string,
+  opts: { authAccountId?: bigint },
+): Promise<TakeActions> {
+  const actions: TakeActions = { reconcileEnqueued: true };
+
+  // Refresh classification — bio may have changed since last poll.
+  const { invalidateLexiconCache } = await import("./projectTagger.js");
+  invalidateLexiconCache();
+
+  // Optionally record the take as an auth-follow so it appears in signal scans.
+  if (opts.authAccountId) {
+    const acc = await prisma.twitterAccount.findUnique({
+      where: { id: accountId },
+      select: { username: true, tags: true },
+    });
+    if (acc) {
+      await prisma.authFollow.upsert({
+        where: {
+          authAccountId_twitterUserId: {
+            authAccountId: opts.authAccountId,
+            twitterUserId: accountId,
+          },
+        },
+        create: {
+          authAccountId: opts.authAccountId,
+          twitterUserId: accountId,
+          username: acc.username,
+          tagSlug: acc.tags[0] ?? null,
+          source: "hunter_took",
+        },
+        update: { username: acc.username, tagSlug: acc.tags[0] ?? null },
+      });
+      actions.authFollowed = true;
+    }
+  }
+
+  // Sync list memberships so the taken project ends up in its tag list.
+  const { enqueueJob } = await import("../enqueue.js");
+  void enqueueJob("reconcile-lists", {});
+
+  // If a Project row exists, also mark it as taken.
+  const acc = await prisma.twitterAccount.findUnique({
+    where: { id: accountId },
+    select: { username: true },
+  });
+  await prisma.project.upsert({
+    where: { twitterAccountId: accountId },
+    create: {
+      twitterAccountId: accountId,
+      name: acc?.username ?? accountId,
+      category: ["other"],
+      projectStatus: "taken",
+    },
+    update: { projectStatus: "taken" },
+  });
+
+  return actions;
+}

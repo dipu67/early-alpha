@@ -25,9 +25,28 @@ import type { ProjectTag } from "@/lib/types";
 type ToolConfirm =
   | null
   | { kind: "seed" }
-  | { kind: "backfill"; onlyUnknown: boolean };
+  | { kind: "backfill"; onlyUnknown: boolean }
+  | { kind: "backfill-chain" };
 
 type TokenKind = "plain" | "regex" | "handle" | "suffix";
+
+/** Well-known chain keywords that appear in tag labels. */
+const KNOWN_CHAIN_KEYWORDS = [
+  "ethereum", "eth", "solana", "sol", "arbitrum", "arb",
+  "optimism", "op", "base", "zksync", "polygon", "matic",
+  "bsc", "bnb", "avalanche", "avax", "near", "sui", "aptos",
+  "cosmos", "ibc", "blast", "mode", "mantle", "linea", "scroll",
+  "robinhood", "rcoin",
+  "arc", "arcdao",
+];
+
+function isChainSlug(slug: string): boolean {
+  return KNOWN_CHAIN_KEYWORDS.some((kw) => slug.toLowerCase().includes(kw));
+}
+
+function isChainLabel(label: string): boolean {
+  return KNOWN_CHAIN_KEYWORDS.some((kw) => label.toLowerCase().includes(kw));
+}
 
 function slugify(raw: string): string {
   return raw
@@ -89,7 +108,7 @@ function TokenChips({
   );
 }
 
-export function KeywordsManager({ initialTags }: { initialTags: ProjectTag[] }) {
+export function KeywordsManager({ initialTags, tagStats }: { initialTags: ProjectTag[]; tagStats?: { categories: { tag: string; count: number }[]; chains: { chain: string; count: number }[]; enabledTags: number; totalTags: number } }) {
   const router = useRouter();
   const canWrite = useCan("editor");
   const [tags, setTags] = useState(initialTags);
@@ -112,6 +131,7 @@ export function KeywordsManager({ initialTags }: { initialTags: ProjectTag[] }) 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [toolConfirm, setToolConfirm] = useState<ToolConfirm>(null);
   const [toolBusy, setToolBusy] = useState(false);
+  const [newIsChain, setNewIsChain] = useState(false);
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -165,6 +185,7 @@ export function KeywordsManager({ initialTags }: { initialTags: ProjectTag[] }) 
       body: {
         slug,
         label,
+        isChain: newIsChain,
         keywords: [],
         regexKeywords: [],
         handleTokens: [],
@@ -173,9 +194,10 @@ export function KeywordsManager({ initialTags }: { initialTags: ProjectTag[] }) 
     });
     setBusy(false);
     if (res.ok) {
-      toast.success(`Created ${slug}`);
+      toast.success(`Created ${slug}${newIsChain ? " (chain)" : ""}`);
       setNewSlug("");
       setNewLabel("");
+      setNewIsChain(false);
       await refresh();
       selectTag(slug);
     } else {
@@ -329,6 +351,20 @@ export function KeywordsManager({ initialTags }: { initialTags: ProjectTag[] }) 
           const b = res.body as { error?: string } | null;
           toast.error(b?.error ?? `Error ${res.status}`);
         }
+      } else if (toolConfirm.kind === "backfill-chain") {
+        const res = await proxy("/api/projects/backfill-chain", {
+          method: "POST",
+          body: { limit: 2000 },
+        });
+        if (res.ok) {
+          const b = res.body as { updated: number; scanned: number };
+          toast.success(`Chain backfill done: ${b.updated} updated, ${b.scanned} scanned`);
+          setToolConfirm(null);
+          router.refresh();
+        } else {
+          const b = res.body as { error?: string } | null;
+          toast.error(b?.error ?? `Error ${res.status}`);
+        }
       } else {
         const res = await proxy("/api/tags/backfill", {
           method: "POST",
@@ -402,6 +438,18 @@ export function KeywordsManager({ initialTags }: { initialTags: ProjectTag[] }) 
               <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
               Backfill all accounts
             </Button>
+            {tagStats ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={toolBusy}
+                onClick={() => setToolConfirm({ kind: "backfill-chain" })}
+                className="w-full sm:w-auto"
+              >
+                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                Backfill chains ({tagStats.chains.reduce((a, b) => a + b.count, 0)})
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
@@ -441,6 +489,17 @@ export function KeywordsManager({ initialTags }: { initialTags: ProjectTag[] }) 
                   placeholder="My Tag"
                 />
               </div>
+              <div className="min-w-[7rem] flex-1 space-y-1">
+                <label className="text-xs text-muted-foreground">Type</label>
+                <select
+                  value={newIsChain ? "chain" : "tag"}
+                  onChange={(e) => setNewIsChain(e.target.value === "chain")}
+                  className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-xs outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="tag">Tag</option>
+                  <option value="chain">Chain</option>
+                </select>
+              </div>
               <Button type="submit" size="sm" disabled={busy}>
                 <Plus className="mr-1 h-3.5 w-3.5" />
                 Add
@@ -461,6 +520,7 @@ export function KeywordsManager({ initialTags }: { initialTags: ProjectTag[] }) 
                     <TableHead>Tag</TableHead>
                     <TableHead className="text-right">KW</TableHead>
                     <TableHead className="text-right">H</TableHead>
+                    <TableHead className="text-right">Chain</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -483,6 +543,11 @@ export function KeywordsManager({ initialTags }: { initialTags: ProjectTag[] }) 
                         <div className="mt-0.5 flex flex-wrap gap-1">
                           {!t.enabled ? <Badge variant="muted">off</Badge> : null}
                           {t.isBuiltin ? <Badge variant="secondary">builtin</Badge> : null}
+                          {t.isChain ? (
+                            <Badge variant="default" className="bg-violet-600">chain</Badge>
+                          ) : isChainLabel(t.label) ? (
+                            <Badge variant="default" className="bg-violet-600">chain*</Badge>
+                          ) : null}
                         </div>
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-muted-foreground">
@@ -490,6 +555,9 @@ export function KeywordsManager({ initialTags }: { initialTags: ProjectTag[] }) 
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-muted-foreground">
                         {t.handleTokenCount ?? 0}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {t.isChain || isChainSlug(t.slug) || isChainLabel(t.label) ? "✓" : "—"}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -525,6 +593,21 @@ export function KeywordsManager({ initialTags }: { initialTags: ProjectTag[] }) 
                         if (!labelDraft) setLabelDraft(active.label);
                       }}
                     />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Chain tag</label>
+                    <select
+                      value={active.isChain ? "chain" : "tag"}
+                      onChange={async (e) => {
+                        const isChain = e.target.value === "chain";
+                        await patchTag(active.slug, { isChain }, "Chain status updated");
+                        await refresh();
+                      }}
+                      className="h-9 rounded-md border border-input bg-transparent px-2 text-xs outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="tag">Tag</option>
+                      <option value="chain">Chain</option>
+                    </select>
                   </div>
                   <Button
                     type="button"
@@ -674,23 +757,29 @@ export function KeywordsManager({ initialTags }: { initialTags: ProjectTag[] }) 
         title={
           toolConfirm?.kind === "seed"
             ? "Seed keywords from lexicon?"
-            : toolConfirm?.onlyUnknown
-              ? "Backfill unknown accounts?"
-              : "Backfill all accounts?"
+            : toolConfirm?.kind === "backfill-chain"
+              ? "Backfill project chains?"
+              : toolConfirm?.onlyUnknown
+                ? "Backfill unknown accounts?"
+                : "Backfill all accounts?"
         }
         description={
           toolConfirm?.kind === "seed"
             ? "Upsert built-in tags, bio keywords, regexes, and handle tokens from the lexicon file into the database.\n\nExisting custom tags you added in the UI are kept; matching builtin slugs are overwritten with the file contents."
-            : toolConfirm?.onlyUnknown
-              ? "Re-classify accounts that are untagged or only tagged \"unknown\".\n\nRuns on list-worker — can take a while on large DBs. List membership may update for changed tags."
-              : "Re-classify every twitter account with the current DB lexicon.\n\nThis can overwrite manual tag edits and take a long time. Prefer \"Backfill unknown\" when you only care about new/untyped accounts."
+            : toolConfirm?.kind === "backfill-chain"
+              ? "Re-derive chain (and category) for all existing Projects using current bio+handle keywords.\n\nScans up to 2000 projects — fast and non-destructive (only updates changed fields)."
+              : toolConfirm?.onlyUnknown
+                ? "Re-classify accounts that are untagged or only tagged \"unknown\".\n\nRuns on list-worker — can take a while on large DBs. List membership may update for changed tags."
+                : "Re-classify every twitter account with the current DB lexicon.\n\nThis can overwrite manual tag edits and take a long time. Prefer \"Backfill unknown\" when you only care about new/untyped accounts."
         }
         confirmLabel={
           toolConfirm?.kind === "seed"
             ? "Seed keywords"
-            : toolConfirm?.onlyUnknown
-              ? "Backfill unknown"
-              : "Backfill all"
+            : toolConfirm?.kind === "backfill-chain"
+              ? "Backfill chains"
+              : toolConfirm?.onlyUnknown
+                ? "Backfill unknown"
+                : "Backfill all"
         }
         destructive={toolConfirm?.kind === "backfill" && !toolConfirm.onlyUnknown}
         loading={toolBusy}

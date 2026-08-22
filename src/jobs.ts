@@ -43,12 +43,6 @@ export const JOBS = {
     schema: z.object({}).strict(),
     existing: true,
   }),
-  "early-digest": def({
-    queue: "list-tracker",
-    jobName: "early-digest",
-    schema: z.object({}).strict(),
-    existing: true,
-  }),
 
   // ── seed-tracker (services/seedWorker.ts) ──
   "track-seeds": def({
@@ -118,27 +112,10 @@ export const JOBS = {
     schema: z.object({}).strict(),
     existing: true,
   }),
-  "poll-early-projects": def({
+  "poll-watching": def({
     queue: "list-tracker",
-    jobName: "poll-early-projects",
+    jobName: "poll-watching",
     schema: z.object({}).strict(),
-    existing: true,
-  }),
-  /**
-   * Per-account FxTwitter timeline for early pool (cursor.top pagination).
-   * Enqueued by poll-early-projects when tweetCount rises or fxCursor is missing.
-   */
-  "early-timeline": def({
-    queue: "list-tracker",
-    jobName: "early-timeline",
-    schema: z
-      .object({
-        accountId: z.string().min(1),
-        username: z.string().optional(),
-        name: z.string().optional(),
-        tags: z.array(z.string()).optional(),
-      })
-      .strict(),
     existing: true,
   }),
   "growth-report": def({

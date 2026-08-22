@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useTransition, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -16,52 +16,72 @@ const SORT_OPTIONS: { value: ProjectSort; label: string }[] = [
   { value: "username", label: "Username A–Z" },
 ];
 
+const CATEGORIES = ["DeFi", "NFT", "L1", "L2", "GameFi", "AI", "Infra", "Social", "Other"];
+const STATUSES = ["discovered", "investigating", "watching", "launched", "archived"];
+
 function buildHref(parts: {
-  tag?: string;
   search?: string;
   sort?: string;
   missingBioOnly?: boolean;
+  category?: string;
+  projectStatus?: string;
+  chain?: string;
 }): string {
   const params = new URLSearchParams();
-  if (parts.tag?.trim()) params.set("tag", parts.tag.trim());
   if (parts.search?.trim()) params.set("search", parts.search.trim());
   if (parts.sort && parts.sort !== "latest") params.set("sort", parts.sort);
   if (parts.missingBioOnly) params.set("missingBio", "1");
+  if (parts.category) params.set("category", parts.category);
+  if (parts.projectStatus) params.set("projectStatus", parts.projectStatus);
+  if (parts.chain) params.set("chain", parts.chain);
   const q = params.toString();
   return q ? `/dashboard/projects?${q}` : "/dashboard/projects";
 }
 
 export function ProjectsFilters({
-  tag,
   search,
   sort,
   total,
   missingBioOnly = false,
   missingBioCount = 0,
+  category: initialCategory,
+  status: initialStatus,
+  chain: initialChain,
+  chains,
 }: {
-  tag: string;
   search: string;
   sort: ProjectSort;
   total: number;
   missingBioOnly?: boolean;
   missingBioCount?: number;
+  category?: string;
+  status?: string;
+  chain?: string;
+  chains?: string[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [category, setCategory] = useState(initialCategory ?? "");
+  const [status, setStatus] = useState(initialStatus ?? "");
+  const [chain, setChain] = useState(initialChain ?? "");
 
   function navigate(next: {
-    tag?: string;
     search?: string;
     sort?: string;
     missingBioOnly?: boolean;
+    category?: string;
+    status?: string;
+    chain?: string;
   }) {
     startTransition(() => {
       router.push(
         buildHref({
-          tag: next.tag ?? tag,
           search: next.search ?? search,
           sort: next.sort ?? sort,
           missingBioOnly: next.missingBioOnly ?? missingBioOnly,
+          category: next.category ?? (category || undefined),
+          projectStatus: next.status ?? (status || undefined),
+          chain: next.chain ?? (chain || undefined),
         }),
       );
     });
@@ -71,14 +91,13 @@ export function ProjectsFilters({
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     navigate({
-      tag: String(fd.get("tag") ?? ""),
       search: String(fd.get("search") ?? ""),
       sort: String(fd.get("sort") ?? "latest") as ProjectSort,
     });
   }
 
   const hasFilters = Boolean(
-    tag || search || (sort && sort !== "latest") || missingBioOnly,
+    search || (sort && sort !== "latest") || missingBioOnly || category || status || chain,
   );
 
   return (
@@ -86,13 +105,6 @@ export function ProjectsFilters({
       onSubmit={onSubmit}
       className="flex flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
     >
-      <Input
-        name="tag"
-        defaultValue={tag}
-        placeholder="tag slug"
-        className="h-9 w-full sm:w-40"
-        key={`tag-${tag}`}
-      />
       <Input
         name="search"
         defaultValue={search}
@@ -115,6 +127,36 @@ export function ProjectsFilters({
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
+        ))}
+      </select>
+      <select
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
+        className="h-9 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus:ring-2 focus:ring-ring sm:w-32"
+      >
+        <option value="">All categories</option>
+        {CATEGORIES.map((c) => (
+          <option key={c} value={c}>{c}</option>
+        ))}
+      </select>
+      <select
+        value={status}
+        onChange={(e) => setStatus(e.target.value)}
+        className="h-9 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus:ring-2 focus:ring-ring sm:w-36"
+      >
+        <option value="">All statuses</option>
+        {STATUSES.map((s) => (
+          <option key={s} value={s}>{s}</option>
+        ))}
+      </select>
+      <select
+        value={chain}
+        onChange={(e) => setChain(e.target.value)}
+        className="h-9 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus:ring-2 focus:ring-ring sm:w-32"
+      >
+        <option value="">All chains</option>
+        {(chains || []).map((c) => (
+          <option key={c} value={c}>{c}</option>
         ))}
       </select>
       <div className="flex flex-wrap items-center gap-2">

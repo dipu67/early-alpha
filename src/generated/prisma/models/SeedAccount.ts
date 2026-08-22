@@ -249,6 +249,7 @@ export type SeedAccountWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"SeedAccount"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SeedAccount"> | Date | string
   followEdges?: Prisma.FollowEdgeListRelationFilter
+  twitterAccount?: Prisma.XOR<Prisma.TwitterAccountNullableScalarRelationFilter, Prisma.TwitterAccountWhereInput> | null
 }
 
 export type SeedAccountOrderByWithRelationInput = {
@@ -262,6 +263,7 @@ export type SeedAccountOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   followEdges?: Prisma.FollowEdgeOrderByRelationAggregateInput
+  twitterAccount?: Prisma.TwitterAccountOrderByWithRelationInput
 }
 
 export type SeedAccountWhereUniqueInput = Prisma.AtLeast<{
@@ -278,6 +280,7 @@ export type SeedAccountWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"SeedAccount"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SeedAccount"> | Date | string
   followEdges?: Prisma.FollowEdgeListRelationFilter
+  twitterAccount?: Prisma.XOR<Prisma.TwitterAccountNullableScalarRelationFilter, Prisma.TwitterAccountWhereInput> | null
 }, "id" | "twitterId" | "username">
 
 export type SeedAccountOrderByWithAggregationInput = {
@@ -314,7 +317,6 @@ export type SeedAccountScalarWhereWithAggregatesInput = {
 
 export type SeedAccountCreateInput = {
   id?: bigint | number
-  twitterId?: string | null
   username: string
   category: string
   label?: string | null
@@ -323,6 +325,7 @@ export type SeedAccountCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   followEdges?: Prisma.FollowEdgeCreateNestedManyWithoutSeedInput
+  twitterAccount?: Prisma.TwitterAccountCreateNestedOneWithoutSeedAccountsInput
 }
 
 export type SeedAccountUncheckedCreateInput = {
@@ -340,7 +343,6 @@ export type SeedAccountUncheckedCreateInput = {
 
 export type SeedAccountUpdateInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
-  twitterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -349,6 +351,7 @@ export type SeedAccountUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   followEdges?: Prisma.FollowEdgeUpdateManyWithoutSeedNestedInput
+  twitterAccount?: Prisma.TwitterAccountUpdateOneWithoutSeedAccountsNestedInput
 }
 
 export type SeedAccountUncheckedUpdateInput = {
@@ -378,7 +381,6 @@ export type SeedAccountCreateManyInput = {
 
 export type SeedAccountUpdateManyMutationInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
-  twitterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -398,6 +400,16 @@ export type SeedAccountUncheckedUpdateManyInput = {
   followingCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type SeedAccountListRelationFilter = {
+  every?: Prisma.SeedAccountWhereInput
+  some?: Prisma.SeedAccountWhereInput
+  none?: Prisma.SeedAccountWhereInput
+}
+
+export type SeedAccountOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type SeedAccountCountOrderByAggregateInput = {
@@ -449,6 +461,48 @@ export type SeedAccountScalarRelationFilter = {
   isNot?: Prisma.SeedAccountWhereInput
 }
 
+export type SeedAccountCreateNestedManyWithoutTwitterAccountInput = {
+  create?: Prisma.XOR<Prisma.SeedAccountCreateWithoutTwitterAccountInput, Prisma.SeedAccountUncheckedCreateWithoutTwitterAccountInput> | Prisma.SeedAccountCreateWithoutTwitterAccountInput[] | Prisma.SeedAccountUncheckedCreateWithoutTwitterAccountInput[]
+  connectOrCreate?: Prisma.SeedAccountCreateOrConnectWithoutTwitterAccountInput | Prisma.SeedAccountCreateOrConnectWithoutTwitterAccountInput[]
+  createMany?: Prisma.SeedAccountCreateManyTwitterAccountInputEnvelope
+  connect?: Prisma.SeedAccountWhereUniqueInput | Prisma.SeedAccountWhereUniqueInput[]
+}
+
+export type SeedAccountUncheckedCreateNestedManyWithoutTwitterAccountInput = {
+  create?: Prisma.XOR<Prisma.SeedAccountCreateWithoutTwitterAccountInput, Prisma.SeedAccountUncheckedCreateWithoutTwitterAccountInput> | Prisma.SeedAccountCreateWithoutTwitterAccountInput[] | Prisma.SeedAccountUncheckedCreateWithoutTwitterAccountInput[]
+  connectOrCreate?: Prisma.SeedAccountCreateOrConnectWithoutTwitterAccountInput | Prisma.SeedAccountCreateOrConnectWithoutTwitterAccountInput[]
+  createMany?: Prisma.SeedAccountCreateManyTwitterAccountInputEnvelope
+  connect?: Prisma.SeedAccountWhereUniqueInput | Prisma.SeedAccountWhereUniqueInput[]
+}
+
+export type SeedAccountUpdateManyWithoutTwitterAccountNestedInput = {
+  create?: Prisma.XOR<Prisma.SeedAccountCreateWithoutTwitterAccountInput, Prisma.SeedAccountUncheckedCreateWithoutTwitterAccountInput> | Prisma.SeedAccountCreateWithoutTwitterAccountInput[] | Prisma.SeedAccountUncheckedCreateWithoutTwitterAccountInput[]
+  connectOrCreate?: Prisma.SeedAccountCreateOrConnectWithoutTwitterAccountInput | Prisma.SeedAccountCreateOrConnectWithoutTwitterAccountInput[]
+  upsert?: Prisma.SeedAccountUpsertWithWhereUniqueWithoutTwitterAccountInput | Prisma.SeedAccountUpsertWithWhereUniqueWithoutTwitterAccountInput[]
+  createMany?: Prisma.SeedAccountCreateManyTwitterAccountInputEnvelope
+  set?: Prisma.SeedAccountWhereUniqueInput | Prisma.SeedAccountWhereUniqueInput[]
+  disconnect?: Prisma.SeedAccountWhereUniqueInput | Prisma.SeedAccountWhereUniqueInput[]
+  delete?: Prisma.SeedAccountWhereUniqueInput | Prisma.SeedAccountWhereUniqueInput[]
+  connect?: Prisma.SeedAccountWhereUniqueInput | Prisma.SeedAccountWhereUniqueInput[]
+  update?: Prisma.SeedAccountUpdateWithWhereUniqueWithoutTwitterAccountInput | Prisma.SeedAccountUpdateWithWhereUniqueWithoutTwitterAccountInput[]
+  updateMany?: Prisma.SeedAccountUpdateManyWithWhereWithoutTwitterAccountInput | Prisma.SeedAccountUpdateManyWithWhereWithoutTwitterAccountInput[]
+  deleteMany?: Prisma.SeedAccountScalarWhereInput | Prisma.SeedAccountScalarWhereInput[]
+}
+
+export type SeedAccountUncheckedUpdateManyWithoutTwitterAccountNestedInput = {
+  create?: Prisma.XOR<Prisma.SeedAccountCreateWithoutTwitterAccountInput, Prisma.SeedAccountUncheckedCreateWithoutTwitterAccountInput> | Prisma.SeedAccountCreateWithoutTwitterAccountInput[] | Prisma.SeedAccountUncheckedCreateWithoutTwitterAccountInput[]
+  connectOrCreate?: Prisma.SeedAccountCreateOrConnectWithoutTwitterAccountInput | Prisma.SeedAccountCreateOrConnectWithoutTwitterAccountInput[]
+  upsert?: Prisma.SeedAccountUpsertWithWhereUniqueWithoutTwitterAccountInput | Prisma.SeedAccountUpsertWithWhereUniqueWithoutTwitterAccountInput[]
+  createMany?: Prisma.SeedAccountCreateManyTwitterAccountInputEnvelope
+  set?: Prisma.SeedAccountWhereUniqueInput | Prisma.SeedAccountWhereUniqueInput[]
+  disconnect?: Prisma.SeedAccountWhereUniqueInput | Prisma.SeedAccountWhereUniqueInput[]
+  delete?: Prisma.SeedAccountWhereUniqueInput | Prisma.SeedAccountWhereUniqueInput[]
+  connect?: Prisma.SeedAccountWhereUniqueInput | Prisma.SeedAccountWhereUniqueInput[]
+  update?: Prisma.SeedAccountUpdateWithWhereUniqueWithoutTwitterAccountInput | Prisma.SeedAccountUpdateWithWhereUniqueWithoutTwitterAccountInput[]
+  updateMany?: Prisma.SeedAccountUpdateManyWithWhereWithoutTwitterAccountInput | Prisma.SeedAccountUpdateManyWithWhereWithoutTwitterAccountInput[]
+  deleteMany?: Prisma.SeedAccountScalarWhereInput | Prisma.SeedAccountScalarWhereInput[]
+}
+
 export type SeedAccountCreateNestedOneWithoutFollowEdgesInput = {
   create?: Prisma.XOR<Prisma.SeedAccountCreateWithoutFollowEdgesInput, Prisma.SeedAccountUncheckedCreateWithoutFollowEdgesInput>
   connectOrCreate?: Prisma.SeedAccountCreateOrConnectWithoutFollowEdgesInput
@@ -463,9 +517,8 @@ export type SeedAccountUpdateOneRequiredWithoutFollowEdgesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SeedAccountUpdateToOneWithWhereWithoutFollowEdgesInput, Prisma.SeedAccountUpdateWithoutFollowEdgesInput>, Prisma.SeedAccountUncheckedUpdateWithoutFollowEdgesInput>
 }
 
-export type SeedAccountCreateWithoutFollowEdgesInput = {
+export type SeedAccountCreateWithoutTwitterAccountInput = {
   id?: bigint | number
-  twitterId?: string | null
   username: string
   category: string
   label?: string | null
@@ -473,6 +526,72 @@ export type SeedAccountCreateWithoutFollowEdgesInput = {
   followingCursor?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  followEdges?: Prisma.FollowEdgeCreateNestedManyWithoutSeedInput
+}
+
+export type SeedAccountUncheckedCreateWithoutTwitterAccountInput = {
+  id?: bigint | number
+  username: string
+  category: string
+  label?: string | null
+  active?: boolean
+  followingCursor?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  followEdges?: Prisma.FollowEdgeUncheckedCreateNestedManyWithoutSeedInput
+}
+
+export type SeedAccountCreateOrConnectWithoutTwitterAccountInput = {
+  where: Prisma.SeedAccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.SeedAccountCreateWithoutTwitterAccountInput, Prisma.SeedAccountUncheckedCreateWithoutTwitterAccountInput>
+}
+
+export type SeedAccountCreateManyTwitterAccountInputEnvelope = {
+  data: Prisma.SeedAccountCreateManyTwitterAccountInput | Prisma.SeedAccountCreateManyTwitterAccountInput[]
+  skipDuplicates?: boolean
+}
+
+export type SeedAccountUpsertWithWhereUniqueWithoutTwitterAccountInput = {
+  where: Prisma.SeedAccountWhereUniqueInput
+  update: Prisma.XOR<Prisma.SeedAccountUpdateWithoutTwitterAccountInput, Prisma.SeedAccountUncheckedUpdateWithoutTwitterAccountInput>
+  create: Prisma.XOR<Prisma.SeedAccountCreateWithoutTwitterAccountInput, Prisma.SeedAccountUncheckedCreateWithoutTwitterAccountInput>
+}
+
+export type SeedAccountUpdateWithWhereUniqueWithoutTwitterAccountInput = {
+  where: Prisma.SeedAccountWhereUniqueInput
+  data: Prisma.XOR<Prisma.SeedAccountUpdateWithoutTwitterAccountInput, Prisma.SeedAccountUncheckedUpdateWithoutTwitterAccountInput>
+}
+
+export type SeedAccountUpdateManyWithWhereWithoutTwitterAccountInput = {
+  where: Prisma.SeedAccountScalarWhereInput
+  data: Prisma.XOR<Prisma.SeedAccountUpdateManyMutationInput, Prisma.SeedAccountUncheckedUpdateManyWithoutTwitterAccountInput>
+}
+
+export type SeedAccountScalarWhereInput = {
+  AND?: Prisma.SeedAccountScalarWhereInput | Prisma.SeedAccountScalarWhereInput[]
+  OR?: Prisma.SeedAccountScalarWhereInput[]
+  NOT?: Prisma.SeedAccountScalarWhereInput | Prisma.SeedAccountScalarWhereInput[]
+  id?: Prisma.BigIntFilter<"SeedAccount"> | bigint | number
+  twitterId?: Prisma.StringNullableFilter<"SeedAccount"> | string | null
+  username?: Prisma.StringFilter<"SeedAccount"> | string
+  category?: Prisma.StringFilter<"SeedAccount"> | string
+  label?: Prisma.StringNullableFilter<"SeedAccount"> | string | null
+  active?: Prisma.BoolFilter<"SeedAccount"> | boolean
+  followingCursor?: Prisma.StringNullableFilter<"SeedAccount"> | string | null
+  createdAt?: Prisma.DateTimeFilter<"SeedAccount"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"SeedAccount"> | Date | string
+}
+
+export type SeedAccountCreateWithoutFollowEdgesInput = {
+  id?: bigint | number
+  username: string
+  category: string
+  label?: string | null
+  active?: boolean
+  followingCursor?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  twitterAccount?: Prisma.TwitterAccountCreateNestedOneWithoutSeedAccountsInput
 }
 
 export type SeedAccountUncheckedCreateWithoutFollowEdgesInput = {
@@ -505,6 +624,18 @@ export type SeedAccountUpdateToOneWithWhereWithoutFollowEdgesInput = {
 
 export type SeedAccountUpdateWithoutFollowEdgesInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  followingCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  twitterAccount?: Prisma.TwitterAccountUpdateOneWithoutSeedAccountsNestedInput
+}
+
+export type SeedAccountUncheckedUpdateWithoutFollowEdgesInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   twitterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.StringFieldUpdateOperationsInput | string
@@ -515,9 +646,43 @@ export type SeedAccountUpdateWithoutFollowEdgesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type SeedAccountUncheckedUpdateWithoutFollowEdgesInput = {
+export type SeedAccountCreateManyTwitterAccountInput = {
+  id?: bigint | number
+  username: string
+  category: string
+  label?: string | null
+  active?: boolean
+  followingCursor?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type SeedAccountUpdateWithoutTwitterAccountInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
-  twitterId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  followingCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  followEdges?: Prisma.FollowEdgeUpdateManyWithoutSeedNestedInput
+}
+
+export type SeedAccountUncheckedUpdateWithoutTwitterAccountInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  followingCursor?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  followEdges?: Prisma.FollowEdgeUncheckedUpdateManyWithoutSeedNestedInput
+}
+
+export type SeedAccountUncheckedUpdateManyWithoutTwitterAccountInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   username?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.StringFieldUpdateOperationsInput | string
   label?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -569,6 +734,7 @@ export type SeedAccountSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   createdAt?: boolean
   updatedAt?: boolean
   followEdges?: boolean | Prisma.SeedAccount$followEdgesArgs<ExtArgs>
+  twitterAccount?: boolean | Prisma.SeedAccount$twitterAccountArgs<ExtArgs>
   _count?: boolean | Prisma.SeedAccountCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["seedAccount"]>
 
@@ -582,6 +748,7 @@ export type SeedAccountSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   followingCursor?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  twitterAccount?: boolean | Prisma.SeedAccount$twitterAccountArgs<ExtArgs>
 }, ExtArgs["result"]["seedAccount"]>
 
 export type SeedAccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -594,6 +761,7 @@ export type SeedAccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   followingCursor?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  twitterAccount?: boolean | Prisma.SeedAccount$twitterAccountArgs<ExtArgs>
 }, ExtArgs["result"]["seedAccount"]>
 
 export type SeedAccountSelectScalar = {
@@ -611,15 +779,21 @@ export type SeedAccountSelectScalar = {
 export type SeedAccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "twitterId" | "username" | "category" | "label" | "active" | "followingCursor" | "createdAt" | "updatedAt", ExtArgs["result"]["seedAccount"]>
 export type SeedAccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   followEdges?: boolean | Prisma.SeedAccount$followEdgesArgs<ExtArgs>
+  twitterAccount?: boolean | Prisma.SeedAccount$twitterAccountArgs<ExtArgs>
   _count?: boolean | Prisma.SeedAccountCountOutputTypeDefaultArgs<ExtArgs>
 }
-export type SeedAccountIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
-export type SeedAccountIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type SeedAccountIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  twitterAccount?: boolean | Prisma.SeedAccount$twitterAccountArgs<ExtArgs>
+}
+export type SeedAccountIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  twitterAccount?: boolean | Prisma.SeedAccount$twitterAccountArgs<ExtArgs>
+}
 
 export type $SeedAccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "SeedAccount"
   objects: {
     followEdges: Prisma.$FollowEdgePayload<ExtArgs>[]
+    twitterAccount: Prisma.$TwitterAccountPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: bigint
@@ -1026,6 +1200,7 @@ readonly fields: SeedAccountFieldRefs;
 export interface Prisma__SeedAccountClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   followEdges<T extends Prisma.SeedAccount$followEdgesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SeedAccount$followEdgesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FollowEdgePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  twitterAccount<T extends Prisma.SeedAccount$twitterAccountArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SeedAccount$twitterAccountArgs<ExtArgs>>): Prisma.Prisma__TwitterAccountClient<runtime.Types.Result.GetResult<Prisma.$TwitterAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1318,6 +1493,10 @@ export type SeedAccountCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Ext
    */
   data: Prisma.SeedAccountCreateManyInput | Prisma.SeedAccountCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SeedAccountIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1388,6 +1567,10 @@ export type SeedAccountUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Ext
    * Limit how many SeedAccounts to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SeedAccountIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1478,6 +1661,25 @@ export type SeedAccount$followEdgesArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.FollowEdgeScalarFieldEnum | Prisma.FollowEdgeScalarFieldEnum[]
+}
+
+/**
+ * SeedAccount.twitterAccount
+ */
+export type SeedAccount$twitterAccountArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the TwitterAccount
+   */
+  select?: Prisma.TwitterAccountSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the TwitterAccount
+   */
+  omit?: Prisma.TwitterAccountOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TwitterAccountInclude<ExtArgs> | null
+  where?: Prisma.TwitterAccountWhereInput
 }
 
 /**

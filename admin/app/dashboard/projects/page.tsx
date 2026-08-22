@@ -1,13 +1,5 @@
 import { backendFetch } from "@/lib/api";
 import { PageHeader } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { ProjectTableWithCheckboxes } from "./project-table-checkbox";
@@ -17,11 +9,8 @@ import {
   type Project,
   type ProjectSort,
 } from "@/lib/types";
-import { LocalTime } from "@/components/local-time";
-import { ProjectActions } from "./project-actions";
 import { ProjectsFilters } from "./projects-filters";
 import { FetchMissingBiosButton } from "./fetch-bios-button";
-import { SendTagAlertButton } from "./send-tag-alert-button";
 
 export const dynamic = "force-dynamic";
 
@@ -39,41 +28,50 @@ function parseSort(raw: string | undefined): ProjectSort {
   return "latest";
 }
 
-function isMissingBio(description: string | null | undefined): boolean {
-  return description == null || description.trim() === "";
-}
-
 export default async function ProjectsPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    tag?: string;
     search?: string;
     sort?: string;
     missingBio?: string;
+    category?: string;
+    projectStatus?: string;
+    chain?: string;
   }>;
 }) {
   const sp = await searchParams;
   const sort = parseSort(sp.sort);
-  const tag = sp.tag ?? "";
   const search = sp.search ?? "";
-  const missingBioOnly =
-    sp.missingBio === "1" || sp.missingBio === "true";
+  const missingBioOnly = sp.missingBio === "1" || sp.missingBio === "true";
+  const categoryFilter = sp.category ?? "";
+  const statusFilter = sp.projectStatus ?? "";
+  const chainFilter = sp.chain ?? "";
 
-  const res = await backendFetch("/api/projects", {
-    query: {
-      tag: tag || undefined,
-      search: search || undefined,
-      sort,
-      limit: "200",
-      ...(missingBioOnly ? { missingBio: "1" } : {}),
-    },
-  });
+  const [res, chainRes] = await Promise.all([
+    backendFetch("/api/projects", {
+      query: {
+        search: search || undefined,
+        sort,
+        limit: "200",
+        includeProject: "1",
+        ...(missingBioOnly ? { missingBio: "1" } : {}),
+        ...(categoryFilter ? { category: [categoryFilter] } : {}),
+        ...(statusFilter ? { projectStatus: statusFilter } : {}),
+        ...(chainFilter ? { chain: chainFilter } : {}),
+      },
+    }),
+    backendFetch("/api/project-chains"),
+  ]);
+
   const data = (res.ok ? res.body : { items: [], total: 0 }) as Paged<Project> & {
     sort?: string;
     missingBioCount?: number;
   };
+  const chains = chainRes.ok ? (chainRes.body as { items: string[] }) : { items: [] };
   const missingBioCount = data.missingBioCount ?? 0;
+
+  const enrichedCount = data.items.filter((p) => p.project != null).length;
 
   return (
     <div>
@@ -84,20 +82,20 @@ export default async function ProjectsPage({
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <ProjectsFilters
-          tag={tag}
           search={search}
           sort={sort}
           total={data.total}
           missingBioOnly={missingBioOnly}
           missingBioCount={missingBioCount}
+          category={categoryFilter}
+          status={statusFilter}
+          chain={chainFilter}
+          chains={chains.items}
         />
         <FetchMissingBiosButton missingBioCount={missingBioCount} />
-        <SendTagAlertButton tag={tag} />
-        <form action="/api/proxy/api/early-projects/remove-old?minAgeMonths=6" method="POST" className="inline-block ml-auto">
-          <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-destructive bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/20">
-            🗑 Remove Old (&gt;6mo)
-          </button>
-        </form>
+        <span className="ml-auto text-xs text-muted-foreground">
+          {enrichedCount}/{data.items.length} enriched
+        </span>
       </div>
 
       {!res.ok ? (
@@ -111,7 +109,7 @@ export default async function ProjectsPage({
       ) : null}
 
       {data.items.length === 0 ? (
-        <EmptyState title="No projects match" description="Try a different tag or search." />
+        <EmptyState title="No projects match" description="Try a different category or search." />
       ) : (
         <ProjectTableWithCheckboxes items={data.items} />
       )}

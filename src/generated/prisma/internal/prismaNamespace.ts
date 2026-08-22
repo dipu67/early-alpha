@@ -414,7 +414,9 @@ export const ModelName = {
   ProjectMonitor: 'ProjectMonitor',
   ProjectMonitorTagRule: 'ProjectMonitorTagRule',
   GithubRepoMonitor: 'GithubRepoMonitor',
-  GithubRepoCommit: 'GithubRepoCommit'
+  GithubRepoCommit: 'GithubRepoCommit',
+  Project: 'Project',
+  ProjectTemplate: 'ProjectTemplate'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -430,7 +432,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "projectTag" | "adminUser" | "setting" | "telegramBot" | "twitterAccount" | "accountMetricSnapshot" | "projectList" | "listMember" | "postAlert" | "seedAccount" | "trackingRun" | "followEdge" | "alert" | "twitterAuthAccount" | "signalScan" | "signalRule" | "authFollow" | "searchQuery" | "searchHit" | "listMonitor" | "listMonitorHit" | "grokConversation" | "grokMessage" | "grokResearchPrompt" | "grokResearchRun" | "telegramGroup" | "telegramTopic" | "projectMonitor" | "projectMonitorTagRule" | "githubRepoMonitor" | "githubRepoCommit"
+    modelProps: "projectTag" | "adminUser" | "setting" | "telegramBot" | "twitterAccount" | "accountMetricSnapshot" | "projectList" | "listMember" | "postAlert" | "seedAccount" | "trackingRun" | "followEdge" | "alert" | "twitterAuthAccount" | "signalScan" | "signalRule" | "authFollow" | "searchQuery" | "searchHit" | "listMonitor" | "listMonitorHit" | "grokConversation" | "grokMessage" | "grokResearchPrompt" | "grokResearchRun" | "telegramGroup" | "telegramTopic" | "projectMonitor" | "projectMonitorTagRule" | "githubRepoMonitor" | "githubRepoCommit" | "project" | "projectTemplate"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2728,6 +2730,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Project: {
+      payload: Prisma.$ProjectPayload<ExtArgs>
+      fields: Prisma.ProjectFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ProjectFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ProjectFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+        }
+        findFirst: {
+          args: Prisma.ProjectFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ProjectFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+        }
+        findMany: {
+          args: Prisma.ProjectFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>[]
+        }
+        create: {
+          args: Prisma.ProjectCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+        }
+        createMany: {
+          args: Prisma.ProjectCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ProjectCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>[]
+        }
+        delete: {
+          args: Prisma.ProjectDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+        }
+        update: {
+          args: Prisma.ProjectUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+        }
+        deleteMany: {
+          args: Prisma.ProjectDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ProjectUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ProjectUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>[]
+        }
+        upsert: {
+          args: Prisma.ProjectUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectPayload>
+        }
+        aggregate: {
+          args: Prisma.ProjectAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateProject>
+        }
+        groupBy: {
+          args: Prisma.ProjectGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ProjectCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectCountAggregateOutputType> | number
+        }
+      }
+    }
+    ProjectTemplate: {
+      payload: Prisma.$ProjectTemplatePayload<ExtArgs>
+      fields: Prisma.ProjectTemplateFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ProjectTemplateFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectTemplatePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ProjectTemplateFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectTemplatePayload>
+        }
+        findFirst: {
+          args: Prisma.ProjectTemplateFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectTemplatePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ProjectTemplateFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectTemplatePayload>
+        }
+        findMany: {
+          args: Prisma.ProjectTemplateFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectTemplatePayload>[]
+        }
+        create: {
+          args: Prisma.ProjectTemplateCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectTemplatePayload>
+        }
+        createMany: {
+          args: Prisma.ProjectTemplateCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ProjectTemplateCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectTemplatePayload>[]
+        }
+        delete: {
+          args: Prisma.ProjectTemplateDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectTemplatePayload>
+        }
+        update: {
+          args: Prisma.ProjectTemplateUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectTemplatePayload>
+        }
+        deleteMany: {
+          args: Prisma.ProjectTemplateDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ProjectTemplateUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ProjectTemplateUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectTemplatePayload>[]
+        }
+        upsert: {
+          args: Prisma.ProjectTemplateUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectTemplatePayload>
+        }
+        aggregate: {
+          args: Prisma.ProjectTemplateAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateProjectTemplate>
+        }
+        groupBy: {
+          args: Prisma.ProjectTemplateGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectTemplateGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ProjectTemplateCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectTemplateCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2772,6 +2922,7 @@ export const ProjectTagScalarFieldEnum = {
   label: 'label',
   isBuiltin: 'isBuiltin',
   enabled: 'enabled',
+  isChain: 'isChain',
   keywords: 'keywords',
   regexKeywords: 'regexKeywords',
   handleTokens: 'handleTokens',
@@ -2842,6 +2993,7 @@ export const TwitterAccountScalarFieldEnum = {
   huntUpdatedAt: 'huntUpdatedAt',
   lastProfilePolledAt: 'lastProfilePolledAt',
   fxCursor: 'fxCursor',
+  lastTweetId: 'lastTweetId',
   previousUsername: 'previousUsername',
   usernameChangedAt: 'usernameChangedAt',
   followersAtDetect: 'followersAtDetect'
@@ -3276,12 +3428,52 @@ export const GithubRepoCommitScalarFieldEnum = {
 export type GithubRepoCommitScalarFieldEnum = (typeof GithubRepoCommitScalarFieldEnum)[keyof typeof GithubRepoCommitScalarFieldEnum]
 
 
+export const ProjectScalarFieldEnum = {
+  id: 'id',
+  twitterAccountId: 'twitterAccountId',
+  name: 'name',
+  description: 'description',
+  website: 'website',
+  github: 'github',
+  projectStatus: 'projectStatus',
+  chain: 'chain',
+  tokenAddress: 'tokenAddress',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectScalarFieldEnum = (typeof ProjectScalarFieldEnum)[keyof typeof ProjectScalarFieldEnum]
+
+
+export const ProjectTemplateScalarFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  name: 'name',
+  description: 'description',
+  chain: 'chain',
+  defaultTags: 'defaultTags',
+  templateFields: 'templateFields',
+  isBuiltin: 'isBuiltin',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectTemplateScalarFieldEnum = (typeof ProjectTemplateScalarFieldEnum)[keyof typeof ProjectTemplateScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {
@@ -3298,6 +3490,15 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
 
@@ -3380,6 +3581,20 @@ export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, '
  * Reference to a field of type 'Float[]'
  */
 export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Json'
+ */
+export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+/**
+ * Reference to a field of type 'QueryMode'
+ */
+export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 /**
@@ -3523,6 +3738,8 @@ export type GlobalOmitConfig = {
   projectMonitorTagRule?: Prisma.ProjectMonitorTagRuleOmit
   githubRepoMonitor?: Prisma.GithubRepoMonitorOmit
   githubRepoCommit?: Prisma.GithubRepoCommitOmit
+  project?: Prisma.ProjectOmit
+  projectTemplate?: Prisma.ProjectTemplateOmit
 }
 
 /* Types for Logging */
