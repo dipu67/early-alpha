@@ -528,9 +528,15 @@ export interface WatchingAlertInput {
   followersCount: number;
   tweetCount: number;
   tags?: string[];
+  /** Matched signal labels. Non-empty routes the alert to the signal topic. */
+  signals?: string[];
 }
 
-/** Watching-project post — a project with projectStatus='watching' posted. */
+/**
+ * Watching-project post — a project with projectStatus='watching' posted.
+ * Renders as a signal alert when `signals` is non-empty, otherwise as a plain
+ * post; the poller routes the two to different Telegram topics.
+ */
 export function formatWatchingAlert(
   input: WatchingAlertInput,
 ): { text: string; user: UserData } {
@@ -540,14 +546,20 @@ export function formatWatchingAlert(
   const tagLine = labels.length
     ? `🏷 ${escapeMarkdown(labels.slice(0, 4).map(tagLabel).join(" · "))}\n`
     : "";
+  const signals = (input.signals ?? []).filter(Boolean);
+  const signalLine = signals.length
+    ? `🏷️ ${escapeMarkdown(signals.join(" · "))}\n`
+    : "";
+  const header = signals.length ? `🚨 *Watching · signal*` : `👀 *Watching · new post*`;
 
   const text =
-    `👀 *Watching · new post*\n` +
+    `${header}\n` +
     `━━━━━━━━━━━━━━━━━━\n` +
     `👤 *${escapeMarkdown(displayName)}*  ${mdUserLink(input.username)}\n` +
     `👥 ${escapeMarkdown(formatNumber(input.followersCount))} followers · ` +
     `🐦 ${escapeMarkdown(formatNumber(input.tweetCount))} posts\n` +
     tagLine +
+    signalLine +
     `\n${escapeMarkdown(excerpt(input.text))}\n\n` +
     `🔗 ${mdLink("View post", postUrl)}\n` +
     `━━━━━━━━━━━━━━━━━━\n`;

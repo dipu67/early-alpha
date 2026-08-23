@@ -4,15 +4,20 @@
 //   1. Fetch TwitterAccount rows whose Project has projectStatus = 'watching'
 //   2. Use FxTwitter getProfileStatuses to fetch each user's latest tweets
 //   3. First sight of an account seeds lastTweetId only (no backlog flood)
-//   4. Else alert on every tweet with snowflake id > lastTweetId
+//   4. Else, for every tweet with snowflake id > lastTweetId, run signal
+//      detection: a match routes the alert to the signal topic, no match routes
+//      it to the row-post topic (see routeWatchingTweet)
 //   5. Advance lastTweetId only past tweets that actually reached Telegram —
 //      a failed send holds the watermark so the post is retried next cycle.
+//      A branch the admin turned off still advances: "off" means drop, not defer.
 
 import { prisma } from "../db/prisma.js";
 import { FxTwitterClient, FxTwitterError } from "../fxTwitter/fxTwitterClient.js";
 import type { APITwitterStatus } from "../fxTwitter/types.js";
 import { CONFIG_KEYS, getConfig } from "./appConfig.js";
 import { formatWatchingAlert } from "./formatAlert.js";
+import { detectSignalsWithRules } from "./signalRules.js";
+import { detectSignals } from "./postSignals.js";
 import { sendTelegramAlert } from "../tg/sendAlert.js";
 import { maxSnowflake, toSnowflake } from "./pollerCore.js";
 
@@ -20,11 +25,58 @@ import { maxSnowflake, toSnowflake } from "./pollerCore.js";
 const TWEETS_PER_USER_FALLBACK = Number(process.env.WATCHING_POLL_COUNT ?? 20);
 const MAX_USERS_FALLBACK = Number(process.env.WATCHING_MAX_USERS ?? 10);
 
+/** Which Telegram stream a watching post belongs to. */
+export type WatchingBranch = "signal" | "row";
+
+export interface WatchingRouting {
+  signalEnabled: boolean;
+  rowEnabled: boolean;
+  signalTopicId: number | undefined;
+  rowTopicId: number | undefined;
+}
+
+export interface WatchingRoute {
+  branch: WatchingBranch;
+  /** False when the admin turned this branch off — skip the send, still advance. */
+  enabled: boolean;
+  /** undefined falls back to sendTelegramAlert's alert-type / default topic. */
+  topicId: number | undefined;
+}
+
+/**
+ * Route one watching post: a matched signal goes to the signal topic, everything
+ * else to the row-post topic. Each branch has its own admin on/off switch.
+ */
+export function routeWatchingTweet(
+  signals: string[],
+  cfg: WatchingRouting,
+): WatchingRoute {
+  return signals.length > 0
+    ? { branch: "signal", enabled: cfg.signalEnabled, topicId: cfg.signalTopicId }
+    : { branch: "row", enabled: cfg.rowEnabled, topicId: cfg.rowTopicId };
+}
+
+/** Coerce a Setting value to a usable forum topic id, or undefined. */
+function topicOrUndefined(v: unknown): number | undefined {
+  const n = Number(v);
+  return typeof v === "number" || (v != null && v !== "" && Number.isFinite(n))
+    ? Number.isFinite(n)
+      ? n
+      : undefined
+    : undefined;
+}
+
 export interface WatchingPollResult {
   watched: number;
   checked: number;
   timelines: number;
   alerted: number;
+  /** Posts routed to the signal topic. */
+  alertedSignal: number;
+  /** Posts routed to the row-post topic. */
+  alertedRow: number;
+  /** Posts whose branch is switched off — dropped, watermark still advanced. */
+  skippedDisabled: number;
   skippedUnchanged: number;
   /** Accounts seeded on first sight (watermark set, no alerts). */
   seeded: number;
@@ -40,6 +92,9 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
     checked: 0,
     timelines: 0,
     alerted: 0,
+    alertedSignal: 0,
+    alertedRow: 0,
+    skippedDisabled: 0,
     skippedUnchanged: 0,
     seeded: 0,
     held: 0,
@@ -47,10 +102,13 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
     error: null,
   };
 
-  // Alerting is the only consumer of this poll — with it off there is nothing
-  // to do, and polling anyway would silently burn through the watermarks.
-  const signalEnabled = await getConfig<boolean>(CONFIG_KEYS.watchingSignalEnabled, true);
-  if (!signalEnabled) return result;
+  // Alerting is the only consumer of this poll — with both streams off there is
+  // nothing to do, and polling anyway would silently burn through the watermarks.
+  const [signalEnabled, rowEnabled] = await Promise.all([
+    getConfig<boolean>(CONFIG_KEYS.watchingSignalEnabled, true),
+    getConfig<boolean>(CONFIG_KEYS.watchingRowEnabled, true),
+  ]);
+  if (!signalEnabled && !rowEnabled) return result;
 
   const maxUsersRaw = await getConfig<number>(CONFIG_KEYS.watchingMaxUsers, MAX_USERS_FALLBACK);
   const tweetsPerUserRaw = await getConfig<number>(
@@ -61,9 +119,17 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
   const tweetsPerUser = Number.isFinite(Number(tweetsPerUserRaw))
     ? Number(tweetsPerUserRaw)
     : TWEETS_PER_USER_FALLBACK;
-  // Admin-selected Watching topic; explicit thread wins over alert-type routing.
-  const topicId = await getConfig<number | null>(CONFIG_KEYS.watchingSignalTopicId, null);
-  const thread = typeof topicId === "number" && Number.isFinite(topicId) ? topicId : undefined;
+  // Admin-selected Watching topics; an explicit thread wins over alert-type routing.
+  const routing: WatchingRouting = {
+    signalEnabled,
+    rowEnabled,
+    signalTopicId: topicOrUndefined(
+      await getConfig<number | null>(CONFIG_KEYS.watchingSignalTopicId, null),
+    ),
+    rowTopicId: topicOrUndefined(
+      await getConfig<number | null>(CONFIG_KEYS.watchingRowTopicId, null),
+    ),
+  };
 
   const watchingAccounts = await prisma.twitterAccount.findMany({
     where: {
@@ -157,13 +223,32 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
         continue;
       }
 
-      // Advance only past posts that reached Telegram. A send failure stops the
-      // batch, so the watermark holds and the post is retried next cycle instead
-      // of being silently dropped.
+      // Advance only past posts that reached Telegram (or were dropped on
+      // purpose by an off switch). A send failure stops the batch, so the
+      // watermark holds and the post is retried next cycle instead of being
+      // silently lost.
       let advanceTo: string | null = null;
       let failed = false;
 
       for (const tweet of newTweets) {
+        // DB rules first (mint live, wl application, …), legacy lexicon as fallback —
+        // same order listPoller uses, so both pollers agree on what a signal is.
+        let signals = await detectSignalsWithRules(tweet.text, account.tags, {
+          structuralFallback: true,
+        });
+        if (signals.length === 0) {
+          signals = detectSignals(tweet.text, account.tags[0]);
+        }
+
+        const route = routeWatchingTweet(signals, routing);
+
+        if (!route.enabled) {
+          result.skippedDisabled++;
+          advanceTo = maxSnowflake([advanceTo, tweet.id]);
+          console.log(`[watching] @${username}: ${tweet.id} ${route.branch} stream off — dropped`);
+          continue;
+        }
+
         const msg = formatWatchingAlert({
           accountId: account.id,
           username,
@@ -173,10 +258,11 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
           followersCount: account.followersCount ?? 0,
           tweetCount: account.tweetCount ?? 0,
           tags: account.tags,
+          signals,
         });
 
         try {
-          await sendTelegramAlert(msg, "MarkdownV2", thread, "monitor");
+          await sendTelegramAlert(msg, "MarkdownV2", route.topicId, "monitor");
         } catch (err) {
           failed = true;
           console.error(
@@ -186,6 +272,12 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
         }
 
         result.alerted++;
+        if (route.branch === "signal") result.alertedSignal++;
+        else result.alertedRow++;
+        console.log(
+          `[watching] @${username}: ${tweet.id} → ${route.branch} topic ${route.topicId ?? "default"}` +
+            (signals.length ? ` [${signals.join(",")}]` : ""),
+        );
         advanceTo = maxSnowflake([advanceTo, tweet.id]);
       }
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { backendFetch } from "@/lib/api";
+import { proxy } from "@/lib/client";
 import { toast } from "@/components/ui/sonner";
 
 interface TopicOption {
@@ -67,10 +67,21 @@ export function TopicSelectors({
         onClick={async () => {
           setSaving(true);
           try {
-            await backendFetch("/api/watching/config", {
+            const res = await proxy("/api/watching/config", {
               method: "PATCH",
-              body: { signalTopicId: selectedSignal ? Number(selectedSignal) : null, rowTopicId: selectedRow ? Number(selectedRow) : null },
+              body: {
+                signalTopicId: selectedSignal ? Number(selectedSignal) : null,
+                rowTopicId: selectedRow ? Number(selectedRow) : null,
+              },
             });
+            if (!res.ok) {
+              const detail =
+                typeof res.body === "object" && res.body !== null && "error" in res.body
+                  ? String((res.body as { error: unknown }).error)
+                  : `HTTP ${res.status}`;
+              toast.error(`Could not save topics — ${detail}`);
+              return;
+            }
             toast.success("Topics saved");
             router.refresh();
           } finally {

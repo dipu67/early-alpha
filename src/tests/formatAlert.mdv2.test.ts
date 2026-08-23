@@ -274,4 +274,45 @@ describe("formatters MarkdownV2", () => {
     expect(text).toContain("*lastbuyers*");
     expect(user.name).toBe("lastbuyers");
   });
+
+  it("formatWatchingAlert switches header + signal line on matched signals", () => {
+    const base = {
+      accountId: "1",
+      username: "ord_9882",
+      name: "Ord",
+      text: "Mint is live now",
+      tweetId: "7",
+      followersCount: 10,
+      tweetCount: 10,
+    };
+
+    const row = formatWatchingAlert(base);
+    expect(row.text).toContain("👀 *Watching · new post*");
+    expect(row.text).not.toContain("Watching · signal");
+
+    const signal = formatWatchingAlert({ ...base, signals: ["mint live", "stage:public"] });
+    expect(signal.text).toContain("🚨 *Watching · signal*");
+    expect(signal.text).not.toContain("Watching · new post");
+    expect(signal.text).toContain("mint live · stage:public");
+    // Signal labels are user-supplied strings and must be escaped like any other.
+    expect(bareSpecialsOutsideMarkup(signal.text)).toEqual([]);
+
+    const escaped = formatWatchingAlert({ ...base, signals: ["mint_live (wl)"] });
+    expect(escaped.text).toContain("mint\\_live \\(wl\\)");
+    expect(bareSpecialsOutsideMarkup(escaped.text)).toEqual([]);
+  });
+
+  it("formatWatchingAlert treats an empty signal array as a plain post", () => {
+    const { text } = formatWatchingAlert({
+      accountId: "1",
+      username: "u",
+      name: "N",
+      text: "gm",
+      tweetId: "8",
+      followersCount: 0,
+      tweetCount: 0,
+      signals: [],
+    });
+    expect(text).toContain("👀 *Watching · new post*");
+  });
 });

@@ -4,6 +4,22 @@
 
 const BASE = process.env.BACKEND_URL ?? "http://localhost:4000";
 
+/**
+ * Fail loudly if a client component imports this module. `process.env.BACKEND_API_KEY`
+ * is undefined in the browser, so `apiKey()` throws — and the try/catch below turns
+ * that into an innocuous-looking `{ ok: false }`, which callers then ignore. That
+ * silence cost us the watching topic selector: it reported "saved" and wrote nothing.
+ * Client components use `proxy()` / `useFetch` from `@/lib/client`.
+ */
+function assertServer(): void {
+  if (typeof window !== "undefined") {
+    throw new Error(
+      "@/lib/api is server-only (Server Components / route handlers). " +
+        "Use proxy() or useFetch from @/lib/client in client components.",
+    );
+  }
+}
+
 function apiKey(): string {
   const key = process.env.BACKEND_API_KEY;
   if (!key) throw new Error("Missing BACKEND_API_KEY");
@@ -52,6 +68,7 @@ export async function backendFetch(
   path: string,
   init: { method?: string; body?: unknown; query?: Record<string, string | string[] | undefined> } = {},
 ): Promise<BackendResponse> {
+  assertServer();
   try {
     const url = buildUrl(path, init.query);
 
@@ -90,6 +107,7 @@ export async function backendFetchRaw(
   path: string,
   init: { method?: string; body?: unknown; query?: Record<string, string | undefined> } = {},
 ): Promise<BackendRawResponse> {
+  assertServer();
   try {
     const url = buildUrl(path, init.query);
 
