@@ -519,6 +519,49 @@ export function formatMonitorAlert(
   };
 }
 
+export interface WatchingAlertInput {
+  accountId: string;
+  username: string;
+  name: string;
+  text: string;
+  tweetId: string;
+  followersCount: number;
+  tweetCount: number;
+  tags?: string[];
+}
+
+/** Watching-project post — a project with projectStatus='watching' posted. */
+export function formatWatchingAlert(
+  input: WatchingAlertInput,
+): { text: string; user: UserData } {
+  const postUrl = `https://x.com/${input.username}/status/${input.tweetId}`;
+  const displayName = input.name.trim() || input.username;
+  const labels = (input.tags ?? []).filter((t) => t && t !== DEFAULT_SLUG);
+  const tagLine = labels.length
+    ? `🏷 ${escapeMarkdown(labels.slice(0, 4).map(tagLabel).join(" · "))}\n`
+    : "";
+
+  const text =
+    `👀 *Watching · new post*\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `👤 *${escapeMarkdown(displayName)}*  ${mdUserLink(input.username)}\n` +
+    `👥 ${escapeMarkdown(formatNumber(input.followersCount))} followers · ` +
+    `🐦 ${escapeMarkdown(formatNumber(input.tweetCount))} posts\n` +
+    tagLine +
+    `\n${escapeMarkdown(excerpt(input.text))}\n\n` +
+    `🔗 ${mdLink("View post", postUrl)}\n` +
+    `━━━━━━━━━━━━━━━━━━\n`;
+
+  return {
+    text,
+    user: {
+      id: input.accountId,
+      username: input.username,
+      name: displayName,
+    } as UserData,
+  };
+}
+
 /** Early monitor raw post (no signal match) — optional TG stream. */
 export function formatEarlyRawPostAlert(input: {
   accountId: string;

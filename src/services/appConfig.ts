@@ -27,6 +27,10 @@ export const CONFIG_KEYS = {
   watchingIntervalMs: "watching.intervalMs",
   watchingSignalTopicId: "watching.signalTopicId",
   watchingRowTopicId: "watching.rowTopicId",
+  /** Watching accounts polled per cycle (0 = no cap) */
+  watchingMaxUsers: "watching.maxUsers",
+  /** Timeline page size per watching account */
+  watchingTweetsPerUser: "watching.tweetsPerUser",
   tgMinIntervalMs: "tg.minIntervalMs",
   tgMaxRetries: "tg.maxRetries",
   /** JSON array or comma-separated Telegram user ids for bot admin commands */

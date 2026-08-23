@@ -13,12 +13,26 @@ import {
   formatReclassifyAlert,
   formatSearchAlert,
   formatSignalAlert,
+  formatWatchingAlert,
 } from "../services/formatAlert.js";
 
 /** Bare MarkdownV2 specials that must not appear unescaped outside intentional markup. */
 function hasBareTildeOutsideEscape(text: string): boolean {
   // Allow \~ only
   return /(?<!\\)~/.test(text);
+}
+
+/**
+ * Every MarkdownV2 special left bare after intentional markup is removed —
+ * exactly what Telegram 400s on ("can't parse entities").
+ */
+function bareSpecialsOutsideMarkup(text: string): string[] {
+  const stripped = text
+    .replace(/\[[^\]]*\]\((?:\\.|[^)\\])*\)/g, "") // [label](url) links
+    .replace(/`[^`]*`/g, "") // `code` spans
+    .replace(/\\[\s\S]/g, "") // escaped pairs
+    .replace(/\*/g, ""); // *bold* markers
+  return [...new Set(stripped.match(/[_[\]()~`>#+\-=|{}.!\\]/g) ?? [])];
 }
 
 describe("escapeMarkdown", () => {
@@ -208,5 +222,56 @@ describe("formatters MarkdownV2", () => {
     expect(raw.text).toContain("u\\_1");
     expect(raw.text).toContain("raw\\_post \\~x");
     expect(raw.text).toContain("No signal keyword matched");
+  });
+
+  // Regression: the watching poller shipped an unescaped body with a raw HTML
+  // anchor, so every send died with
+  // "can't parse entities: Character '(' is reserved" and the watermark never
+  // advanced — no watching alert ever arrived.
+  it("formatWatchingAlert escapes MarkdownV2 specials and uses a markdown link", () => {
+    const { text } = formatWatchingAlert({
+      accountId: "1",
+      username: "ord_9882",
+      name: "Ord (Alpha)",
+      text: "33 Forms spots up for grabs! To enter: - repost - tag 2 friends #alpha ~soon (wl)",
+      tweetId: "2091231379501580628",
+      followersCount: 1500,
+      tweetCount: 340,
+      tags: ["nft"],
+    });
+
+    // The exact characters Telegram rejected.
+    expect(text).toContain("Ord \\(Alpha\\)");
+    expect(text).toContain("ord\\_9882");
+    expect(text).toContain("\\- repost");
+    expect(text).toContain("grabs\\!");
+    expect(text).toContain("\\#alpha");
+    expect(text).toContain("1\\.5K followers");
+    expect(hasBareTildeOutsideEscape(text)).toBe(false);
+
+    // MarkdownV2 link, not an HTML anchor (HTML renders as literal text here).
+    expect(text).not.toContain("<a href");
+    expect(text).toContain(
+      "[View post](https://x.com/ord_9882/status/2091231379501580628)",
+    );
+
+    // No bare MarkdownV2 special survives outside intentional markup.
+    expect(bareSpecialsOutsideMarkup(text)).toEqual([]);
+  });
+
+  it("formatWatchingAlert falls back to the handle when name is empty", () => {
+    const { text, user } = formatWatchingAlert({
+      accountId: "1",
+      username: "lastbuyers",
+      name: "",
+      text: "gm",
+      tweetId: "5",
+      followersCount: 0,
+      tweetCount: 0,
+    });
+    // `**` would be an unmatched bold entity and Telegram would 400.
+    expect(text).not.toContain("**");
+    expect(text).toContain("*lastbuyers*");
+    expect(user.name).toBe("lastbuyers");
   });
 });

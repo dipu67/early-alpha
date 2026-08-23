@@ -159,7 +159,7 @@ const worker = new Worker(
       const { pollWatchingProjects } = await import("./watchingPoller.js");
       const r = await pollWatchingProjects();
       console.log(
-        `[list-worker] poll-watching checked=${r.checked} timelines=${r.timelines} alerted=${r.alerted} rateLimited=${r.rateLimited}`,
+        `[list-worker] poll-watching checked=${r.checked} timelines=${r.timelines} alerted=${r.alerted} seeded=${r.seeded} held=${r.held} rateLimited=${r.rateLimited}`,
       );
     } else if (job.name === "growth-report") {
       const { sendWeeklyGrowthReport } = await import("./growthReport.js");
