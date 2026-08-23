@@ -2,7 +2,7 @@
   "hasCompletedOnboarding": true,
   "env": {
     "ANTHROPIC_BASE_URL": "https://agentrouter.org/",
-    "ANTHROPIC_AUTH_TOKEN": "sk-KaradUAKIhZSQ8ApllFZHXinIQJPkm41A2OV1SVapB2D9d35",
+    "ANTHROPIC_AUTH_TOKEN": "sk-UHAU3YuvVOxGfJvgtzuqSyXb8xIcS5DsPYePp0xldaCsR872",
     "ANTHROPIC_MODEL": "claude-opus-5"
   }
 }

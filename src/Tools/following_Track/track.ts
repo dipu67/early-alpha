@@ -21,73 +21,14 @@ import {
 } from "../../services/formatAlert.js";
 
 // --- Category tagging ---
-
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  DeFi: [
-    "defi",
-    "dex",
-    "swap",
-    "yield",
-    "lending",
-    "liquidity",
-    "amm",
-    "vault",
-    "staking",
-  ],
-  NFT: ["nft", "nfts", "collectible", "pfp", "mint", "opensea"],
-  L1: ["layer 1", "l1", "blockchain", "chain", "mainnet"],
-  L2: [
-    "layer 2",
-    "l2",
-    "rollup",
-    "zk",
-    "optimistic",
-    "arbitrum",
-    "optimism",
-    "base",
-    "zksync",
-    "starknet",
-  ],
-  GameFi: ["gamefi", "play-to-earn", "p2e", "gaming", "metaverse", "web3 game"],
-};
-
-const EXCHANGE_NAMES = [
-  "binance",
-  "coinbase",
-  "kraken",
-  "okx",
-  "bybit",
-  "kucoin",
-  "huobi",
-  "bitfinex",
-  "gemini",
-];
-const EXCLUDE_BIO_TERMS = ["airdrop", "giveaway"];
-
-export function categorizeFromBio(bio: string | null | undefined): string[] {
-  if (!bio) return [];
-  const lower = bio.toLowerCase();
-  const matched: string[] = [];
-
-  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    for (const kw of keywords) {
-      const regex = new RegExp(
-        `\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
-        "i",
-      );
-      if (regex.test(lower)) {
-        matched.push(category);
-        break;
-      }
-    }
-  }
-
-  return matched;
-}
+// Tags are now loaded from DB (project_tags table) via classifyAccount.
+// No hardcoded keyword lists here — edit tags from the admin Keywords UI.
 
 // --- Project enrichment ---
 
 import { enrichFromBio } from "../../services/projectEnricher.js";
+import { classifyAccount, DEFAULT_SLUG } from "../../services/projectTagger.js";
+import { tagsToCategories } from "../../services/projectTagger.js";
 
 
 /** Ensure a Project row exists for this account, created at discovery time. */
@@ -114,21 +55,22 @@ async function upsertProjectAtDiscovery(
   });
 }
 
-export function passesEarlyStageFilter(user: UserData): boolean {
+export async function passesEarlyStageFilter(user: UserData): Promise<boolean> {
   if (!user.followersCount || user.followersCount >= 10_000) return false;
 
   const bio = (user.description ?? "") + " " + (user.name ?? "");
   const lower = bio.toLowerCase();
 
-  for (const term of EXCLUDE_BIO_TERMS) {
-    if (lower.includes(term)) return false;
-  }
-  for (const exchange of EXCHANGE_NAMES) {
-    if (lower.includes(exchange)) return false;
+  if (lower.includes("airdrop") || lower.includes("giveaway")) return false;
+  const exchangeLower = lower.split(/\s+/);
+  for (const term of exchangeLower) {
+    if (["binance", "coinbase", "kraken", "okx", "bybit", "kucoin", "huobi", "bitfinex", "gemini"].includes(term)) return false;
   }
 
-  const categories = categorizeFromBio(user.description);
-  if (categories.length === 0) return false;
+  // Use DB-backed tag classification instead of hardcoded keywords
+  const tags = await classifyAccount(user);
+  const meaningfulTags = tags.filter((t) => t !== DEFAULT_SLUG);
+  if (meaningfulTags.length === 0) return false;
 
   if (!user.createdAt) return false;
   const ageMs = Date.now() - new Date(user.createdAt).getTime();
@@ -211,7 +153,6 @@ async function importSeeds(): Promise<void> {
     return;
   }
 
-  const validCategories = new Set(Object.keys(CATEGORY_KEYWORDS));
   let imported = 0;
   const failures: string[] = [];
 
@@ -220,8 +161,10 @@ async function importSeeds(): Promise<void> {
       failures.push(`${seed.username ?? "unknown"} (missing required fields)`);
       continue;
     }
-    if (!validCategories.has(seed.category)) {
-      failures.push(`@${seed.username} (invalid category: ${seed.category})`);
+    // Validate that the category exists in the DB tag lexicon
+    const tags = await classifyAccount({ username: seed.username, name: seed.username, description: "" });
+    if (!tags.includes(seed.category.toLowerCase()) && seed.category !== "unknown") {
+      failures.push(`@${seed.username} (category '${seed.category}' not in tag lexicon)`);
       continue;
     }
 
@@ -238,6 +181,11 @@ async function importSeeds(): Promise<void> {
 
       const user = adaptAPIUser(profile.user);
 
+      // Classify tags from bio/name so they're stored immediately, not left for backfill
+      const nextTags = await classifyAccount(user);
+      const cleanTags = nextTags.filter((t) => t !== DEFAULT_SLUG);
+      const tags = cleanTags.length > 0 ? cleanTags : nextTags;
+
       await prisma.twitterAccount.upsert({
         where: { id: user.id },
         create: {
@@ -245,6 +193,7 @@ async function importSeeds(): Promise<void> {
           username: user.username,
           name: user.name,
           description: user.description ?? null,
+          tags,
           followersCount: user.followersCount ?? null,
           followingCount: user.followingCount ?? null,
           isBlueVerified: user.isBlueVerified ?? null,
@@ -255,6 +204,7 @@ async function importSeeds(): Promise<void> {
           username: user.username,
           name: user.name,
           description: user.description ?? null,
+          tags,
           followersCount: user.followersCount ?? null,
           followingCount: user.followingCount ?? null,
           isBlueVerified: user.isBlueVerified ?? null,
@@ -459,6 +409,11 @@ export async function runTrackingCycle(
         });
         if (existingAccount) continue;
 
+        // Classify tags from bio/name before storing
+        const nextTags = await classifyAccount(user);
+        const cleanTags = nextTags.filter((t) => t !== DEFAULT_SLUG);
+        const tags = cleanTags.length > 0 ? cleanTags : nextTags;
+
         await prisma.twitterAccount.upsert({
           where: { id: user.id },
           create: {
@@ -466,6 +421,7 @@ export async function runTrackingCycle(
             username: user.username,
             name: user.name,
             description: user.description ?? null,
+            tags,
             followersCount: user.followersCount ?? null,
             followingCount: user.followingCount ?? null,
             isBlueVerified: user.isBlueVerified ?? null,
@@ -476,6 +432,7 @@ export async function runTrackingCycle(
             username: user.username,
             name: user.name,
             description: user.description ?? null,
+            tags,
             followersCount: user.followersCount ?? null,
             followingCount: user.followingCount ?? null,
             isBlueVerified: user.isBlueVerified ?? null,
@@ -521,7 +478,7 @@ export async function runTrackingCycle(
           const msgFormat = await formatNewFollowAlert(seed.username, user);
           await sendTelegramAlert(msgFormat, "MarkdownV2", undefined, "newFollow");
 
-          if (!isPopulationRun && passesEarlyStageFilter(user) && !seedTwitterIds.has(user.id)) {
+          if (!isPopulationRun && (await passesEarlyStageFilter(user)) && !seedTwitterIds.has(user.id)) {
             await checkAndAlertConvergence(user, run.id);
           }
         }
@@ -660,9 +617,10 @@ async function checkAndAlertConvergence(
   });
 
   const convergenceCount = edges.length;
-  // Only alert for early-stage accounts (<6 months) with non-empty categories
-  const categories = categorizeFromBio(target.description);
-  if (categories.length === 0) return;
+  // Only alert for early-stage accounts (<6 months) with non-empty tags from DB
+  const tags = await classifyAccount({ username: target.username, name: target.name ?? "", description: target.description ?? null });
+  const meaningfulTags = tags.filter((t) => t !== DEFAULT_SLUG);
+  if (meaningfulTags.length === 0) return;
 
   if (convergenceCount < 2) return;
 
@@ -687,7 +645,7 @@ async function checkAndAlertConvergence(
         score: convergenceCount,
         seedCount: convergenceCount,
         seedUsernames,
-        categories,
+        categories: meaningfulTags,
       },
     });
     return;
@@ -701,7 +659,7 @@ async function checkAndAlertConvergence(
       score: convergenceCount,
       seedCount: convergenceCount,
       seedUsernames,
-      categories,
+      categories: meaningfulTags,
       reason: `${convergenceCount} seeds followed within 72h`,
     },
   });
@@ -739,7 +697,7 @@ async function checkAndAlertConvergence(
     targetFollowerCount: target.followersCount ?? 0,
     targetAccountAge: target.createdAt ? getAccountAge(target.createdAt) : null,
     seedUsernames,
-    categories,
+    categories: meaningfulTags,
     score: convergenceCount,
   };
 
@@ -806,8 +764,9 @@ export async function sendDailyDigestMessage(): Promise<void> {
     const user = edge.following;
     if (!user.followersCount || user.followersCount >= 10_000) continue;
 
-    const categories = categorizeFromBio(user.description);
-    if (categories.length === 0) continue;
+    const tags = await classifyAccount({ username: user.username, name: user.name, description: user.description });
+    const meaningfulTags = tags.filter((t) => t !== DEFAULT_SLUG);
+    if (meaningfulTags.length === 0) continue;
 
     const entry: DigestEntry = {
       seedUsername: edge.seed.username,
@@ -818,7 +777,7 @@ export async function sendDailyDigestMessage(): Promise<void> {
 
     digestEntries.push(entry);
 
-    const cat = categories[0] ?? "Uncategorized";
+    const cat = meaningfulTags[0] ?? "Uncategorized";
     if (!categorized.has(cat)) categorized.set(cat, []);
     categorized.get(cat)!.push(entry);
   }
