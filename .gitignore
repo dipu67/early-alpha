@@ -17,6 +17,6 @@ frontend/
 data/chainlist-snapshot.json
 data/chainlist-discoveries.json
 backup.json
-.claude/settings.json
+/.claude/settings.json
 src/data/chainlist-discoveries.json
 src/data/chainlist-snapshot.json

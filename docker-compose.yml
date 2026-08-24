@@ -13,7 +13,13 @@ name: early-alpha
 
 services:
   postgres:
-    image: postgres:17-alpine
+    # Load-bearing, do not "simplify" either line below. The existing cluster in
+    # early-alpha_postgres_data is PG18, and the PG18 image keeps PGDATA at
+    # /var/lib/postgresql/18/docker — so the volume mounts at /var/lib/postgresql,
+    # NOT the pre-18 /var/lib/postgresql/data. Get either wrong and the entrypoint
+    # finds no PG_VERSION, runs initdb, and serves an empty database while the real
+    # data sits untouched in the volume under 18/docker.
+    image: postgres:18-alpine
     container_name: early-alpha-postgres
     restart: unless-stopped
     environment:
@@ -23,7 +29,7 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
       interval: 5s
