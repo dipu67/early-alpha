@@ -2,8 +2,11 @@
 //
 // Flow per cycle:
 //   1. Fetch TwitterAccount rows whose Project has projectStatus = 'watching'
-//   2. Use FxTwitter getProfileStatuses to fetch each user's latest tweets
-//   3. First sight of an account seeds lastTweetId only (no backlog flood)
+//   2. Fetch each user's timeline via FxTwitter getProfileStatuses, passing the
+//      stored fxCursor (`cursor.top`) so X returns only posts newer than the last
+//      page we saw. No cursor yet, or an empty cursored page, falls back to the
+//      newest page.
+//   3. First sight of an account seeds lastTweetId + fxCursor only (no backlog flood)
 //   4. Else, for every tweet with snowflake id > lastTweetId, run signal
 //      detection: a match routes the alert to the signal topic, no match routes
 //      it to the row-post topic (see routeWatchingTweet)
@@ -166,11 +169,48 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
     const username = account.username.toLowerCase().replace(/^@+/, "");
 
     try {
-      // No cursor — always ask for the newest page; lastTweetId is the watermark.
-      const resp = await fx.getProfileStatuses(username, { count: tweetsPerUser });
+      // Ask only for posts newer than the last page we saw: `cursor.top` is X's
+      // "load newer" token (verified: 2 new posts back instead of a full 11-post
+      // page), and the response carries a refreshed cursor to store.
+      //
+      // The cursor is an optimization — lastTweetId stays the watermark of record.
+      // An empty page is ambiguous: "nothing newer" on a live cursor, "nothing at
+      // all" on a stale one, and both are common. The tell is the refreshed cursor:
+      // a live cursor still returns one, a dead one returns nothing. Only that
+      // second case is refetched uncursored, so a quiet account stays one request.
+      // (`since` would be the natural fit but the API 204s even when newer posts
+      // exist, so it can't be used here.)
+      let resp = await fx.getProfileStatuses(username, {
+        count: tweetsPerUser,
+        ...(account.fxCursor ? { cursor: account.fxCursor } : {}),
+      });
+
+      if (account.fxCursor && !resp?.results?.length && !resp?.cursor?.top) {
+        resp = await fx.getProfileStatuses(username, { count: tweetsPerUser });
+        console.log(
+          `[watching] @${username}: cursor expired — refetched newest page ` +
+            `(${resp?.results?.length ?? 0} tweets, filtered by watermark)`,
+        );
+      }
 
       if (!resp || !resp.results || resp.results.length === 0) {
-        console.log(`[watching] @${username}: no tweets returned`);
+        // An empty page from a live cursor is the healthy "nothing newer" answer,
+        // not a failure. Count it and store the refreshed cursor — otherwise a
+        // normal quiet cycle reports checked=0 and looks identical to an outage.
+        const emptyCursor = resp?.cursor?.top ?? null;
+        if (emptyCursor) {
+          result.checked++;
+          result.skippedUnchanged++;
+          if (emptyCursor !== account.fxCursor) {
+            await prisma.twitterAccount.update({
+              where: { id: account.id },
+              data: { fxCursor: emptyCursor },
+            });
+          }
+          console.log(`[watching] @${username}: nothing newer`);
+        } else {
+          console.log(`[watching] @${username}: no tweets returned`);
+        }
         continue;
       }
 
@@ -178,12 +218,17 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
       result.checked++;
 
       const tweets: APITwitterStatus[] = resp.results;
-      const newCursor = resp.cursor?.top ?? null;
+      const newCursor = resp.cursor?.top;
       const pageNewest = maxSnowflake(tweets.map((t) => t.id));
 
-      // First sight: seed the watermark, alert nothing. Every other poller in
+      // First sight: seed the watermarks, alert nothing. Every other poller in
       // this codebase does the same so enrolling an account can't dump its
       // whole timeline into Telegram.
+      //
+      // Seed lastTweetId, not just the cursor: it is the dedup backstop for any
+      // page that arrives uncursored (first sight, a cleared cursor, the stale-
+      // cursor retry above). With it null, cutoff is null and every post on such
+      // a page reads as new — a full-page flood.
       if (!account.lastTweetId) {
         await prisma.twitterAccount.update({
           where: { id: account.id },
