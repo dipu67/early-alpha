@@ -4,15 +4,15 @@
 //   1. Fetch TwitterAccount rows whose Project has projectStatus = 'watching'
 //   2. Fetch each user's timeline via FxTwitter getProfileStatuses, passing the
 //      stored fxCursor (`cursor.top`) so X returns only posts newer than the last
-//      page we saw. No cursor yet, or an empty cursored page, falls back to the
-//      newest page.
-//   3. First sight of an account seeds lastTweetId + fxCursor only (no backlog flood)
-//   4. Else, for every tweet with snowflake id > lastTweetId, run signal
-//      detection: a match routes the alert to the signal topic, no match routes
-//      it to the row-post topic (see routeWatchingTweet)
-//   5. Advance lastTweetId only past tweets that actually reached Telegram —
-//      a failed send holds the watermark so the post is retried next cycle.
-//      A branch the admin turned off still advances: "off" means drop, not defer.
+//      page we saw. fxCursor is the sole watermark — a cursored response needs
+//      no further filtering.
+//   3. First sight of an account seeds the cursor only (no backlog flood)
+//   4. Else, for every returned post, run signal detection: a match routes the
+//      alert to the signal topic, no match routes it to the row-post topic
+//      (see routeWatchingTweet)
+//   5. Advance the cursor only when the whole page reached Telegram — a failed
+//      send holds it so the page is retried next cycle. A branch the admin
+//      turned off does not hold: "off" means drop, not defer.
 
 import { prisma } from "../db/prisma.js";
 import { FxTwitterClient, FxTwitterError } from "../fxTwitter/fxTwitterClient.js";
@@ -22,7 +22,7 @@ import { formatWatchingAlert } from "./formatAlert.js";
 import { detectSignalsWithRules } from "./signalRules.js";
 import { detectSignals } from "./postSignals.js";
 import { sendTelegramAlert } from "../tg/sendAlert.js";
-import { maxSnowflake, toSnowflake } from "./pollerCore.js";
+import { toSnowflake } from "./pollerCore.js";
 
 /** Env values are fallbacks only — the Setting keys override them at runtime. */
 const TWEETS_PER_USER_FALLBACK = Number(process.env.WATCHING_POLL_COUNT ?? 20);
@@ -81,9 +81,9 @@ export interface WatchingPollResult {
   /** Posts whose branch is switched off — dropped, watermark still advanced. */
   skippedDisabled: number;
   skippedUnchanged: number;
-  /** Accounts seeded on first sight (watermark set, no alerts). */
+  /** Accounts seeded with no alerts — first sight, or an expired cursor re-seeded. */
   seeded: number;
-  /** Accounts whose watermark was held back by a failed send. */
+  /** Accounts whose cursor was held back by a failed send. */
   held: number;
   rateLimited: boolean;
   error: string | null;
@@ -168,15 +168,11 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
     const username = account.username.toLowerCase().replace(/^@+/, "");
 
     try {
-      // Ask only for posts newer than the last page we saw: `cursor.top` is X's
-      // "load newer" token (verified: 2 new posts back instead of a full 11-post
-      // page), and the response carries a refreshed cursor to store.
+      // `cursor.top` is X's "load newer" token, so a cursored response carries
+      // only posts made since the last page we saw — no further filtering needed
+      // (verified: 2 new posts back instead of a full 11-post page). The response
+      // carries a refreshed cursor to store.
       //
-      // The cursor is an optimization — lastTweetId stays the watermark of record.
-      // An empty page is ambiguous: "nothing newer" on a live cursor, "nothing at
-      // all" on a stale one, and both are common. The tell is the refreshed cursor:
-      // a live cursor still returns one, a dead one returns nothing. Only that
-      // second case is refetched uncursored, so a quiet account stays one request.
       // (`since` would be the natural fit but the API 204s even when newer posts
       // exist, so it can't be used here.)
       let resp = await fx.getProfileStatuses(username, {
@@ -184,26 +180,40 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
         ...(account.fxCursor ? { cursor: account.fxCursor } : {}),
       });
 
+      // An empty page is ambiguous: "nothing newer" on a live cursor, "this
+      // cursor is dead" on a stale one. The tell is the refreshed cursor — a
+      // live cursor still returns one, a dead cursor returns nothing.
       if (account.fxCursor && !resp?.results?.length && !resp?.cursor?.top) {
+        // Dead cursor. Refetch the newest page to re-seed from it, but alert
+        // nothing: the cursor is the only watermark, so there is nothing to
+        // filter that page against and alerting it would dump the timeline into
+        // Telegram. Posts made while the cursor was dead are skipped by design.
         resp = await fx.getProfileStatuses(username, { count: tweetsPerUser });
+        await prisma.twitterAccount.update({
+          where: { id: account.id },
+          data: { fxCursor: resp?.cursor?.top ?? null },
+        });
+        result.checked++;
+        result.seeded++;
         console.log(
-          `[watching] @${username}: cursor expired — refetched newest page ` +
-            `(${resp?.results?.length ?? 0} tweets, filtered by watermark)`,
+          `[watching] @${username}: cursor expired — re-seeded, ` +
+            `${resp?.results?.length ?? 0} posts skipped`,
         );
+        continue;
       }
 
       if (!resp || !resp.results || resp.results.length === 0) {
-        // An empty page from a live cursor is the healthy "nothing newer" answer,
-        // not a failure. Count it and store the refreshed cursor — otherwise a
-        // normal quiet cycle reports checked=0 and looks identical to an outage.
-        const emptyCursor = resp?.cursor?.top ?? null;
-        if (emptyCursor) {
+        // Live cursor with nothing behind it: the healthy quiet answer, not a
+        // failure. Count it and store the refreshed cursor — otherwise a normal
+        // quiet cycle reports checked=0 and looks identical to an outage.
+        const refreshed = resp?.cursor?.top ?? null;
+        if (refreshed) {
           result.checked++;
           result.skippedUnchanged++;
-          if (emptyCursor !== account.fxCursor) {
+          if (refreshed !== account.fxCursor) {
             await prisma.twitterAccount.update({
               where: { id: account.id },
-              data: { fxCursor: emptyCursor },
+              data: { fxCursor: refreshed },
             });
           }
           console.log(`[watching] @${username}: nothing newer`);
@@ -217,61 +227,37 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
       result.checked++;
 
       const tweets: APITwitterStatus[] = resp.results;
-      const newCursor = resp.cursor?.top;
-      const pageNewest = maxSnowflake(tweets.map((t) => t.id));
+      const newCursor = resp.cursor?.top ?? null;
 
-      // First sight: seed the watermarks, alert nothing. Every other poller in
-      // this codebase does the same so enrolling an account can't dump its
-      // whole timeline into Telegram.
-      //
-      // Seed lastTweetId, not just the cursor: it is the dedup backstop for any
-      // page that arrives uncursored (first sight, a cleared cursor, the stale-
-      // cursor retry above). With it null, cutoff is null and every post on such
-      // a page reads as new — a full-page flood.
-      if (!account.lastTweetId) {
+      // First sight: seed the cursor, alert nothing. Every other poller in this
+      // codebase does the same so enrolling an account can't dump its whole
+      // timeline into Telegram.
+      if (!account.fxCursor) {
         await prisma.twitterAccount.update({
           where: { id: account.id },
-          data: { lastTweetId: pageNewest, fxCursor: newCursor },
+          data: { fxCursor: newCursor },
         });
         result.seeded++;
         console.log(
-          `[watching] @${username}: seeded lastTweetId=${pageNewest ?? "none"} (fetched=${tweets.length})`,
+          `[watching] @${username}: seeded cursor=${newCursor ?? "none"} (fetched=${tweets.length})`,
         );
         continue;
       }
 
-      const cutoff = toSnowflake(account.lastTweetId);
-      // Oldest first so alerts arrive in posting order and a mid-batch failure
-      // leaves the watermark on a contiguous prefix.
-      const newTweets = tweets
-        .filter((t) => {
-          const n = toSnowflake(t.id);
-          return n == null ? t.id !== account.lastTweetId : cutoff == null || n > cutoff;
-        })
-        .sort((a, b) => {
-          const an = toSnowflake(a.id) ?? 0n;
-          const bn = toSnowflake(b.id) ?? 0n;
-          return an < bn ? -1 : an > bn ? 1 : 0;
-        });
+      // Everything on a cursored page is new. Oldest first so alerts arrive in
+      // posting order.
+      const newTweets = [...tweets].sort((a, b) => {
+        const an = toSnowflake(a.id) ?? 0n;
+        const bn = toSnowflake(b.id) ?? 0n;
+        return an < bn ? -1 : an > bn ? 1 : 0;
+      });
 
-      console.log(`[watching] @${username}: got ${tweets.length} tweets, ${newTweets.length} new`);
+      console.log(`[watching] @${username}: ${newTweets.length} new`);
 
-      if (newTweets.length === 0) {
-        result.skippedUnchanged++;
-        if (newCursor !== account.fxCursor) {
-          await prisma.twitterAccount.update({
-            where: { id: account.id },
-            data: { fxCursor: newCursor },
-          });
-        }
-        continue;
-      }
-
-      // Advance only past posts that reached Telegram (or were dropped on
-      // purpose by an off switch). A send failure stops the batch, so the
-      // watermark holds and the post is retried next cycle instead of being
-      // silently lost.
-      let advanceTo: string | null = null;
+      // The cursor only moves once the whole page reached Telegram. It is
+      // page-granular, not per-post, so a mid-batch failure has to hold the
+      // entire page and the retry re-sends whatever already went out —
+      // at-least-once on purpose, since a duplicate beats a dropped alert.
       let failed = false;
 
       for (const tweet of newTweets) {
@@ -288,7 +274,6 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
 
         if (!route.enabled) {
           result.skippedDisabled++;
-          advanceTo = maxSnowflake([advanceTo, tweet.id]);
           console.log(`[watching] @${username}: ${tweet.id} ${route.branch} stream off — dropped`);
           continue;
         }
@@ -322,22 +307,21 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
           `[watching] @${username}: ${tweet.id} → ${route.branch} topic ${route.topicId ?? "default"}` +
             (signals.length ? ` [${signals.join(",")}]` : ""),
         );
-        advanceTo = maxSnowflake([advanceTo, tweet.id]);
       }
 
-      if (failed) result.held++;
-
-      const data: { lastTweetId?: string; fxCursor?: string | null } = {};
-      if (advanceTo && advanceTo !== account.lastTweetId) data.lastTweetId = advanceTo;
-      if (!failed && newCursor !== account.fxCursor) data.fxCursor = newCursor;
-      if (Object.keys(data).length > 0) {
-        await prisma.twitterAccount.update({ where: { id: account.id }, data });
+      if (failed) {
+        result.held++;
+        console.log(`[watching] @${username}: cursor held — page retried next cycle`);
+        continue;
       }
 
-      console.log(
-        `[watching] @${username}: watermark ${account.lastTweetId} → ` +
-          (data.lastTweetId ?? `${account.lastTweetId} (held)`),
-      );
+      if (newCursor !== account.fxCursor) {
+        await prisma.twitterAccount.update({
+          where: { id: account.id },
+          data: { fxCursor: newCursor },
+        });
+      }
+      console.log(`[watching] @${username}: cursor advanced`);
     } catch (err) {
       if (err instanceof FxTwitterError && err.status === 429) {
         result.rateLimited = true;
