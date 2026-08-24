@@ -147,7 +147,6 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
       followersCount: true,
       tweetCount: true,
       fxCursor: true,
-      lastTweetId: true,
       tags: true,
     },
     // Newest-enrolled first. With more watching projects than `maxUsers` the
