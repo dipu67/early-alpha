@@ -261,6 +261,9 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
       let failed = false;
 
       for (const tweet of newTweets) {
+        // skip if repost 
+        if (tweet.reposted_by) continue
+        
         // DB rules first (mint live, wl application, …), legacy lexicon as fallback —
         // same order listPoller uses, so both pollers agree on what a signal is.
         let signals = await detectSignalsWithRules(tweet.text, account.tags, {
