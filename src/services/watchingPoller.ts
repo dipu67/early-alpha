@@ -151,8 +151,8 @@ export async function pollWatchingProjects(): Promise<WatchingPollResult> {
     },
     // Newest-enrolled first. With more watching projects than `maxUsers` the
     // tail never gets polled — raise watching.maxUsers (0 = no cap) if that bites.
-    orderBy: { firstSeenAt: "desc" },
-    ...(maxUsers > 0 ? { take: maxUsers } : {}),
+    // orderBy: { firstSeenAt: "desc" },
+    // ...(maxUsers > 0 ? { take: maxUsers } : {}),
   });
 
   result.watched = watchingAccounts.length;
